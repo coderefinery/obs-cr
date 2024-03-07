@@ -1,1 +1,2 @@
 obsws-python
+pillow
