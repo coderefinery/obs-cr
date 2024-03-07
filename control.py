@@ -3,6 +3,8 @@ from functools import partial
 
 from tkinter import *
 from tkinter import ttk
+from tktooltip import ToolTip
+
 
 ACTIVE = 'red'
 AUDIO_INPUT = 'Instructors'
@@ -31,9 +33,12 @@ def quick_back(scene=NOTES):
     switch(scene)
     pip_size(pip.last_scale)
 ttk.Label(frm, text="Quick actions:").grid(row=1, column=0)
-Button(frm, text="BREAK", command=quick_break).grid(row=1, column=1)
-Button(frm, text="BACK(screenshare)", command=partial(quick_back, 'Screenshare')).grid(row=1, column=2)
-Button(frm, text="BACK(notes)", command=quick_back).grid(row=1, column=3)
+b = Button(frm, text="BREAK", command=quick_break); b.grid(row=1, column=1)
+ToolTip(b, 'Go to break.  Mute audio, hide PIP, and swich to Notes', delay=1)
+b = Button(frm, text="BACK(screenshare)", command=partial(quick_back, 'Screenshare')); b.grid(row=1, column=2)
+ToolTip(b, 'Back from break, try to restore settings', delay=1)
+b = Button(frm, text="BACK(notes)", command=quick_back); b.grid(row=1, column=3)
+ToolTip(b, 'Back from break, try to restore settings', delay=1)
 
 
 # Scenes
@@ -87,6 +92,7 @@ def volume(state, from_obs=False, dB=None):
 b_audio = Button(frm, text='Audio', command=mute_toggle)
 b_audio.grid(row=3, column=0)
 b_audio.state = True
+ToolTip(b_audio, 'Mute/unmute instructor audio.  Red=ON, default=MUTED', delay=1)
 audio = Scale(frm, from_=-2, to=0, orient=HORIZONTAL, command=volume, showvalue=0, resolution=.02)
 audio.grid(row=3, column=1, columnspan=4, sticky=E+W)
 audio_value = ttk.Label(frm, text="x"); audio_value.grid(row=3, column=5)
@@ -136,10 +142,11 @@ def pip_crop(n):
 
 
 ttk.Label(frm, text="PIP crop to:").grid(row=5, column=0)
+crop_buttons = Frame(frm) ; crop_buttons.grid(row=5, column=1, columnspan=4)
 for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
-    b =  Button(frm, text=label, command=partial(pip_crop, n))
-    b.grid(row=5, column=i+1)
-
+    b = Button(crop_buttons, text=label, command=partial(pip_crop, n))
+    b.pack(in_=crop_buttons, side=LEFT)
+    ToolTip(b, 'Set PIP to be cropped for this many people.  None=no crop', delay=1)
 
 
 import argparse
