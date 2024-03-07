@@ -48,6 +48,7 @@ def update_image():
     root.after(max(100, int(args.delay*1000)), update_image)
 
 root = Tk()
+root.title("OBS preview")
 frm = ttk.Frame(root, padding=0)
 frm.pack()
 image = get_image(840//2, 1080//2)

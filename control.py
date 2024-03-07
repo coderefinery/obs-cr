@@ -1,3 +1,4 @@
+from math import log10
 from functools import partial
 
 from tkinter import *
@@ -11,6 +12,7 @@ NOTES = 'HackMD'
 PIP = '_GalleryCapture[hidden]'
 
 root = Tk()
+root.title("OBS CodeRefinery control")
 frm = ttk.Frame(root, padding=10)
 frm.grid()
 ttk.Label(frm, text="Hello World!").grid(column=0, row=0)
@@ -22,7 +24,7 @@ default_color = root.cget("background")
 def quick_break():
     mute_toggle(True)
     switch(NOTES)
-    pip_size(0)
+    pip_size(0, save=True)
 def quick_back(scene=NOTES):
     print(scene)
     mute_toggle(False)
@@ -69,15 +71,25 @@ def mute_toggle(state=None, from_obs=False):
         b_audio.state = state
         if not from_obs:
             cl1.set_input_mute(AUDIO_INPUT, state)
-def volume(state):
+def volume(state, from_obs=False, dB=None):
+    print(f'Setting volumes: {state} {dB}')
+    if state is None:
+        state = -log10(-(dB-1))
     state = float(state)
-    print(f'Volume: {state}')
-    cl1.set_input_volume(AUDIO_INPUT, vol_db=state)
+    dB = - 10**(-state) + 1
+    print(f'calculated dB: {dB} ({state})')
+    audio_value.config(text=f"{dB:.1f} dB")
+    if from_obs:
+        audio.set(state)
+        return
+    cl1.set_input_volume(AUDIO_INPUT, vol_db=dB)
+
 b_audio = Button(frm, text='Audio', command=mute_toggle)
 b_audio.grid(row=3, column=0)
 b_audio.state = True
-audio = Scale(frm, from_=-100, to=0, orient=HORIZONTAL, command=volume)
+audio = Scale(frm, from_=-2, to=0, orient=HORIZONTAL, command=volume, showvalue=0, resolution=.02)
 audio.grid(row=3, column=1, columnspan=4, sticky=E+W)
+audio_value = ttk.Label(frm, text="x"); audio_value.grid(row=3, column=5)
 
 
 # PIP
@@ -89,22 +101,26 @@ CROP_FACTORS = {
     5:    {'top': 50, 'bottom':  0, 'left': 11, 'right': 11, },  # checked
     }
 b_pip = Label(frm, text="PIP size:").grid(row=4, column=0)
-def pip_size(scale):
+def pip_size(scale, from_obs=False, save=False):
     scale = float(scale)
-    if scale == 0:
+    if save:
         pip.last_scale = pip.scale
-    print(f'PIP size: {scale}')
+    #print(f'PIP size: {scale}')
+    pip_value.config(text=f"{scale:0.2f}")
+    pip.scale = scale
+    pip.set(scale)
     for scene in SCENES_WITH_PIP:
         id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
         transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
         transform['scaleX'] = scale
         transform['scaleY'] = scale
-        cl1.set_scene_item_transform(scene, id_, transform)
-        pip.scale = scale
-pip = Scale(frm, from_=0, to=1, orient=HORIZONTAL, command=pip_size, resolution=.01)
+        if not from_obs:
+            cl1.set_scene_item_transform(scene, id_, transform)
+pip = Scale(frm, from_=0, to=1, orient=HORIZONTAL, command=pip_size, resolution=.01, showvalue=0)
 pip.grid(row=4, column=1, columnspan=4, sticky=E+W)
 pip.scale = None
 pip.last_scale = .25
+pip_value = ttk.Label(frm, text="?") ; pip_value.grid(row=4, column=5)
 # PIP crop selection
 def pip_crop(n):
     print(f"PIP crop → {n} people")
@@ -117,6 +133,7 @@ def pip_crop(n):
             transform['crop'+k.title()] = v
         print('====new:', transform)
         cl1.set_scene_item_transform(scene, id_, transform)
+
 
 ttk.Label(frm, text="PIP crop to:").grid(row=5, column=0)
 for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
@@ -148,10 +165,12 @@ switch(cl1.get_current_program_scene().current_program_scene_name)
 # audio mute
 mute_toggle(cl1.get_input_mute(AUDIO_INPUT).input_muted, from_obs=True)
 # audio volume
-audio.set(cl1.get_input_volume(AUDIO_INPUT).input_volume_db)
+dB = cl1.get_input_volume(AUDIO_INPUT).input_volume_db
+print(f"from OBS: {dB} (volume_state)")
+volume(state=None, dB=dB, from_obs=True)
 # pip size
 id_ = cl1.get_scene_item_id(NOTES, PIP).scene_item_id
-pip.set(cl1.get_scene_item_transform(NOTES, id_).scene_item_transform['scaleX'])
+pip_size(cl1.get_scene_item_transform(NOTES, id_).scene_item_transform['scaleX'], from_obs=True)
 
 
 def on_current_program_scene_changed(data):
@@ -165,7 +184,7 @@ def on_input_volume_changed(data):
     print(data.attrs())
     print(data.input_name, data.input_volume_db)
     if data.input_name == AUDIO_INPUT:
-        audio.set(data.input_volume_db)
+        volume(state=None, dB=data.input_volume_db, from_obs=True)
 def on_input_mute_state_changed(data):
     print(data.attrs())
     if data.input_name == AUDIO_INPUT:
@@ -176,8 +195,8 @@ cl.callback.register([
     on_input_mute_state_changed,
     ])
 
-import logging
-logging.basicConfig(level=logging.DEBUG)
+#import logging
+#logging.basicConfig(level=logging.DEBUG)
 
 print('starting...')
 root.mainloop()
