@@ -57,6 +57,7 @@ SCENES = { }
 for i, scene in enumerate(SCENE_NAMES):
     b = SCENES[scene] = Button(frm, text=scene, command=partial(switch, scene))
     b.grid(column=i, row=2)
+    ToolTip(b, 'Change scene to this', delay=1)
 
 
 

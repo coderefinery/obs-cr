@@ -1,2 +1,3 @@
 obsws-python
 pillow
+tkinter-tooltip
