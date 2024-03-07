@@ -1,0 +1,183 @@
+from functools import partial
+
+from tkinter import *
+from tkinter import ttk
+
+ACTIVE = 'red'
+AUDIO_INPUT = 'Instructors'
+SCENE_NAMES = ['Title', 'Gallery', 'Screenshare', 'ScreenshareLandscape', 'HackMD', 'Empty']
+SCENES_WITH_PIP = ['Screenshare', 'ScreenshareLandscape', 'HackMD']
+NOTES = 'HackMD'
+PIP = '_GalleryCapture[hidden]'
+
+root = Tk()
+frm = ttk.Frame(root, padding=10)
+frm.grid()
+ttk.Label(frm, text="Hello World!").grid(column=0, row=0)
+Button(frm, text="Quit", command=root.destroy).grid(column=1, row=0)
+
+default_color = root.cget("background")
+
+# Quick actions
+def quick_break():
+    mute_toggle(True)
+    switch(NOTES)
+    pip_size(0)
+def quick_back(scene=NOTES):
+    print(scene)
+    mute_toggle(False)
+    switch(scene)
+    pip_size(pip.last_scale)
+ttk.Label(frm, text="Quick actions:").grid(row=1, column=0)
+Button(frm, text="BREAK", command=quick_break).grid(row=1, column=1)
+Button(frm, text="BACK(screenshare)", command=partial(quick_back, 'Screenshare')).grid(row=1, column=2)
+Button(frm, text="BACK(notes)", command=quick_back).grid(row=1, column=3)
+
+
+# Scenes
+def switch(name):
+    print(f'switching to {name}')
+    if name not in SCENES:
+        print(f"Unknown scene {name}")
+        return
+    cl1.set_current_program_scene(name)
+    SCENES[name].configure(background=ACTIVE, activebackground=ACTIVE)
+    SCENES[name].configure()
+    for n, b in SCENES.items():
+        if name != n:
+            b.configure(background=default_color, activebackground=default_color)
+SCENES = { }
+for i, scene in enumerate(SCENE_NAMES):
+    b = SCENES[scene] = Button(frm, text=scene, command=partial(switch, scene))
+    b.grid(column=i, row=2)
+
+
+
+# Audio
+def mute_toggle(state=None, from_obs=False):
+    if state is None: # toggle
+        state = not b_audio.state
+    if state == b_audio.state:
+        return
+    if not state: # turn on
+        b_audio.configure(background=ACTIVE, activebackground=ACTIVE)
+        b_audio.state = state
+        if not from_obs:
+            cl1.set_input_mute(AUDIO_INPUT, state)
+    else:
+        b_audio.configure(background=default_color, activebackground=default_color)
+        b_audio.state = state
+        if not from_obs:
+            cl1.set_input_mute(AUDIO_INPUT, state)
+def volume(state):
+    state = float(state)
+    print(f'Volume: {state}')
+    cl1.set_input_volume(AUDIO_INPUT, vol_db=state)
+b_audio = Button(frm, text='Audio', command=mute_toggle)
+b_audio.grid(row=3, column=0)
+b_audio.state = True
+audio = Scale(frm, from_=-100, to=0, orient=HORIZONTAL, command=volume)
+audio.grid(row=3, column=1, columnspan=4, sticky=E+W)
+
+
+# PIP
+CROP_FACTORS = {
+    None: {'top':  0, 'bottom':  0, 'left':  0, 'right':  0, },
+    1:    {'top':  0, 'bottom':  0, 'left': 59, 'right':  59, },
+    2:    {'top': 90, 'bottom':  0, 'left': 12, 'right': 12, },  # checked
+    3:    {'top':  4, 'bottom':  0, 'left': 60, 'right': 60, },  # checked
+    5:    {'top': 50, 'bottom':  0, 'left': 11, 'right': 11, },  # checked
+    }
+b_pip = Label(frm, text="PIP size:").grid(row=4, column=0)
+def pip_size(scale):
+    scale = float(scale)
+    if scale == 0:
+        pip.last_scale = pip.scale
+    print(f'PIP size: {scale}')
+    for scene in SCENES_WITH_PIP:
+        id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
+        transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
+        transform['scaleX'] = scale
+        transform['scaleY'] = scale
+        cl1.set_scene_item_transform(scene, id_, transform)
+        pip.scale = scale
+pip = Scale(frm, from_=0, to=1, orient=HORIZONTAL, command=pip_size, resolution=.01)
+pip.grid(row=4, column=1, columnspan=4, sticky=E+W)
+pip.scale = None
+pip.last_scale = .25
+# PIP crop selection
+def pip_crop(n):
+    print(f"PIP crop → {n} people")
+
+    for scene in SCENES_WITH_PIP:
+        id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
+        transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
+        print('====old', transform)
+        for (k,v) in CROP_FACTORS[n].items():
+            transform['crop'+k.title()] = v
+        print('====new:', transform)
+        cl1.set_scene_item_transform(scene, id_, transform)
+
+ttk.Label(frm, text="PIP crop to:").grid(row=5, column=0)
+for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
+    b =  Button(frm, text=label, command=partial(pip_crop, n))
+    b.grid(row=5, column=i+1)
+
+
+
+import argparse
+import os
+parser = argparse.ArgumentParser()
+parser.add_argument('hostname_port')
+parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
+                  help='or set env var OBS_PASSWORD')
+args = parser.parse_args()
+hostname = args.hostname_port.split(':')[0]
+port = args.hostname_port.split(':')[1]
+password = args.password
+
+# OBS websocket
+import obsws_python as obs
+cl1 = obs.ReqClient(host=hostname, port=port, password=password, timeout=3)
+cl = obs.EventClient(host=hostname, port=port, password=password, timeout=3)
+
+# Initialize with our current state
+# scene
+
+switch(cl1.get_current_program_scene().current_program_scene_name)
+# audio mute
+mute_toggle(cl1.get_input_mute(AUDIO_INPUT).input_muted, from_obs=True)
+# audio volume
+audio.set(cl1.get_input_volume(AUDIO_INPUT).input_volume_db)
+# pip size
+id_ = cl1.get_scene_item_id(NOTES, PIP).scene_item_id
+pip.set(cl1.get_scene_item_transform(NOTES, id_).scene_item_transform['scaleX'])
+
+
+def on_current_program_scene_changed(data):
+    #print(data.attrs())
+    print(data.scene_name)
+    if data.scene_name in SCENES:
+        switch(data.scene_name)
+    else:
+        print(f'Switching to unknown scene: {data.scene_name}')
+def on_input_volume_changed(data):
+    print(data.attrs())
+    print(data.input_name, data.input_volume_db)
+    if data.input_name == AUDIO_INPUT:
+        audio.set(data.input_volume_db)
+def on_input_mute_state_changed(data):
+    print(data.attrs())
+    if data.input_name == AUDIO_INPUT:
+        mute_toggle(state=data.input_muted)
+cl.callback.register([
+    on_current_program_scene_changed,
+    on_input_volume_changed,
+    on_input_mute_state_changed,
+    ])
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+print('starting...')
+root.mainloop()
