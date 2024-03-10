@@ -18,7 +18,7 @@ root.title("OBS CodeRefinery control")
 frm = ttk.Frame(root, padding=10)
 frm.grid()
 ttk.Label(frm, text="Hello World!").grid(column=0, row=0)
-Button(frm, text="Quit", command=root.destroy).grid(column=1, row=0)
+ttk.Button(frm, text="Quit", command=root.destroy).grid(column=1, row=0)
 
 default_color = root.cget("background")
 
@@ -33,11 +33,11 @@ def quick_back(scene=NOTES):
     switch(scene)
     pip_size(pip.last_scale)
 ttk.Label(frm, text="Quick actions:").grid(row=1, column=0)
-b = Button(frm, text="BREAK", command=quick_break); b.grid(row=1, column=1)
+b = ttk.Button(frm, text="BREAK", command=quick_break); b.grid(row=1, column=1)
 ToolTip(b, 'Go to break.  Mute audio, hide PIP, and swich to Notes', delay=1)
-b = Button(frm, text="BACK(screenshare)", command=partial(quick_back, 'Screenshare')); b.grid(row=1, column=2)
+b = ttk.Button(frm, text="BACK(screenshare)", command=partial(quick_back, 'Screenshare')); b.grid(row=1, column=2)
 ToolTip(b, 'Back from break, try to restore settings', delay=1)
-b = Button(frm, text="BACK(notes)", command=quick_back); b.grid(row=1, column=3)
+b = ttk.Button(frm, text="BACK(notes)", command=quick_back); b.grid(row=1, column=3)
 ToolTip(b, 'Back from break, try to restore settings', delay=1)
 
 
@@ -90,7 +90,7 @@ def volume(state, from_obs=False, dB=None):
         return
     cl1.set_input_volume(AUDIO_INPUT, vol_db=dB)
 
-b_audio = Button(frm, text='Audio', command=mute_toggle)
+b_audio = ttk.Button(frm, text='Audio', command=mute_toggle)
 b_audio.grid(row=3, column=0)
 b_audio.state = True
 ToolTip(b_audio, 'Mute/unmute instructor audio.  Red=ON, default=MUTED', delay=1)
@@ -107,7 +107,7 @@ CROP_FACTORS = {
     3:    {'top':  4, 'bottom':  0, 'left': 60, 'right': 60, },  # checked
     5:    {'top': 50, 'bottom':  0, 'left': 11, 'right': 11, },  # checked
     }
-b_pip = Label(frm, text="PIP size:").grid(row=4, column=0)
+b_pip = ttk.Label(frm, text="PIP size:").grid(row=4, column=0)
 def pip_size(scale, from_obs=False, save=False):
     scale = float(scale)
     if save:
