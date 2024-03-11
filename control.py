@@ -8,6 +8,7 @@ from tktooltip import ToolTip
 
 
 ACTIVE = 'red'
+ACTIVE_SAFE = 'orange'
 AUDIO_INPUT = 'Instructors'
 NOTES = 'Notes'
 SCENE_NAMES = {
@@ -21,7 +22,9 @@ SCENE_NAMES = {
     'Empty': ('Empty', 'Empty black screen', True),
      }
 SCENES_WITH_PIP = ['Screenshare', 'ScreenshareLandscape', 'Notes']
+SCENES_SAFE = ['Title', NOTES] # scenes suitable for breaks
 PIP = '_GalleryCapture[hidden]'
+PLAYBACK_INPUT = 'CRaudio'  # for playing transitions sounds, etc.
 
 root = Tk()
 root.title("OBS CodeRefinery control")
@@ -53,27 +56,64 @@ def quick_back(scene=NOTES):
     mute_toggle(False)
     switch(scene)
     pip_size(pip.last_scale)
+    playback_buttons['short'].play()
+class QuickBreak(ttk.Button):
+    def __init__(self, frm, text, tooltip=None, grid=None):
+        super().__init__(frm, command=self.click, text=text)
+        if grid:
+            self.grid(row=grid[0], column=grid[1])
+    def click(self):
+        mute_toggle(True)
+        switch(NOTES)
+        pip_size(0, save=True)
+        if tooltip:
+            ToolTip(self, tooltip, delay=1)
+class QuickBack(ttk.Button):
+    def __init__(self, frm, scene, text, sound=False, tooltip=None, grid=None):
+        self.scene = scene
+        self.sound = sound
+        super().__init__(frm, command=self.click, text=text)
+        if tooltip:
+            ToolTip(self, tooltip, delay=1)
+        if grid:
+            self.grid(row=grid[0], column=grid[1])
+    def click(self):
+        mute_toggle(False)
+        switch(self.scene)
+        pip_size(pip.last_scale)
+        if self.sound:
+            playback_buttons['short'].play()
 ttk.Label(frm, text="Quick actions:").grid(row=1, column=0)
-b = ttk.Button(frm, text="BREAK", command=quick_break); b.grid(row=1, column=1)
-ToolTip(b, 'Go to break.  Mute audio, hide PIP, and swich to Notes', delay=1)
-b = ttk.Button(frm, text="BACK(ss)", command=partial(quick_back, 'Screenshare')); b.grid(row=1, column=2)
-ToolTip(b, 'Back from break, try to restore settings', delay=1)
-b = ttk.Button(frm, text="BACK(n)", command=quick_back); b.grid(row=1, column=3)
-ToolTip(b, 'Back from break, go to notes, try to restore settings', delay=1)
-
+#b = ttk.Button(frm, text="BREAK", command=quick_break); b.grid(row=1, column=1)
+#ToolTip(b, 'Go to break.  Mute audio, hide PIP, and swich to Notes', delay=1)
+QuickBreak(frm, 'BREAK', tooltip='Go to break.  Mute audio, hide PIP, and swich to Notes', grid=(1,1))
+#b = ttk.Button(frm, text="BACK(ss)", command=partial(quick_back, 'Screenshare')); b.grid(row=1, column=2)
+#ToolTip(b, 'Back from break, try to restore settings, play short sound', delay=1)
+#b = ttk.Button(frm, text="BACK(n)", command=quick_back); b.grid(row=1, column=3)
+#ToolTip(b, 'Back from break, go to notes, try to restore settings, play short sound', delay=1)
+QuickBack(frm, 'Screenshare', 'BACK(ss) sound', tooltip='Back from break (screenshare), try to restore settings, play short sound', sound=True,  grid=(1,2))
+QuickBack(frm, NOTES,         'BACK(n) sound',  tooltip='Back from break (notes), try to restore settings, play short sound',       sound=True,  grid=(1,3))
+QuickBack(frm, 'Screenshare', 'BACK(ss)',       tooltip='Back from break (screenshare), try to restore settings, no sound',         sound=False, grid=(1,4))
+QuickBack(frm, 'Screenshare', 'BACK(n)',        tooltip='Back from break (notes), try to restore settings, no sound',               sound=False, grid=(1,5))
 
 # Scenes
-def switch(name):
+def switch(name, from_obs=False):
     print(f'switching to {name}')
-    if name not in SCENES:
-        print(f"Unknown scene {name}")
-        return
-    cl1.set_current_program_scene(name)
-    SCENES[name].configure(background=ACTIVE, activebackground=ACTIVE)
-    SCENES[name].configure()
+    # Disable currently active buttons
     for n, b in SCENES.items():
         if name != n:
             b.configure(background=default_color, activebackground=default_color)
+    if name not in SCENES:
+        print(f"Unknown scene {name}")
+        return
+    # Set new button
+    if not from_obs:
+        cl1.set_current_program_scene(name)
+    color = ACTIVE
+    if name in SCENES_SAFE:
+        color = ACTIVE_SAFE
+    SCENES[name].configure(background=color, activebackground=color)
+    #SCENES[name].configure()
 SCENES = { }
 for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
     b = SCENES[scene] = Button(frm, text=label, command=partial(switch, scene),
@@ -119,6 +159,7 @@ b_audio.state = True
 ToolTip(b_audio, 'Mute/unmute instructor audio.  Red=ON, default=MUTED', delay=1)
 audio = Scale(frm, from_=-2, to=0, orient=HORIZONTAL, command=volume, showvalue=0, resolution=.02)
 audio.grid(row=3, column=1, columnspan=5, sticky=E+W)
+ToolTip(audio, "Current instructor audio gain", delay=1)
 audio_value = ttk.Label(frm, text="x"); audio_value.grid(row=3, column=6)
 
 
@@ -139,17 +180,23 @@ def pip_size(scale, from_obs=False, save=False):
     pip_value.config(text=f"{scale:0.2f}")
     pip.scale = scale
     pip.set(scale)
+    if scale == 0:
+        color = default_color
+    else:
+        color = ACTIVE
     for scene in SCENES_WITH_PIP:
         id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
         transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
         transform['scaleX'] = scale
         transform['scaleY'] = scale
+        pip.configure(background=color, activebackground=color)
         if not from_obs:
             cl1.set_scene_item_transform(scene, id_, transform)
 pip = Scale(frm, from_=0, to=1, orient=HORIZONTAL, command=pip_size, resolution=.01, showvalue=0)
 pip.grid(row=4, column=1, columnspan=5, sticky=E+W)
 pip.scale = None
 pip.last_scale = .25
+ToolTip(pip, "Change the size of instructor picture-in-picture", delay=1)
 pip_value = ttk.Label(frm, text="?") ; pip_value.grid(row=4, column=6)
 # PIP crop selection
 def pip_crop(n):
@@ -169,9 +216,67 @@ crop_buttons.columnconfigure(tuple(range(5)), weight=1)
 crop_buttons.grid(row=5, column=1, columnspan=5)
 for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
     b = ttk.Button(crop_buttons, text=label, command=partial(pip_crop, n))
-    b.pack(in_=crop_buttons, side=LEFT)
+    b.grid(row=0, column=i)
     ToolTip(b, 'Set PIP to be cropped for this many people.  None=no crop', delay=1)
 
+# Playback
+playback_label = ttk.Label(frm, text="Play:")
+playback_label.grid(row=6, column=0)
+ToolTip(playback_label, f"Row deals with playing transition sounds", delay=1)
+class PlaybackTimer(ttk.Label):
+    def __init__(self, frm, input_name, *args):
+        self.input_name = input_name
+        super().__init__(frm, *args)
+        self.configure(text='x')
+    def update_timer(self):
+        event = cl1.get_media_input_status(self.input_name)
+        duration = event.media_duration
+        cursor = event.media_cursor
+        state = event.media_state  # 'OBS_MEDIA_STATE_PAUSED', 'OBS_MEDIA_STATE_PLAYING'
+        if state != 'OBS_MEDIA_STATE_PLAYING':
+            self.configure(text='-', background=default_color)
+            return
+        if duration < 0:
+            self.after(500, self.update_timer)
+            return
+        def s_to_mmss(s):
+            return f'{s//60}:{s%60:02}'
+        self.configure(text=f'-{s_to_mmss((duration-cursor)//1000)}/{s_to_mmss(duration//1000)}',
+                       background=ACTIVE)
+        self.after(500, self.update_timer)
+playback = PlaybackTimer(frm, PLAYBACK_INPUT)
+playback.grid(row=6, column=1)
+ToolTip(playback, f"Countdown time for current file playing", delay=1)
+class PlayFile(ttk.Button):
+    def __init__(self, frm, filename, label, tooltip):
+        self.filename = filename
+        super().__init__(frm, text=label, command=self.play)
+        ToolTip(self, tooltip, delay=1)
+    def play(self):
+        print(f'setting input to {self.filename}')
+        cl1.set_input_settings(PLAYBACK_INPUT, {'local_file': self.filename}, overlay=True)
+playback_files = [
+    {'filename': '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_Jingle_long.mp3',
+     'label': 'long',
+     'tooltip': 'Long theme song for starting/ending day, 1:23 duration'},
+    {'filename': '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_sound_short.mp3',
+     'label': 'short',
+     'tooltip': 'Short audio for coming back from breaks, 0:03 duration'},
+    ]
+playback_buttons = { }
+for i, file_ in enumerate(playback_files, start=2):
+    pf = playback_buttons[file_['label']] = PlayFile(frm, **file_)
+    pf.grid(row=6, column=i)
+    ToolTip(pf, f"Play the audio file {file_['label']}", delay=1)
+class PlayStop(ttk.Button):
+    def __init__(self, frm):
+        super().__init__(frm, text='StopPlay', command=self.stop)
+    def stop(self):
+        print("stopping playback")
+        cl1.trigger_media_input_action(PLAYBACK_INPUT, 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP')
+ps = PlayStop(frm)
+ps.grid(row=6, column=6)
+ToolTip(ps, "Stop all playbacks", delay=1)
 
 # Announcement text
 #def ann_toggle():
@@ -219,34 +324,52 @@ dB = cl1.get_input_volume(AUDIO_INPUT).input_volume_db
 print(f"from OBS: {dB} (volume_state)")
 volume(state=None, dB=dB, from_obs=True)
 # pip size
-id_ = cl1.get_scene_item_id(NOTES, PIP).scene_item_id
-pip_size(cl1.get_scene_item_transform(NOTES, id_).scene_item_transform['scaleX'], from_obs=True)
+pip_id = cl1.get_scene_item_id(NOTES, PIP).scene_item_id
+def update_pip_size():
+    """The on_scene_item_transform_changed doesn't seem to work, so we have to poll here... unfortunately."""
+    pip_size(cl1.get_scene_item_transform(NOTES, pip_id).scene_item_transform['scaleX'], from_obs=True)
+    pip.after(1000, update_pip_size)
+update_pip_size()
 
 
 def on_current_program_scene_changed(data):
+    """Scene changing"""
     #print(data.attrs())
     print(data.scene_name)
-    if data.scene_name in SCENES:
-        switch(data.scene_name)
-    else:
-        print(f'Switching to unknown scene: {data.scene_name}')
+    switch(data.scene_name, from_obs=True)
 def on_input_volume_changed(data):
-    print(data.attrs())
-    print(data.input_name, data.input_volume_db)
+    """Volume change"""
+    #print(data.attrs())
+    #print(data.input_name, data.input_volume_db)
     if data.input_name == AUDIO_INPUT:
         volume(state=None, dB=data.input_volume_db, from_obs=True)
 def on_input_mute_state_changed(data):
-    print(data.attrs())
+    """Muting/unmuting"""
+    #print(data.attrs())
     if data.input_name == AUDIO_INPUT:
-        mute_toggle(state=data.input_muted)
+        mute_toggle(state=data.input_muted, from_obs=True)
+def on_media_input_playback_started(data):
+    """Playing media"""
+    playback.update_timer()
+def on_scene_item_transform_changed(data):
+    """PIP size change"""
+    print(data)
+    if data.scene_item_id == pip_id:
+        pip_size(data.scene_item_transform['scaleX'], from_obs=True)
+
+
 cl.callback.register([
     on_current_program_scene_changed,
     on_input_volume_changed,
     on_input_mute_state_changed,
+    on_media_input_playback_started,
+    #on_scene_item_transform_changed,
     ])
 
-#import logging
+import logging
 #logging.basicConfig(level=logging.DEBUG)
+
+#import IPython ; IPython.embed()
 
 print('starting...')
 root.mainloop()
