@@ -148,7 +148,8 @@ def volume(state, from_obs=False, dB=None):
         state = -log10(-(dB-1))
         print(f'calculated state: {state}')
     state = round(float(state), 2)
-    dB = - 10**(-state) + 1
+    if dB is None:
+        dB = - 10**(-state) + 1
     print(f'calculated dB: ({state})   ->    {dB} ')
     audio_value.config(text=f"{dB:.1f} dB")
     if from_obs:
