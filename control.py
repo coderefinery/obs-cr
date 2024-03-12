@@ -12,6 +12,7 @@ from tktooltip import ToolTip
 ACTIVE = 'red'
 ACTIVE_SAFE = 'orange'
 AUDIO_INPUT = 'Instructors'
+AUDIO_INPUT_BRCD = 'BroadcasterMic'
 NOTES = 'Notes'
 SCENE_NAMES = {
     # obs_name: (label, tooltip),
@@ -66,7 +67,8 @@ class QuickBreak(ttk.Button):
         if grid:
             self.grid(row=grid[0], column=grid[1])
     def click(self):
-        mute_toggle(True)
+        mute[AUDIO_INPUT].click(True)
+        mute[AUDIO_INPUT_BRCD].click(True)
         switch(NOTES)
         pip_size.update(0, save=True)
         if tooltip:
@@ -83,7 +85,7 @@ class QuickBack(ttk.Button):
         import threading
         threading.Thread(target=self.run).start()
     def run(self):
-        mute_toggle(False)
+        mute[AUDIO_INPUT].click(False)
         if quick_sound.state() == ('selected', ):
             playback_buttons['short'].play()
         time.sleep(3)
@@ -130,21 +132,26 @@ for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
 
 
 # Audio
-def mute_toggle(state=None, from_obs=False):
-    if state is None: # toggle
-        state = not b_audio.state
-    if state == b_audio.state:
-        return
-    if not state: # turn on
-        b_audio.configure(background=ACTIVE, activebackground=ACTIVE)
-        b_audio.state = state
-        if not from_obs:
-            cl1.set_input_mute(AUDIO_INPUT, state)
-    else:
-        b_audio.configure(background=default_color, activebackground=default_color)
-        b_audio.state = state
-        if not from_obs:
-            cl1.set_input_mute(AUDIO_INPUT, state)
+class Mute(Button):
+    def __init__(self, frm, input_, text, enabled=True, tooltip=None, grid=None):
+        self.state = None
+        self.input = input_
+        super().__init__(frm, text=text, command=self.click, state='normal' if enabled else 'disabled')
+        if tooltip:
+            ToolTip(self, tooltip, delay=1)
+        if grid:
+            self.grid(row=grid[0], column=grid[1])
+    def click(self, state=None):
+        if state is None:
+            state = not self.state
+        self.obs_update(state)  # update colors
+        cl1.set_input_mute(AUDIO_INPUT, state)
+    def obs_update(self, state):
+        self.state = state
+        if state: # mute on
+            self.configure(background=default_color, activebackground=default_color)
+        else:    # mute off
+            self.configure(background=ACTIVE, activebackground=ACTIVE)
 class Volume(ttk.Frame):
     def __init__(self, frame, input_):
         self.input = input_
@@ -176,16 +183,11 @@ class Volume(ttk.Frame):
         self.label.config(text=f"{dB:.1f} dB")
         self.value.set(state)
 
-b_audio = Button(frm, text='Audio', command=mute_toggle)
-b_audio.grid(row=3, column=0)
-b_audio.state = True
-ToolTip(b_audio, 'Mute/unmute instructor audio.  Red=ON, default=MUTED', delay=1)
-#audio = Scale(frm, from_=-2, to=0, orient=HORIZONTAL, command=volume, showvalue=0, resolution=.01)
-#audio.grid(row=3, column=1, columnspan=5, sticky=E+W)
-#ToolTip(audio, "Current instructor audio gain", delay=1)
-#audio_value = ttk.Label(frm, text="x"); audio_value.grid(row=3, column=6)
+mute = { }
+mute[AUDIO_INPUT_BRCD] = mute_inst = Mute(frm, AUDIO_INPUT_BRCD, "🎤 Brcd", tooltip="Broadcaster microphone, red=ON", enabled=False, grid=(3, 0))
+mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "🎤 Instr", tooltip="Mute/unbute instructor capture, red=ON", grid=(3, 1))
 volume = Volume(frm, AUDIO_INPUT)
-volume.grid(row=3, column=1, columnspan=6, sticky=E+W)
+volume.grid(row=3, column=2, columnspan=5, sticky=E+W)
 
 
 # PIP
@@ -276,7 +278,7 @@ for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3
 
 
 # Playback
-playback_label = ttk.Label(frm, text="Play:")
+playback_label = ttk.Label(frm, text="Jingle:")
 playback_label.grid(row=6, column=0)
 ToolTip(playback_label, f"Row deals with playing transition sounds", delay=1)
 class PlaybackTimer(ttk.Label):
@@ -374,7 +376,8 @@ cl = obs.EventClient(host=hostname, port=port, password=password, timeout=3)
 # scene
 switch(cl1.get_current_program_scene().current_program_scene_name, from_obs=True)
 # audio mute
-mute_toggle(cl1.get_input_mute(AUDIO_INPUT).input_muted, from_obs=True)
+for input_ in mute:
+    mute[input_].obs_update(cl1.get_input_mute(input_).input_muted)
 # audio volume
 dB = cl1.get_input_volume(volume.input).input_volume_db
 print(f"from OBS: {dB} (volume_state)")
@@ -403,9 +406,9 @@ def on_input_volume_changed(data):
 def on_input_mute_state_changed(data):
     """Muting/unmuting"""
     #print(data.attrs())
-    if data.input_name == AUDIO_INPUT:
+    if data.input_name in mute:
         print(f"OBS: mute {data.input_name} to {data.input_muted}")
-        mute_toggle(state=data.input_muted, from_obs=True)
+        mute[data.input_name].obs_update(state=data.input_muted)
 def on_media_input_playback_started(data):
     """Playing media"""
     print("OBS: media playback started")
