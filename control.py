@@ -89,7 +89,7 @@ class QuickBack(ttk.Button):
         mute[AUDIO_INPUT].click(False)
         if quick_sound.state() == ('selected', ):
             playback_buttons['short'].play()
-        time.sleep(3)
+            time.sleep(3)
         switch(self.scene)
         pip_size.update(pip_size.last_state)
         print('sound state: ', quick_sound.state())
