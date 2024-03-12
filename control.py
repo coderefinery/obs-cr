@@ -95,7 +95,7 @@ QuickBreak(frm, 'BREAK', tooltip='Go to break.  Mute audio, hide PIP, and swich 
 QuickBack(frm, 'Screenshare', 'BACK(ss) sound', tooltip='Back from break (screenshare), try to restore settings, play short sound', sound=True,  grid=(1,2))
 QuickBack(frm, NOTES,         'BACK(n) sound',  tooltip='Back from break (notes), try to restore settings, play short sound',       sound=True,  grid=(1,3))
 QuickBack(frm, 'Screenshare', 'BACK(ss)',       tooltip='Back from break (screenshare), try to restore settings, no sound',         sound=False, grid=(1,4))
-QuickBack(frm, 'Screenshare', 'BACK(n)',        tooltip='Back from break (notes), try to restore settings, no sound',               sound=False, grid=(1,5))
+QuickBack(frm, NOTES,         'BACK(n)',        tooltip='Back from break (notes), try to restore settings, no sound',               sound=False, grid=(1,5))
 
 # Scenes
 def switch(name, from_obs=False):
