@@ -22,7 +22,7 @@ SCENE_NAMES = {
     NOTES: ('Notes', 'Notes', True),
     'Empty': ('Empty', 'Empty black screen', True),
     }
-SCENES_WITH_PIP = ['Screenshare', 'ScreenshareCrop', 'ScreenshareLandscape', 'Notes']
+SCENES_WITH_PIP = ['Screenshare', 'ScreenshareCrop', 'ScreenshareLandscape', 'Broadcaster-Screen', NOTES]
 SCENES_SAFE = ['Title', NOTES] # scenes suitable for breaks
 PIP = '_GalleryCapture[hidden]'
 PLAYBACK_INPUT = 'CRaudio'  # for playing transitions sounds, etc.
