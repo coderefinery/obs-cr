@@ -142,17 +142,21 @@ def mute_toggle(state=None, from_obs=False):
         if not from_obs:
             cl1.set_input_mute(AUDIO_INPUT, state)
 def volume(state, from_obs=False, dB=None):
+    print('---')
     print(f'Setting volumes: {state}         {dB}')
     if state is None:
         state = -log10(-(dB-1))
+        print(f'calculated state: {state}')
     state = round(float(state), 2)
     dB = - 10**(-state) + 1
     print(f'calculated dB: ({state})   ->    {dB} ')
     audio_value.config(text=f"{dB:.1f} dB")
     if from_obs:
+        print('from_obs=True')
         audio.set(state)
-        return
-    cl1.set_input_volume(AUDIO_INPUT, vol_db=dB)
+    else:
+        #time.sleep(2)
+        cl1.set_input_volume(AUDIO_INPUT, vol_db=round(dB, 2))
 
 b_audio = Button(frm, text='Audio', command=mute_toggle)
 b_audio.grid(row=3, column=0)
@@ -207,10 +211,10 @@ def pip_crop(n):
     for scene in SCENES_WITH_PIP:
         id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
         transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
-        print('====old', transform)
+        #print('====old', transform)
         for (k,v) in CROP_FACTORS[n].items():
             transform['crop'+k.title()] = v
-        print('====new:', transform)
+        #print('====new:', transform)
         cl1.set_scene_item_transform(scene, id_, transform)
 ttk.Label(frm, text="PIP crop:").grid(row=5, column=0)
 crop_buttons = ttk.Frame(frm)
@@ -337,25 +341,28 @@ update_pip_size()
 def on_current_program_scene_changed(data):
     """Scene changing"""
     #print(data.attrs())
-    print(data.scene_name)
+    print(f"OBS: scene to {data.scene_name}")
     switch(data.scene_name, from_obs=True)
 def on_input_volume_changed(data):
     """Volume change"""
     #print(data.attrs())
     #print(data.input_name, data.input_volume_db)
     if data.input_name == AUDIO_INPUT:
+        print(f"OBS: Volume {data.input_name} to {data.input_volume_db}")
         volume(state=None, dB=data.input_volume_db, from_obs=True)
 def on_input_mute_state_changed(data):
     """Muting/unmuting"""
     #print(data.attrs())
     if data.input_name == AUDIO_INPUT:
+        print(f"OBS: mute {data.input_name} to {data.input_muted}")
         mute_toggle(state=data.input_muted, from_obs=True)
 def on_media_input_playback_started(data):
     """Playing media"""
+    print("OBS: media playback started")
     playback.update_timer()
 def on_scene_item_transform_changed(data):
     """PIP size change"""
-    print(data)
+    print(f"OBS: transform change of {data.scene_item_id}")
     if data.scene_item_id == pip_id:
         pip_size(data.scene_item_transform['scaleX'], from_obs=True)
 
