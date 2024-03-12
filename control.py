@@ -101,7 +101,7 @@ QuickBack(frm, 'ScreenshareCrop', 'BACK(ss-c)', tooltip='Back from break (screen
 QuickBack(frm, NOTES,         'BACK(n)',       tooltip='Back from break (notes),\ntry to restore settings',                grid=(1,5))
 quick_sound = ttk.Checkbutton(frm, text="Jingle?", onvalue=True, offvalue=False)
 quick_sound.grid(row=1, column=7)
-ToolTip(quick_sound, "Play short sound when coming back from break?")
+ToolTip(quick_sound, "Play short sound when coming back from break?\nIf yes, then unmute, play jingle for 3s, then switch scene and increase PIP size.")
 
 
 # Scenes
