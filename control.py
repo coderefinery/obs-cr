@@ -16,12 +16,13 @@ SCENE_NAMES = {
     'Title': ('Title', 'Title screen with logo', True),
     'Gallery': ('Gallery', 'All instructors gallery', True),
     'Screenshare': ('Screen', 'Screenshare, normal portrait mode', True),
+    'ScreenshareCrop': ('ScrLSCrp', 'Screenshare, landscape share but crop portrait out of the left 840 pixels (requires local setup)', True),
     'ScreenshareLandscape': ('ScreenLS', 'Screenshare, landscape mode (requires local setup)', True),
     'Broadcaster-Screen': ('BrdScr', 'Broadcaster local screen (only broadcaster may select)', False),
     NOTES: ('Notes', 'Notes', True),
     'Empty': ('Empty', 'Empty black screen', True),
-     }
-SCENES_WITH_PIP = ['Screenshare', 'ScreenshareLandscape', 'Notes']
+    }
+SCENES_WITH_PIP = ['Screenshare', 'ScreenshareCrop', 'ScreenshareLandscape', 'Notes']
 SCENES_SAFE = ['Title', NOTES] # scenes suitable for breaks
 PIP = '_GalleryCapture[hidden]'
 PLAYBACK_INPUT = 'CRaudio'  # for playing transitions sounds, etc.
