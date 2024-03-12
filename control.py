@@ -1,5 +1,5 @@
 from functools import partial
-from math import log10
+import math
 import time
 
 from tkinter import *
@@ -141,32 +141,70 @@ def mute_toggle(state=None, from_obs=False):
         b_audio.state = state
         if not from_obs:
             cl1.set_input_mute(AUDIO_INPUT, state)
-def volume(state, from_obs=False, dB=None):
-    print('---')
-    print(f'Setting volumes: {state}         {dB}')
-    if state is None:
-        state = -log10(-(dB-1))
-        print(f'calculated state: {state}')
-    state = round(float(state), 2)
-    if dB is None:
-        dB = - 10**(-state) + 1
-    print(f'calculated dB: ({state})   ->    {dB} ')
-    audio_value.config(text=f"{dB:.1f} dB")
-    if from_obs:
-        print('from_obs=True')
-        audio.set(state)
-    else:
-        #time.sleep(2)
-        cl1.set_input_volume(AUDIO_INPUT, vol_db=round(dB, 2))
+#def volume(state, from_obs=False, dB=None):
+#    print('---')
+#    print(f'Setting volumes: {state}         {dB}')
+#    if state is None:
+#        state = -log10(-(dB-1))
+#        print(f'calculated state: {state}')
+#    state = round(float(state), 2)
+#    if dB is None:
+#        dB = - 10**(-state) + 1
+#    print(f'calculated dB: ({state})   ->    {dB} ')
+#    audio_value.config(text=f"{dB:.1f} dB")
+#    if from_obs:
+#        print('from_obs=True')
+#        audio.set(state)
+#    else:
+#        #time.sleep(2)
+#        cl1.set_input_volume(AUDIO_INPUT, vol_db=round(dB, 2))
+class Volume(ttk.Frame):
+    def __init__(self, frame, input_):
+        self.input = input_
+        self.last_dB = None
+        super().__init__(frame)
+        self.value = DoubleVar()
+        self.scale = Scale(self, from_=-2, to=0, orient=HORIZONTAL, command=self.update, showvalue=0, resolution=.05, variable=self.value)
+        self.scale.grid(row=0, column=0, columnspan=5, sticky=E+W)
+        ToolTip(self.scale, "Current instructor audio gain", delay=1)
+        self.label = ttk.Label(self, text="x");
+        self.label.grid(row=0, column=5)
+        self.columnconfigure(tuple(range(6)), weight=1)
+    def to_dB(self, state):
+        return - 10**(-state) + 1
+    def to_state(self, dB):
+        return -math.log10(-(dB-1))
+
+    def update(self, state):
+        print('->')
+        state = float(state)
+        dB = self.to_dB(state)
+        #if self.last_dB is not None and math.isclose(dB, self.last_dB, rel_tol=1e-5):
+        #    return
+        print(f'-> Setting volume: {state}     ->  {dB}')
+        self.label.config(text=f"{dB:.1f} dB")
+        self.last_dB = dB
+        cl1.set_input_volume(self.input, vol_db=dB)
+    def obs_update(self, dB):
+        #if self.last_dB is not None and math.isclose(dB, self.last_dB, rel_tol=1e-5):
+        #    return
+        print('<=')
+        state = self.to_state(dB)
+        print(f'<= Setting volume: {state}    <- {dB}')
+        self.label.config(text=f"{dB:.1f} dB")
+        self.last_dB = dB
+        self.value.set(state)
 
 b_audio = Button(frm, text='Audio', command=mute_toggle)
 b_audio.grid(row=3, column=0)
 b_audio.state = True
 ToolTip(b_audio, 'Mute/unmute instructor audio.  Red=ON, default=MUTED', delay=1)
-audio = Scale(frm, from_=-2, to=0, orient=HORIZONTAL, command=volume, showvalue=0, resolution=.01)
-audio.grid(row=3, column=1, columnspan=5, sticky=E+W)
-ToolTip(audio, "Current instructor audio gain", delay=1)
-audio_value = ttk.Label(frm, text="x"); audio_value.grid(row=3, column=6)
+#audio = Scale(frm, from_=-2, to=0, orient=HORIZONTAL, command=volume, showvalue=0, resolution=.01)
+#audio.grid(row=3, column=1, columnspan=5, sticky=E+W)
+#ToolTip(audio, "Current instructor audio gain", delay=1)
+#audio_value = ttk.Label(frm, text="x"); audio_value.grid(row=3, column=6)
+volume = Volume(frm, AUDIO_INPUT)
+volume.grid(row=3, column=1, columnspan=6, sticky=E+W)
 
 
 # PIP
@@ -327,9 +365,9 @@ switch(cl1.get_current_program_scene().current_program_scene_name, from_obs=True
 # audio mute
 mute_toggle(cl1.get_input_mute(AUDIO_INPUT).input_muted, from_obs=True)
 # audio volume
-dB = cl1.get_input_volume(AUDIO_INPUT).input_volume_db
+dB = cl1.get_input_volume(volume.input).input_volume_db
 print(f"from OBS: {dB} (volume_state)")
-volume(state=None, dB=dB, from_obs=True)
+volume.obs_update(dB)
 # pip size
 pip_id = cl1.get_scene_item_id(NOTES, PIP).scene_item_id
 def update_pip_size():
@@ -348,9 +386,9 @@ def on_input_volume_changed(data):
     """Volume change"""
     #print(data.attrs())
     #print(data.input_name, data.input_volume_db)
-    if data.input_name == AUDIO_INPUT:
+    if data.input_name == volume.input:
         print(f"OBS: Volume {data.input_name} to {data.input_volume_db}")
-        volume(state=None, dB=data.input_volume_db, from_obs=True)
+        volume.obs_update(data.input_volume_db)
 def on_input_mute_state_changed(data):
     """Muting/unmuting"""
     #print(data.attrs())
