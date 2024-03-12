@@ -180,18 +180,19 @@ def pip_size(scale, from_obs=False, save=False):
     #print(f'PIP size: {scale}')
     pip_value.config(text=f"{scale:0.2f}")
     pip.scale = scale
-    pip.set(scale)
     if scale == 0:
         color = default_color
     else:
         color = ACTIVE
+    if from_obs:
+        pip.set(scale)
     for scene in SCENES_WITH_PIP:
-        id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
-        transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
-        transform['scaleX'] = scale
-        transform['scaleY'] = scale
         pip.configure(background=color, activebackground=color)
         if not from_obs:
+            id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
+            transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
+            transform['scaleX'] = scale
+            transform['scaleY'] = scale
             cl1.set_scene_item_transform(scene, id_, transform)
 pip = Scale(frm, from_=0, to=1, orient=HORIZONTAL, command=pip_size, resolution=.01, showvalue=0)
 pip.grid(row=4, column=1, columnspan=5, sticky=E+W)
@@ -317,7 +318,7 @@ cl = obs.EventClient(host=hostname, port=port, password=password, timeout=3)
 
 # Initialize with our current state
 # scene
-switch(cl1.get_current_program_scene().current_program_scene_name)
+switch(cl1.get_current_program_scene().current_program_scene_name, from_obs=True)
 # audio mute
 mute_toggle(cl1.get_input_mute(AUDIO_INPUT).input_muted, from_obs=True)
 # audio volume
