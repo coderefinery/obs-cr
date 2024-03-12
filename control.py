@@ -26,7 +26,7 @@ SCENE_NAMES = {
     'Empty': ('Empty', 'Empty black screen', True),
     }
 SCENES_WITH_PIP = ['Screenshare', 'ScreenshareCrop', 'ScreenshareLandscape', 'Broadcaster-Screen', NOTES]
-SCENES_SAFE = ['Title', NOTES] # scenes suitable for breaks
+SCENES_SAFE = ['Title', NOTES, 'Empty'] # scenes suitable for breaks
 PIP = '_GalleryCapture[hidden]'
 PLAYBACK_INPUT = 'CRaudio'  # for playing transitions sounds, etc.
 
@@ -66,6 +66,7 @@ class QuickBreak(ttk.Button):
         super().__init__(frm, command=self.click, text=text)
         if grid:
             self.grid(row=grid[0], column=grid[1])
+        ToolTip(self, f"Switch to {NOTES}, mute all audio, pip size to 0.")
     def click(self):
         mute[AUDIO_INPUT].click(True)
         mute[AUDIO_INPUT_BRCD].click(True)
@@ -184,7 +185,7 @@ class Volume(ttk.Frame):
         self.value.set(state)
 
 mute = { }
-mute[AUDIO_INPUT_BRCD] = mute_inst = Mute(frm, AUDIO_INPUT_BRCD, "🎤 Brcd", tooltip="Broadcaster microphone, red=ON", enabled=False, grid=(3, 0))
+mute[AUDIO_INPUT_BRCD] = mute_inst = Mute(frm, AUDIO_INPUT_BRCD, "🎤 Brcd", tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False, grid=(3, 0))
 mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "🎤 Instr", tooltip="Mute/unbute instructor capture, red=ON", grid=(3, 1))
 volume = Volume(frm, AUDIO_INPUT)
 volume.grid(row=3, column=2, columnspan=5, sticky=E+W)
