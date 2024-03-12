@@ -48,16 +48,16 @@ ttk.Button(frm, text="Quit", command=root.destroy).grid(column=1, row=0)
 
 
 # Quick actions
-def quick_break():
-    mute_toggle(True)
-    switch(NOTES)
-    pip_size(0, save=True)
-def quick_back(scene=NOTES):
-    print(scene)
-    mute_toggle(False)
-    switch(scene)
-    pip_size(pip.last_scale)
-    playback_buttons['short'].play()
+#def quick_break():
+#    mute_toggle(True)
+#    switch(NOTES)
+#    pip_size.update(0, save=True)
+#def quick_back(scene=NOTES):
+#    print(scene)
+#    mute_toggle(False)
+#    switch(scene)
+#    pip_size.update(pip_size.last_state)
+#    playback_buttons['short'].play()
 class QuickBreak(ttk.Button):
     def __init__(self, frm, text, tooltip=None, grid=None):
         super().__init__(frm, command=self.click, text=text)
@@ -66,7 +66,7 @@ class QuickBreak(ttk.Button):
     def click(self):
         mute_toggle(True)
         switch(NOTES)
-        pip_size(0, save=True)
+        pip_size.update(0, save=True)
         if tooltip:
             ToolTip(self, tooltip, delay=1)
 class QuickBack(ttk.Button):
@@ -81,7 +81,7 @@ class QuickBack(ttk.Button):
     def click(self):
         mute_toggle(False)
         switch(self.scene)
-        pip_size(pip.last_scale)
+        pip_size.update(pip_size.last_state)
         if self.sound:
             playback_buttons['short'].play()
 ttk.Label(frm, text="Quick actions:").grid(row=1, column=0)
@@ -141,27 +141,9 @@ def mute_toggle(state=None, from_obs=False):
         b_audio.state = state
         if not from_obs:
             cl1.set_input_mute(AUDIO_INPUT, state)
-#def volume(state, from_obs=False, dB=None):
-#    print('---')
-#    print(f'Setting volumes: {state}         {dB}')
-#    if state is None:
-#        state = -log10(-(dB-1))
-#        print(f'calculated state: {state}')
-#    state = round(float(state), 2)
-#    if dB is None:
-#        dB = - 10**(-state) + 1
-#    print(f'calculated dB: ({state})   ->    {dB} ')
-#    audio_value.config(text=f"{dB:.1f} dB")
-#    if from_obs:
-#        print('from_obs=True')
-#        audio.set(state)
-#    else:
-#        #time.sleep(2)
-#        cl1.set_input_volume(AUDIO_INPUT, vol_db=round(dB, 2))
 class Volume(ttk.Frame):
     def __init__(self, frame, input_):
         self.input = input_
-        self.last_dB = None
         super().__init__(frame)
         self.value = DoubleVar()
         self.scale = Scale(self, from_=-2, to=0, orient=HORIZONTAL, command=self.update, showvalue=0, resolution=.05, variable=self.value)
@@ -179,20 +161,15 @@ class Volume(ttk.Frame):
         print('->')
         state = float(state)
         dB = self.to_dB(state)
-        #if self.last_dB is not None and math.isclose(dB, self.last_dB, rel_tol=1e-5):
-        #    return
         print(f'-> Setting volume: {state}     ->  {dB}')
         self.label.config(text=f"{dB:.1f} dB")
         self.last_dB = dB
         cl1.set_input_volume(self.input, vol_db=dB)
     def obs_update(self, dB):
-        #if self.last_dB is not None and math.isclose(dB, self.last_dB, rel_tol=1e-5):
-        #    return
         print('<=')
         state = self.to_state(dB)
         print(f'<= Setting volume: {state}    <- {dB}')
         self.label.config(text=f"{dB:.1f} dB")
-        self.last_dB = dB
         self.value.set(state)
 
 b_audio = Button(frm, text='Audio', command=mute_toggle)
@@ -215,34 +192,63 @@ CROP_FACTORS = {
     3:    {'top':  4, 'bottom':  0, 'left': 60, 'right': 60, },  # checked
     5:    {'top': 50, 'bottom':  0, 'left': 11, 'right': 11, },  # checked
     }
-b_pip = ttk.Label(frm, text="PIP size:").grid(row=4, column=0)
-def pip_size(scale, from_obs=False, save=False):
-    scale = float(scale)
-    if save:
-        pip.last_scale = pip.scale
-    #print(f'PIP size: {scale}')
-    pip_value.config(text=f"{scale:0.2f}")
-    pip.scale = scale
-    if scale == 0:
-        color = default_color
-    else:
-        color = ACTIVE
-    if from_obs:
-        pip.set(scale)
-    for scene in SCENES_WITH_PIP:
-        pip.configure(background=color, activebackground=color)
-        if not from_obs:
+#def pip_size(scale, from_obs=False, save=False):
+#    scale = float(scale)
+#    if save:
+#        pip.last_scale = pip.scale
+#    #print(f'PIP size: {scale}')
+#    pip_value.config(text=f"{scale:0.2f}")
+#    pip.scale = scale
+#    if scale == 0:
+#        color = default_color
+#    else:
+#        color = ACTIVE
+#    if from_obs:
+#        pip.set(scale)
+#    for scene in SCENES_WITH_PIP:
+#        pip.configure(background=color, activebackground=color)
+#        if not from_obs:
+#            id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
+#            transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
+#            transform['scaleX'] = scale
+#            transform['scaleY'] = scale
+#            cl1.set_scene_item_transform(scene, id_, transform)
+class PipSize(ttk.Frame):
+    def __init__(self, frame):
+        self.last_state = None
+        super().__init__(frame)
+        self.value = DoubleVar()
+        self.scale = Scale(self, from_=0, to=1, orient=HORIZONTAL, command=self.update, showvalue=0, resolution=.01, variable=self.value)
+        self.scale.grid(row=0, column=0, columnspan=5, sticky=E+W)
+        ToolTip(self.scale, "Cchange the size of the instructor picture-in-picture", delay=1)
+        self.label = ttk.Label(self, text="?");
+        self.label.grid(row=0, column=5)
+        self.columnconfigure(tuple(range(6)), weight=1)
+    def update(self, state, save=False):
+        state = float(state)
+        if save:
+            self.last_state = self.value.get()
+        self.label.configure(text=f"{state:0.2f}")
+        if state == 0:   color = default_color
+        else:            color = ACTIVE
+        self.scale.configure(background=color, activebackground=color)
+        for scene in SCENES_WITH_PIP:
             id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
             transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
-            transform['scaleX'] = scale
-            transform['scaleY'] = scale
+            transform['scaleX'] = state
+            transform['scaleY'] = state
             cl1.set_scene_item_transform(scene, id_, transform)
-pip = Scale(frm, from_=0, to=1, orient=HORIZONTAL, command=pip_size, resolution=.01, showvalue=0)
-pip.grid(row=4, column=1, columnspan=5, sticky=E+W)
-pip.scale = None
-pip.last_scale = .25
-ToolTip(pip, "Change the size of instructor picture-in-picture", delay=1)
-pip_value = ttk.Label(frm, text="?") ; pip_value.grid(row=4, column=6)
+    def obs_update(self, state):
+        self.value.set(state)
+        self.label.configure(text=f"{state:0.2f}")
+        if state == 0:   color = default_color
+        else:            color = ACTIVE
+        self.scale.configure(background=color, activebackground=color)
+
+b_pip = ttk.Label(frm, text="PIP size:")
+b_pip.grid(row=4, column=0)
+pip_size = PipSize(frm)
+pip_size.grid(row=4, column=1, columnspan=6, sticky=E+W)
 # PIP crop selection
 def pip_crop(n):
     print(f"PIP crop → {n} people")
@@ -263,6 +269,7 @@ for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3
     b = ttk.Button(crop_buttons, text=label, command=partial(pip_crop, n))
     b.grid(row=0, column=i)
     ToolTip(b, 'Set PIP to be cropped for this many people.  None=no crop', delay=1)
+
 
 # Playback
 playback_label = ttk.Label(frm, text="Play:")
@@ -372,8 +379,8 @@ volume.obs_update(dB)
 pip_id = cl1.get_scene_item_id(NOTES, PIP).scene_item_id
 def update_pip_size():
     """The on_scene_item_transform_changed doesn't seem to work, so we have to poll here... unfortunately."""
-    pip_size(cl1.get_scene_item_transform(NOTES, pip_id).scene_item_transform['scaleX'], from_obs=True)
-    pip.after(1000, update_pip_size)
+    pip_size.obs_update(cl1.get_scene_item_transform(NOTES, pip_id).scene_item_transform['scaleX'])
+    pip_size.after(1000, update_pip_size)
 update_pip_size()
 
 
@@ -403,7 +410,7 @@ def on_scene_item_transform_changed(data):
     """PIP size change"""
     print(f"OBS: transform change of {data.scene_item_id}")
     if data.scene_item_id == pip_id:
-        pip_size(data.scene_item_transform['scaleX'], from_obs=True)
+        pip_size.obs_update(data.scene_item_transform['scaleX'])
 
 
 cl.callback.register([
