@@ -142,12 +142,12 @@ def mute_toggle(state=None, from_obs=False):
         if not from_obs:
             cl1.set_input_mute(AUDIO_INPUT, state)
 def volume(state, from_obs=False, dB=None):
-    print(f'Setting volumes: {state} {dB}')
+    print(f'Setting volumes: {state}         {dB}')
     if state is None:
         state = -log10(-(dB-1))
     state = float(state)
     dB = - 10**(-state) + 1
-    print(f'calculated dB: {dB} ({state})')
+    print(f'calculated dB: ({state})   ->    {dB} ')
     audio_value.config(text=f"{dB:.1f} dB")
     if from_obs:
         audio.set(state)
@@ -158,7 +158,7 @@ b_audio = Button(frm, text='Audio', command=mute_toggle)
 b_audio.grid(row=3, column=0)
 b_audio.state = True
 ToolTip(b_audio, 'Mute/unmute instructor audio.  Red=ON, default=MUTED', delay=1)
-audio = Scale(frm, from_=-2, to=0, orient=HORIZONTAL, command=volume, showvalue=0, resolution=.02)
+audio = Scale(frm, from_=-2, to=0, orient=HORIZONTAL, command=volume, showvalue=0, resolution=.002)
 audio.grid(row=3, column=1, columnspan=5, sticky=E+W)
 ToolTip(audio, "Current instructor audio gain", delay=1)
 audio_value = ttk.Label(frm, text="x"); audio_value.grid(row=3, column=6)
