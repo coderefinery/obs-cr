@@ -6,6 +6,8 @@ from tkinter import *
 from tkinter import ttk
 from tktooltip import ToolTip
 
+# pylint: disable=redefined-outer-name
+
 
 ACTIVE = 'red'
 ACTIVE_SAFE = 'orange'
@@ -70,32 +72,34 @@ class QuickBreak(ttk.Button):
         if tooltip:
             ToolTip(self, tooltip, delay=1)
 class QuickBack(ttk.Button):
-    def __init__(self, frm, scene, text, sound=False, tooltip=None, grid=None):
+    def __init__(self, frm, scene, text, tooltip=None, grid=None):
         self.scene = scene
-        self.sound = sound
         super().__init__(frm, command=self.click, text=text)
         if tooltip:
             ToolTip(self, tooltip, delay=1)
         if grid:
             self.grid(row=grid[0], column=grid[1])
     def click(self):
+        import threading
+        threading.Thread(target=self.run).start()
+    def run(self):
         mute_toggle(False)
+        if quick_sound.state() == ('selected', ):
+            playback_buttons['short'].play()
+        time.sleep(3)
         switch(self.scene)
         pip_size.update(pip_size.last_state)
-        if self.sound:
-            playback_buttons['short'].play()
+        print('sound state: ', quick_sound.state())
 ttk.Label(frm, text="Quick actions:").grid(row=1, column=0)
-#b = ttk.Button(frm, text="BREAK", command=quick_break); b.grid(row=1, column=1)
-#ToolTip(b, 'Go to break.  Mute audio, hide PIP, and swich to Notes', delay=1)
 QuickBreak(frm, 'BREAK', tooltip='Go to break.  Mute audio, hide PIP, and swich to Notes', grid=(1,1))
-#b = ttk.Button(frm, text="BACK(ss)", command=partial(quick_back, 'Screenshare')); b.grid(row=1, column=2)
-#ToolTip(b, 'Back from break, try to restore settings, play short sound', delay=1)
-#b = ttk.Button(frm, text="BACK(n)", command=quick_back); b.grid(row=1, column=3)
-#ToolTip(b, 'Back from break, go to notes, try to restore settings, play short sound', delay=1)
-QuickBack(frm, 'Screenshare', 'BACK(ss) sound', tooltip='Back from break (screenshare), try to restore settings, play short sound', sound=True,  grid=(1,2))
-QuickBack(frm, NOTES,         'BACK(n) sound',  tooltip='Back from break (notes), try to restore settings, play short sound',       sound=True,  grid=(1,3))
-QuickBack(frm, 'Screenshare', 'BACK(ss)',       tooltip='Back from break (screenshare), try to restore settings, no sound',         sound=False, grid=(1,4))
-QuickBack(frm, NOTES,         'BACK(n)',        tooltip='Back from break (notes), try to restore settings, no sound',               sound=False, grid=(1,5))
+QuickBack(frm, 'Screenshare',       'BACK(ss) ',     tooltip='Back from break (screenshare), \ntry to restore settings', grid=(1,2))
+QuickBack(frm, 'ScreenshareLandscape',   'BACK(ss-ls)',  tooltip='Back from break (notes), \ntry to restore settings',  grid=(1,3))
+QuickBack(frm, 'ScreenshareCrop', 'BACK(ss-c)', tooltip='Back from break (screenshare, cropped landscape mode), \ntry to restore settings',grid=(1,4))
+QuickBack(frm, NOTES,         'BACK(n)',       tooltip='Back from break (notes),\ntry to restore settings',                grid=(1,5))
+quick_sound = ttk.Checkbutton(frm, text="Jingle?", onvalue=True, offvalue=False)
+quick_sound.grid(row=1, column=7)
+ToolTip(quick_sound, "Play short sound when coming back from break?")
+
 
 # Scenes
 def switch(name, from_obs=False):
@@ -215,7 +219,7 @@ CROP_FACTORS = {
 #            cl1.set_scene_item_transform(scene, id_, transform)
 class PipSize(ttk.Frame):
     def __init__(self, frame):
-        self.last_state = None
+        self.last_state = 0.25
         super().__init__(frame)
         self.value = DoubleVar()
         self.scale = Scale(self, from_=0, to=1, orient=HORIZONTAL, command=self.update, showvalue=0, resolution=.01, variable=self.value)
