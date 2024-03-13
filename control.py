@@ -143,10 +143,11 @@ class Mute(Button):
         if grid:
             self.grid(row=grid[0], column=grid[1])
     def click(self, state=None):
+        """True = muted"""
         if state is None:
             state = not self.state
         self.obs_update(state)  # update colors
-        cl1.set_input_mute(AUDIO_INPUT, state)
+        cl1.set_input_mute(self.input, state)
     def obs_update(self, state):
         self.state = state
         if state: # mute on
