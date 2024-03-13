@@ -291,8 +291,13 @@ class PlaybackTimer(ttk.Label):
     def update_timer(self):
         event = cl1.get_media_input_status(self.input_name)
         state = event.media_state  # 'OBS_MEDIA_STATE_PAUSED', 'OBS_MEDIA_STATE_PLAYING'
+        if state in {'OBS_MEDIA_STATE_OPENING', 'OBS_MEDIA_STATE_BUFFERING', 'OBS_MEDIA_STATE_PAUSED', }:
+            print(f"OBS media state: {state}")
+            self.after(500, self.update_timer)
+            return
         if state != 'OBS_MEDIA_STATE_PLAYING':
             self.configure(text='-', background=default_color)
+            print(f"OBS media state: {state}")
             return
         duration = event.media_duration
         cursor = event.media_cursor
