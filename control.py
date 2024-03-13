@@ -265,7 +265,7 @@ class PipSize(ttk.Frame):
         self.scale.configure(background=color, activebackground=color)
     def on_custom_event(self, data):
         """Custom event listener callback from OBS."""
-        print(f'OBS custom event: {vars(data)}')
+        #print(f'OBS custom event: {vars(data)}')
         if hasattr(data, 'pip_last_state'):
             self.last_state = data.pip_last_state
             print(f"Saving last pip size: {self.last_state}")
