@@ -186,8 +186,8 @@ class Volume(ttk.Frame):
         self.value.set(state)
 
 mute = { }
-mute[AUDIO_INPUT_BRCD] = mute_inst = Mute(frm, AUDIO_INPUT_BRCD, " Brcd", tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False, grid=(3, 0))
-mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, " Instr", tooltip="Mute/unbute instructor capture, red=ON", grid=(3, 1))
+mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False, grid=(3, 0))
+mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "Instr", tooltip="Mute/unbute instructor capture, red=ON", grid=(3, 1))
 volume = Volume(frm, AUDIO_INPUT)
 volume.grid(row=3, column=2, columnspan=5, sticky=E+W)
 
