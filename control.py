@@ -282,12 +282,12 @@ for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3
 # Playback
 playback_label = ttk.Label(frm, text="Jingle:")
 playback_label.grid(row=6, column=0)
-ToolTip(playback_label, f"Row deals with playing transition sounds", delay=1)
+ToolTip(playback_label, "Row deals with playing transition sounds", delay=1)
 class PlaybackTimer(ttk.Label):
     def __init__(self, frm, input_name, *args):
         self.input_name = input_name
         super().__init__(frm, *args)
-        self.configure(text='x')
+        self.configure(text='-')
     def update_timer(self):
         event = cl1.get_media_input_status(self.input_name)
         state = event.media_state  # 'OBS_MEDIA_STATE_PAUSED', 'OBS_MEDIA_STATE_PLAYING'
