@@ -71,7 +71,8 @@ class QuickBreak(ttk.Button):
         mute[AUDIO_INPUT].click(True)
         mute[AUDIO_INPUT_BRCD].click(True)
         switch(NOTES)
-        pip_size.update(0, save=True)
+        pip_size.save_last()
+        pip_size.update(0)
         if tooltip:
             ToolTip(self, tooltip, delay=1)
 class QuickBack(ttk.Button):
@@ -91,7 +92,7 @@ class QuickBack(ttk.Button):
             playback_buttons['short'].play()
             time.sleep(3)
         switch(self.scene)
-        pip_size.update(pip_size.last_state)
+        pip_size.restore_last()
         print('sound state: ', quick_sound.state())
 ttk.Label(frm, text="Quick actions:").grid(row=1, column=0)
 QuickBreak(frm, 'BREAK', tooltip='Go to break.  Mute audio, hide PIP, and swich to Notes', grid=(1,1))
@@ -232,10 +233,9 @@ class PipSize(ttk.Frame):
         self.label = ttk.Label(self, text="?");
         self.label.grid(row=0, column=5)
         self.columnconfigure(tuple(range(6)), weight=1)
-    def update(self, state, save=False):
+    def update(self, state):
+        """Update callback of slider"""
         state = float(state)
-        if save:
-            self.last_state = self.value.get()
         self.label.configure(text=f"{state:0.2f}")
         if state == 0:   color = default_color
         else:            color = ACTIVE
@@ -246,12 +246,29 @@ class PipSize(ttk.Frame):
             transform['scaleX'] = state
             transform['scaleY'] = state
             cl1.set_scene_item_transform(scene, id_, transform)
+    def save_last(self):
+        """Save pip size for future restoring"""
+        self.last_state = self.value.get()
+        # The custom event doesn't seem to work - somehow
+        cl1.broadcast_custom_event({'eventData': {'pip_last_state': self.last_state}})
+        cl1.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', 'pip_last_state', self.last_state)
+        print('setting')
+    def restore_last(self):
+        """Restore last pip size"""
+        self.update(self.last_state)
     def obs_update(self, state):
+        """"Callabck for scale update from OBS"""
         self.value.set(state)
         self.label.configure(text=f"{state:0.2f}")
         if state == 0:   color = default_color
         else:            color = ACTIVE
         self.scale.configure(background=color, activebackground=color)
+    def on_custom_event(self, data):
+        """Custom event listener callback from OBS."""
+        print(f'OBS custom event: {vars(data)}')
+        if hasattr(data, 'pip_last_state'):
+            self.last_state = data.pip_last_state
+            print(f"Saving last pip size: {self.last_state}")
 
 b_pip = ttk.Label(frm, text="PIP size:")
 b_pip.grid(row=4, column=0)
@@ -397,7 +414,6 @@ def update_pip_size():
     pip_size.after(1000, update_pip_size)
 update_pip_size()
 
-
 def on_current_program_scene_changed(data):
     """Scene changing"""
     #print(data.attrs())
@@ -421,7 +437,7 @@ def on_media_input_playback_started(data):
     print("OBS: media playback started")
     playback.update_timer()
 def on_scene_item_transform_changed(data):
-    """PIP size change"""
+    """PIP size change.  This doesnt' work."""
     print(f"OBS: transform change of {data.scene_item_id}")
     if data.scene_item_id == pip_id:
         pip_size.obs_update(data.scene_item_transform['scaleX'])
@@ -433,6 +449,7 @@ cl.callback.register([
     on_input_mute_state_changed,
     on_media_input_playback_started,
     #on_scene_item_transform_changed,
+    pip_size.on_custom_event,
     ])
 
 import logging
