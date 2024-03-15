@@ -1,5 +1,6 @@
 from functools import partial
 import math
+import random
 import subprocess
 import time
 
@@ -23,9 +24,9 @@ SCENE_NAMES = {
     'Gallery': ('Gallery', 'All instructors gallery', True),
     'Screenshare': ('Screen', 'Screenshare, normal portrait mode', True),
     'ScreenshareCrop': ('ScrLSCrp', 'Screenshare, landscape share but crop portrait out of the left 840 pixels (requires local setup)', True),
-    'ScreenshareLandscape': ('ScreenLS', 'Screenshare, landscape mode (requires local setup)', True),
+    'ScreenshareLandscape': ('ScreenLS', 'Screenshare, actual full landscape mode inserted into portrait mode (requires local setup)', True),
     'Broadcaster-Screen': ('BrdScr', 'Broadcaster local screen (only broadcaster may select)', False),
-    NOTES: ('Notes', 'Notes', True),
+    NOTES: ('Notes', 'Notes, from the broadcaster computer', True),
     'Empty': ('Empty', 'Empty black screen', True),
     }
 SCENES_WITH_PIP = ['Screenshare', 'ScreenshareCrop', 'ScreenshareLandscape', 'Broadcaster-Screen', NOTES]
@@ -33,7 +34,15 @@ SCENES_WITH_GALLERY = SCENES_WITH_PIP + ['Gallery']
 SCENES_SAFE = ['Title', NOTES, 'Empty'] # scenes suitable for breaks
 PIP = '_GalleryCapture[hidden]'
 PLAYBACK_INPUT = 'CRaudio'  # for playing transitions sounds, etc.
-TOOLTIP_DELAY = 1
+TOOLTIP_DELAY = 0.5
+PLAYBACK_FILES = [
+    {'filename': '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_sound_short.mp3',
+     'label': 'short',
+     'tooltip': 'Short audio for coming back from breaks, 0:03 duration'},
+    {'filename': '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_Jingle_long.mp3',
+     'label': 'long',
+     'tooltip': 'Long theme song for starting/ending day, 1:23 duration'},
+    ]
 
 
 #
@@ -47,6 +56,7 @@ parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
                   help='or set env var OBS_PASSWORD')
 parser.add_argument('--notes-window',
                     help='window name regex for notes document (for scrolling), get via xwininfo -tree -root | less')
+parser.add_argument('--small', action='store_true')
 parser.add_argument('--verbose', action='store_true')
 args = parser.parse_args()
 hostname = args.hostname_port.split(':')[0]
@@ -73,12 +83,13 @@ frm.pack()
 #ttk.Label(frm, text="Hello World!").grid(column=0, row=0)
 t = ttk.Label(frm, text=time.strftime('%H:%M:%S'))
 t.grid(row=0, column=0)
+ToolTip(t, "Current time", delay=TOOLTIP_DELAY)
 def update_time():
     t.config(text=time.strftime('%H:%M:%S'))
     t.after(1000, update_time)
 update_time()
-b_quit = ttk.Button(frm, text="Quit control panel", command=root.destroy)
-b_quit.grid(column=1, row=0, columnspan=2)
+b_quit = ttk.Button(frm, text="Quit", command=root.destroy)
+b_quit.grid(column=7, row=0, columnspan=1)
 ToolTip(b_quit, "Quit the control panel (does not affect the stream)", delay=TOOLTIP_DELAY)
 default_color = root.cget("background")
 default_activecolor = default_color
@@ -86,17 +97,92 @@ color_default = {'background': default_color, 'activebackground': default_color}
 
 
 
+class IndicatorLight(Button):
+    def __init__(self, frm, event_name, label, color='cyan', grid=None, tooltip=None, blink=None):
+        self.event_name = event_name
+        self.color = color
+        self.blink = blink
+        super().__init__(frm, text=label, command=self.click)
+        if grid:
+            self.grid(**grid)
+        if tooltip:
+            ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
+        saved_state = cl1.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name)
+        self.state = None
+        self.blink_id = None
+        if saved_state:
+            self.state = saved_state.slot_value
+        self.update_(self.state)
+    def click(self):
+        self.state = not self.state
+        cl1.broadcast_custom_event({'eventData': {self.event_name: self.state}})
+        cl1.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name, self.state)
+    def update_(self, state):
+        """Callback anytime state is updated."""
+        self.state = state
+        if self.state:
+            self.configure(background=self.color, activebackground=self.color)
+            if self.blink:
+                blink_id = self.blink_id = random.randint(0, 2**64-1)
+                self.after(self.blink, self.do_blink, blink_id, False)
+        else:
+            self.configure(background=default_color, activebackground=default_color)
+    def do_blink(self, blink_id, next_state):
+        """Callback to blink.  Each time flips blink on/off until self.state is not true."""
+        if self.blink_id != blink_id or not self.state:
+            return
+        if next_state:
+            self.configure(background=self.color, activebackground=self.color)
+        else:
+            self.configure(background=default_color, activebackground=default_color)
+        self.after(self.blink, self.do_blink, blink_id, not next_state)
+    def on_custom_event(self, event):
+        if hasattr(event, self.event_name):
+            self.update_(getattr(event, self.event_name))
+class IndicatorMasterLive(Button):
+    def __init__(self, frm, event_name, label, color='cyan', grid=None, tooltip=None):
+        self.event_name = event_name
+        self.color = color
+        super().__init__(frm, text=label)
+        if grid:
+            self.grid(**grid)
+        self.tt = None
+        self.state = { }
+        if tooltip:
+            self.tt_default = tooltip
+            self.tt = ToolTip(self, msg=self.tt_msg, delay=TOOLTIP_DELAY)
+    def update_(self, name, value):
+        self.state[name] = value
+        if any(self.state.values()):
+            self.configure(background=self.color, activebackground=self.color)
+        else:
+            self.configure(background=default_color, activebackground=default_color)
+    def tt_msg(self):
+        return '\n'.join([self.tt_default] + [f'RED: {k} ({v})' for k,v in self.state.items() if v])
+    def on_custom_event(self, event):
+        pass
+il = Label(frm, text="Indicator:")
+il.grid(row=0, column=1)
+ToolTip(il, "Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.", delay=TOOLTIP_DELAY)
+indicator_frame = ttk.Frame(frm)
+indicator_frame.grid(row=0, column=2, columnspan=5, sticky=W)
+indicator_frame.columnconfigure(tuple(range(10)), weight=1)
+indicators = { }
+indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="M live", color='red', grid=dict(row=0, column=0), tooltip="Master live warning.  RED if anything is live on stream.")
+for i, (name, label, color, tt, kwargs) in enumerate([
+    ('masterwarning', 'M Warn', 'red', 'Master warning: some urgent problem, please check.', {'blink': 500}),
+    ('mastercaution', 'M Caution', 'yellow', 'Master caution: some problem, please check.', {}),
+    ('time', 'Time', 'yellow', 'General "check time" indicator.', {}),
+    ('notes', 'Notes', 'cyan', 'General "check shared notes" indicator.', {}),
+    ('question', 'Question', 'cyan', 'Important question, check chat or notes', {}),
+    ]):
+    indicators[name] = IndicatorLight(indicator_frame, 'indicator-'+name, label, color=color, grid=dict(row=0, column=i+1), tooltip=tt, **kwargs)
+
+
+
+
+
 # Quick actions
-#def quick_break():
-#    mute_toggle(True)
-#    switch(NOTES)
-#    pip_size.update(0, save=True)
-#def quick_back(scene=NOTES):
-#    print(scene)
-#    mute_toggle(False)
-#    switch(scene)
-#    pip_size.update(pip_size.last_state)
-#    playback_buttons['short'].play()
 class QuickBreak(ttk.Button):
     def __init__(self, frm, text, tooltip=None, grid=None):
         super().__init__(frm, command=self.click, text=text)
@@ -129,15 +215,22 @@ class QuickBack(ttk.Button):
         switch(self.scene)
         pip_size.restore_last()
         print('sound state: ', quick_sound.state())
-ttk.Label(frm, text="Quick actions:").grid(row=1, column=0)
-QuickBreak(frm, 'BREAK', tooltip='Go to break.  Mute audio, hide PIP, and swich to Notes', grid=(1,1))
-QuickBack(frm, 'Screenshare',       'BACK(ss) ',     tooltip='Back from break (screenshare), \ntry to restore settings', grid=(1,2))
-QuickBack(frm, 'ScreenshareLandscape',   'BACK(ss-ls)',  tooltip='Back from break (notes), \ntry to restore settings',  grid=(1,3))
-QuickBack(frm, 'ScreenshareCrop', 'BACK(ss-c)', tooltip='Back from break (screenshare, cropped landscape mode), \ntry to restore settings',grid=(1,4))
-QuickBack(frm, NOTES,         'BACK(n)',       tooltip='Back from break (notes),\ntry to restore settings',                grid=(1,5))
-quick_sound = ttk.Checkbutton(frm, text="Jingle?", onvalue=True, offvalue=False)
-quick_sound.grid(row=1, column=7)
-ToolTip(quick_sound, "Play short sound when coming back from break?\nIf yes, then unmute, play jingle for 3s, then switch scene and increase PIP size.")
+qa_label = ttk.Label(frm, text="Quick actions:")
+qa_label.grid(row=1, column=0)
+ToolTip(qa_label, "Quick actions.  Clicking button does something for you.", delay=TOOLTIP_DELAY)
+QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes', grid=(1,1))
+
+if not args.small:
+    QuickBack(frm, 'Screenshare',       'BACK(ss) ',     tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings', grid=(1,2))
+    QuickBack(frm, 'ScreenshareLandscape',   'BACK(ss-ls)',  tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings',  grid=(1,3))
+    QuickBack(frm, 'ScreenshareCrop', 'BACK(ss-c)', tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings',grid=(1,4))
+    QuickBack(frm, NOTES,         'BACK(n)',       tooltip='Back from break\nSwitch to Notes,\ntry to restore settings',                grid=(1,5))
+    quick_sound = ttk.Checkbutton(frm, text="Jingle?", onvalue=True, offvalue=False)
+    quick_sound.grid(row=1, column=7)
+    ToolTip(quick_sound,
+            "Play short sound when coming back from break?\n"
+            "If yes, then unmute, play jingle for 3s, then switch scene and increase PIP size.\n"
+            "if no, immediately restore the settings.", delay=TOOLTIP_DELAY)
 
 
 # Scenes
@@ -157,6 +250,7 @@ def switch(name, from_obs=False):
     if name in SCENES_SAFE:
         color = ACTIVE_SAFE
     SCENES[name].configure(background=color, activebackground=color)
+    indicators['live'].update_('scene-visible', name if (name not in SCENES_SAFE) else '')
     #SCENES[name].configure()
 SCENES = { }
 for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
@@ -165,7 +259,8 @@ for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
     b.grid(column=i, row=2)
     if tooltip:
         ToolTip(b, tooltip, delay=TOOLTIP_DELAY)
-
+    if args.small:
+        b.grid_forget()
 
 
 # Audio
@@ -190,6 +285,7 @@ class Mute(Button):
             self.configure(background=default_color, activebackground=default_color)
         else:    # mute off
             self.configure(background=ACTIVE, activebackground=ACTIVE)
+        indicators['live'].update_('mute-'+self.input, 'unmuted' if not state else None)
 class Volume(ttk.Frame):
     def __init__(self, frame, input_):
         self.input = input_
@@ -223,9 +319,13 @@ class Volume(ttk.Frame):
 
 mute = { }
 mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False, grid=(3, 0))
-mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "Instr", tooltip="Mute/unbute instructor capture, red=ON", grid=(3, 1))
+mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "Instr", tooltip="Mute/unmute instructor capture, red=ON", grid=(3, 1))
 volume = Volume(frm, AUDIO_INPUT)
 volume.grid(row=3, column=2, columnspan=5, sticky=E+W)
+if args.small:
+    print('small')
+    [ x.grid_forget() for x in mute.values() ]
+    volume.grid_forget()
 
 
 # PIP
@@ -264,7 +364,7 @@ class PipSize(ttk.Frame):
         self.value = DoubleVar()
         self.scale = Scale(self, from_=0, to=1, orient=HORIZONTAL, command=self.update, showvalue=0, resolution=.01, variable=self.value)
         self.scale.grid(row=0, column=0, columnspan=5, sticky=E+W)
-        ToolTip(self.scale, "Cchange the size of the instructor picture-in-picture", delay=TOOLTIP_DELAY)
+        ToolTip(self.scale, "Change the size of the instructor picture-in-picture, 0=invisible", delay=TOOLTIP_DELAY)
         self.label = ttk.Label(self, text="?");
         self.label.grid(row=0, column=5)
         self.columnconfigure(tuple(range(6)), weight=1)
@@ -274,6 +374,8 @@ class PipSize(ttk.Frame):
         self.label.configure(text=f"{state:0.2f}")
         if state == 0:   color = default_color
         else:            color = ACTIVE
+        indicators['live'].update_('pip-size', 'visible' if state != 0 else None)
+
         self.scale.configure(background=color, activebackground=color)
         for scene in SCENES_WITH_PIP:
             id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
@@ -307,6 +409,7 @@ class PipSize(ttk.Frame):
 
 b_pip = ttk.Label(frm, text="PIP size:")
 b_pip.grid(row=4, column=0)
+ToolTip(b_pip, "Change size of instuctor picture-in-picture.", delay=TOOLTIP_DELAY)
 pip_size = PipSize(frm)
 pip_size.grid(row=4, column=1, columnspan=6, sticky=E+W)
 # PIP crop selection
@@ -321,7 +424,12 @@ def pip_crop(n):
             transform['crop'+k.title()] = v
         #print('====new:', transform)
         cl1.set_scene_item_transform(scene, id_, transform)
-ttk.Label(frm, text="PIP crop:").grid(row=5, column=0)
+b_cropbuttons = ttk.Label(frm, text="PIP crop:")
+b_cropbuttons.grid(row=5, column=0)
+ToolTip(b_cropbuttons,
+        "PIP insert can be cropped to suit different numbers of people (this comes from "
+        "how Zoom lays it out for different numbers of people.  Click a button if "
+        "it doesn't fit right into the corner.", delay=TOOLTIP_DELAY)
 crop_buttons = ttk.Frame(frm)
 crop_buttons.columnconfigure(tuple(range(5)), weight=1)
 crop_buttons.grid(row=5, column=1, columnspan=5)
@@ -329,7 +437,9 @@ for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3
     b = ttk.Button(crop_buttons, text=label, command=partial(pip_crop, n))
     b.grid(row=0, column=i)
     ToolTip(b, 'Set PIP to be cropped for this many people.  None=no crop', delay=TOOLTIP_DELAY)
-
+if args.small:
+    for x in [b_pip, pip_size, b_cropbuttons, crop_buttons]:
+        x.grid_forget()
 
 # Playback
 playback_label = ttk.Label(frm, text="Jingle:")
@@ -372,16 +482,8 @@ class PlayFile(ttk.Button):
     def play(self):
         print(f'setting input to {self.filename}')
         cl1.set_input_settings(PLAYBACK_INPUT, {'local_file': self.filename}, overlay=True)
-playback_files = [
-    {'filename': '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_Jingle_long.mp3',
-     'label': 'long',
-     'tooltip': 'Long theme song for starting/ending day, 1:23 duration'},
-    {'filename': '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_sound_short.mp3',
-     'label': 'short',
-     'tooltip': 'Short audio for coming back from breaks, 0:03 duration'},
-    ]
 playback_buttons = { }
-for i, file_ in enumerate(playback_files, start=2):
+for i, file_ in enumerate(PLAYBACK_FILES, start=2):
     pf = playback_buttons[file_['label']] = PlayFile(frm, **file_)
     pf.grid(row=6, column=i)
     ToolTip(pf, f"Play the audio file {file_['label']}", delay=TOOLTIP_DELAY)
@@ -392,56 +494,16 @@ class PlayStop(ttk.Button):
         print("stopping playback")
         cl1.trigger_media_input_action(PLAYBACK_INPUT, 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP')
 ps = PlayStop(frm)
-ps.grid(row=6, column=6)
+ps.grid(row=6, column=2+len(PLAYBACK_FILES))
 ToolTip(ps, "Stop all playbacks", delay=TOOLTIP_DELAY)
-
-class IndicatorLight(Button):
-    def __init__(self, frm, event_name, label, color='cyan', grid=None, tooltip=None):
-        self.event_name = event_name
-        self.color = color
-        super().__init__(frm, text=label, command=self.click)
-        if grid:
-            self.grid(**grid)
-        if tooltip:
-            ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
-        saved_state = cl1.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name)
-        self.state = None
-        if saved_state:
-            self.state = saved_state.slot_value
-        self.update_(self.state)
-    def click(self):
-        self.state = not self.state
-        cl1.broadcast_custom_event({'eventData': {self.event_name: self.state}})
-        cl1.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name, self.state)
-    def update_(self, state):
-        self.state = state
-        if self.state:
-            self.configure(background=self.color, activebackground=self.color)
-        else:
-            self.configure(background=default_color, activebackground=default_color)
-    def on_custom_event(self, event):
-        if hasattr(event, self.event_name):
-            self.update_(getattr(event, self.event_name))
-il = Label(frm, text="Indicator:")
-il.grid(row=7, column=0)
-ToolTip(il, "Synced indicator lights", delay=TOOLTIP_DELAY)
-indicator_frame = ttk.Frame(frm)
-indicator_frame.grid(row=7, column=1, columnspan=5, sticky=W)
-indicator_frame.columnconfigure(tuple(range(10)), weight=1)
-indicators = { }
-for i, (name, label, color, tt) in enumerate([
-    ('masterwarning', 'M Warning', 'red', 'Master warning: some problem, please check.'),
-    ('mastercaution', 'M Caution', 'yellow', 'Master caution: some problem, please check.'),
-    ('time', 'Time', 'yellow', 'Check time'),
-    ('notes', 'Notes', 'cyan', 'Check notes'),
-    ('question', 'Question', 'cyan', 'Important question, check chat or notes'),
-    ]):
-    indicators[name] = IndicatorLight(indicator_frame, 'indicator-'+name, label, color=color, grid=dict(row=0, column=i), tooltip=tt)
+if args.small:
+    for x in [playback_label, playback, ps] + list(playback_buttons.values()):
+        x.grid_forget()
 
 
 
 class ScrollNotes(ttk.Button):
-    def __init__(self, label, event, grid=None, tooltip=None):
+    def __init__(self, frm, label, event, grid=None, tooltip=None):
         self.event = event
         super().__init__(frm, text=label, command=self.click)
         if grid:
@@ -452,10 +514,18 @@ class ScrollNotes(ttk.Button):
         cl1.broadcast_custom_event({'eventData': {self.event: True}})
     def on_custom_event(self, event):
         pass
-il = Label(frm, text="Notes scroll:")
-il.grid(row=8, column=0)
-b = ScrollNotes("Up", event='notes_scroll_up', grid=(8,1), tooltip="Scroll notes up")
-b = ScrollNotes("Down", event='notes_scroll_down', grid=(8,2), tooltip="Scroll notes down")
+sn_frame= ttk.Frame(frm)
+sn_frame.columnconfigure(tuple(range(3)), weight=1)
+if args.small:
+    sn_frame.grid(row=1, column=3, columnspan=3)
+else:
+    sn_frame.grid(row=8, column=0, columnspan=3)
+
+sn_label = Label(sn_frame, text="Notes scroll:")
+sn_label.grid(row=0, column=0)
+ToolTip(sn_label, "Tools for scrolling notes up and down (on the broadcaster computer), in the Notes view.", delay=TOOLTIP_DELAY)
+b = ScrollNotes(sn_frame, "Up", event='notes_scroll_up', grid=(0,1), tooltip="Scroll notes up")
+b = ScrollNotes(sn_frame, "Down", event='notes_scroll_down', grid=(0,2), tooltip="Scroll notes down")
 
 
 
