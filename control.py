@@ -92,14 +92,14 @@ frm.grid()
 frm.pack()
 #ttk.Label(frm, text="Hello World!").grid(column=0, row=0)
 t = ttk.Label(frm, text=time.strftime('%H:%M:%S'))
-t.grid(row=0, column=0)
+t.grid(row=0, column=7)
 ToolTip(t, "Current time", delay=TOOLTIP_DELAY)
 def update_time():
     t.config(text=time.strftime('%H:%M:%S'))
     t.after(1000, update_time)
 update_time()
 b_quit = ttk.Button(frm, text="Quit", command=root.destroy)
-b_quit.grid(column=7, row=0, columnspan=1)
+#b_quit.grid(column=7, row=0, columnspan=1)
 ToolTip(b_quit, "Quit the control panel (does not affect the stream)", delay=TOOLTIP_DELAY)
 default_color = root.cget("background")
 default_activecolor = default_color
@@ -173,10 +173,10 @@ class IndicatorMasterLive(Button):
     def on_custom_event(self, event):
         pass
 il = Label(frm, text="Indicator:")
-il.grid(row=0, column=1)
+il.grid(row=0, column=0)
 ToolTip(il, "Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.", delay=TOOLTIP_DELAY)
 indicator_frame = ttk.Frame(frm)
-indicator_frame.grid(row=0, column=2, columnspan=5, sticky=W)
+indicator_frame.grid(row=0, column=1, columnspan=5, sticky=W)
 indicator_frame.columnconfigure(tuple(range(10)), weight=1)
 indicators = { }
 indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="Live", color='red', grid=dict(row=0, column=0), tooltip="Master live warning.  RED if anything is live on stream.")
@@ -186,6 +186,7 @@ for i, (name, label, color, tt, kwargs) in enumerate([
     ('time', 'Time', 'yellow', 'General "check time" indicator.', {}),
     ('notes', 'Notes', 'cyan', 'General "check shared notes" indicator.', {}),
     ('question', 'Question', 'cyan', 'Important question, check chat or notes', {}),
+    ('question', 'Chat', 'cyan', 'check chat', {}),
     ]):
     indicators[name] = IndicatorLight(indicator_frame, 'indicator-'+name, label, color=color, grid=dict(row=0, column=i+1), tooltip=tt, **kwargs)
 
@@ -226,7 +227,7 @@ class QuickBack(ttk.Button):
         switch(self.scene)
         pip_size.restore_last()
         print('sound state: ', quick_sound.state())
-qa_label = ttk.Label(frm, text="Quick actions:")
+qa_label = ttk.Label(frm, text="Presets:")
 qa_label.grid(row=1, column=0)
 ToolTip(qa_label, "Quick actions.  Clicking button does something for you.", delay=TOOLTIP_DELAY)
 QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes', grid=(1,1))
@@ -328,11 +329,14 @@ class Volume(ttk.Frame):
         self.label.config(text=f"{dB:.1f} dB")
         self.value.set(state)
 
+audio_l = ttk.Label(frm, text="Audio:")
+audio_l.grid(row=3, column=0)
+ToolTip(audio_l, "Audio controls (mute/unmute/level)", delay=TOOLTIP_DELAY)
 mute = { }
-mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False, grid=(3, 0))
-mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "Instr", tooltip="Mute/unmute instructor capture, red=ON", grid=(3, 1))
+mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False, grid=(3, 1))
+mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "Instr", tooltip="Mute/unmute instructor capture, red=ON", grid=(3, 2))
 volume = Volume(frm, AUDIO_INPUT)
-volume.grid(row=3, column=2, columnspan=5, sticky=E+W)
+volume.grid(row=3, column=3, columnspan=4, sticky=E+W)
 if args.small:
     print('small')
     [ x.grid_forget() for x in mute.values() ]
