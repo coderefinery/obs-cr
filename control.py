@@ -170,8 +170,8 @@ indicator_frame.columnconfigure(tuple(range(10)), weight=1)
 indicators = { }
 indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="M live", color='red', grid=dict(row=0, column=0), tooltip="Master live warning.  RED if anything is live on stream.")
 for i, (name, label, color, tt, kwargs) in enumerate([
-    ('masterwarning', 'M Warn', 'red', 'Master warning: some urgent problem, please check.', {'blink': 500}),
-    ('mastercaution', 'M Caution', 'yellow', 'Master caution: some problem, please check.', {}),
+    ('masterwarning', 'Warn', 'red', 'Master warning: some urgent issue, please check.', {'blink': 500}),
+    ('mastercaution', 'Caution', 'yellow', 'Master caution: some issue, please check.', {}),
     ('time', 'Time', 'yellow', 'General "check time" indicator.', {}),
     ('notes', 'Notes', 'cyan', 'General "check shared notes" indicator.', {}),
     ('question', 'Question', 'cyan', 'Important question, check chat or notes', {}),
