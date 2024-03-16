@@ -338,7 +338,7 @@ mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "Instr", tooltip="Mute/unmute instruc
 volume = Volume(frm, AUDIO_INPUT)
 volume.grid(row=3, column=3, columnspan=4, sticky=E+W)
 if args.small:
-    print('small')
+    audio_l.grid_forget()
     [ x.grid_forget() for x in mute.values() ]
     volume.grid_forget()
 
