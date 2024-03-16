@@ -57,6 +57,7 @@ parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
 parser.add_argument('--notes-window',
                     help='window name regex for notes document (for scrolling), get via xwininfo -tree -root | less')
 parser.add_argument('--small', action='store_true')
+parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel")
 parser.add_argument('--verbose', action='store_true')
 args = parser.parse_args()
 hostname = args.hostname_port.split(':')[0]
@@ -64,10 +65,19 @@ port = args.hostname_port.split(':')[1]
 password = args.password
 
 # OBS websocket
-import obsws_python as obs
-cl1 = obs.ReqClient(host=hostname, port=port, password=password, timeout=3)
-cl = obs.EventClient(host=hostname, port=port, password=password, timeout=3)
-
+if not args.test:
+    import obsws_python as obs
+    obsreq = obs.ReqClient(host=hostname, port=port, password=password, timeout=3)
+    cl = obs.EventClient(host=hostname, port=port, password=password, timeout=3)
+    obssubscribe = cl.callabck.register
+else:
+    class Request():
+        def __call(self, _method, *args, **kwargs):
+            print(f'[test] OBS request: {_method}({args}, {kwargs})')
+        def __getattr__(self, name):
+            return partial(self.__call, name)
+    obsreq = Request()
+    obssubscribe = getattr(obsreq, 'callback.register')
 
 
 #
@@ -107,7 +117,7 @@ class IndicatorLight(Button):
             self.grid(**grid)
         if tooltip:
             ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
-        saved_state = cl1.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name)
+        saved_state = obsreq.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name)
         self.state = None
         self.blink_id = None
         if saved_state:
@@ -115,8 +125,9 @@ class IndicatorLight(Button):
         self.update_(self.state)
     def click(self):
         self.state = not self.state
-        cl1.broadcast_custom_event({'eventData': {self.event_name: self.state}})
-        cl1.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name, self.state)
+        obsreq.broadcast_custom_event({'eventData': {self.event_name: self.state}})
+        obsreq.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name, self.state)
+        self.update_(self.state)
     def update_(self, state):
         """Callback anytime state is updated."""
         self.state = state
@@ -143,7 +154,7 @@ class IndicatorMasterLive(Button):
     def __init__(self, frm, event_name, label, color='cyan', grid=None, tooltip=None):
         self.event_name = event_name
         self.color = color
-        super().__init__(frm, text=label)
+        super().__init__(frm, text=label, state='disabled')
         if grid:
             self.grid(**grid)
         self.tt = None
@@ -168,7 +179,7 @@ indicator_frame = ttk.Frame(frm)
 indicator_frame.grid(row=0, column=2, columnspan=5, sticky=W)
 indicator_frame.columnconfigure(tuple(range(10)), weight=1)
 indicators = { }
-indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="M live", color='red', grid=dict(row=0, column=0), tooltip="Master live warning.  RED if anything is live on stream.")
+indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="Live", color='red', grid=dict(row=0, column=0), tooltip="Master live warning.  RED if anything is live on stream.")
 for i, (name, label, color, tt, kwargs) in enumerate([
     ('masterwarning', 'Warn', 'red', 'Master warning: some urgent issue, please check.', {'blink': 500}),
     ('mastercaution', 'Caution', 'yellow', 'Master caution: some issue, please check.', {}),
@@ -245,7 +256,7 @@ def switch(name, from_obs=False):
         return
     # Set new button
     if not from_obs:
-        cl1.set_current_program_scene(name)
+        obsreq.set_current_program_scene(name)
     color = ACTIVE
     if name in SCENES_SAFE:
         color = ACTIVE_SAFE
@@ -266,7 +277,7 @@ for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
 # Audio
 class Mute(Button):
     def __init__(self, frm, input_, text, enabled=True, tooltip=None, grid=None):
-        self.state = None
+        self.state = None  # True = Muted, False = unmuted (LIVE)
         self.input = input_
         super().__init__(frm, text=text, command=self.click, state='normal' if enabled else 'disabled')
         if tooltip:
@@ -278,7 +289,7 @@ class Mute(Button):
         if state is None:
             state = not self.state
         self.obs_update(state)  # update colors
-        cl1.set_input_mute(self.input, state)
+        obsreq.set_input_mute(self.input, state)
     def obs_update(self, state):
         self.state = state
         if state: # mute on
@@ -309,7 +320,7 @@ class Volume(ttk.Frame):
         print(f'-> Setting volume: {state}     ->  {dB}')
         self.label.config(text=f"{dB:.1f} dB")
         self.last_dB = dB
-        cl1.set_input_volume(self.input, vol_db=dB)
+        obsreq.set_input_volume(self.input, vol_db=dB)
     def obs_update(self, dB):
         print('<=')
         state = self.to_state(dB)
@@ -352,11 +363,11 @@ CROP_FACTORS = {
 #    for scene in SCENES_WITH_PIP:
 #        pip.configure(background=color, activebackground=color)
 #        if not from_obs:
-#            id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
-#            transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
+#            id_ = obsreq.get_scene_item_id(scene, PIP).scene_item_id
+#            transform = obsreq.get_scene_item_transform(scene, id_).scene_item_transform
 #            transform['scaleX'] = scale
 #            transform['scaleY'] = scale
-#            cl1.set_scene_item_transform(scene, id_, transform)
+#            obsreq.set_scene_item_transform(scene, id_, transform)
 class PipSize(ttk.Frame):
     def __init__(self, frame):
         self.last_state = 0.25
@@ -378,17 +389,17 @@ class PipSize(ttk.Frame):
 
         self.scale.configure(background=color, activebackground=color)
         for scene in SCENES_WITH_PIP:
-            id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
-            transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
+            id_ = obsreq.get_scene_item_id(scene, PIP).scene_item_id
+            transform = obsreq.get_scene_item_transform(scene, id_).scene_item_transform
             transform['scaleX'] = state
             transform['scaleY'] = state
-            cl1.set_scene_item_transform(scene, id_, transform)
+            obsreq.set_scene_item_transform(scene, id_, transform)
     def save_last(self):
         """Save pip size for future restoring"""
         self.last_state = self.value.get()
         # The custom event doesn't seem to work - somehow
-        cl1.broadcast_custom_event({'eventData': {'pip_last_state': self.last_state}})
-        cl1.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', 'pip_last_state', self.last_state)
+        obsreq.broadcast_custom_event({'eventData': {'pip_last_state': self.last_state}})
+        obsreq.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', 'pip_last_state', self.last_state)
         print('setting')
     def restore_last(self):
         """Restore last pip size"""
@@ -417,13 +428,13 @@ def pip_crop(n):
     print(f"PIP crop → {n} people")
 
     for scene in SCENES_WITH_PIP:  # TODO: with gallery
-        id_ = cl1.get_scene_item_id(scene, PIP).scene_item_id
-        transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
+        id_ = obsreq.get_scene_item_id(scene, PIP).scene_item_id
+        transform = obsreq.get_scene_item_transform(scene, id_).scene_item_transform
         #print('====old', transform)
         for (k,v) in CROP_FACTORS[n].items():
             transform['crop'+k.title()] = v
         #print('====new:', transform)
-        cl1.set_scene_item_transform(scene, id_, transform)
+        obsreq.set_scene_item_transform(scene, id_, transform)
 b_cropbuttons = ttk.Label(frm, text="PIP crop:")
 b_cropbuttons.grid(row=5, column=0)
 ToolTip(b_cropbuttons,
@@ -451,7 +462,7 @@ class PlaybackTimer(ttk.Label):
         super().__init__(frm, *args)
         self.configure(text='-')
     def update_timer(self):
-        event = cl1.get_media_input_status(self.input_name)
+        event = obsreq.get_media_input_status(self.input_name)
         state = event.media_state  # 'OBS_MEDIA_STATE_PAUSED', 'OBS_MEDIA_STATE_PLAYING'
         if state in {'OBS_MEDIA_STATE_OPENING', 'OBS_MEDIA_STATE_BUFFERING', 'OBS_MEDIA_STATE_PAUSED', }:
             print(f"OBS media state: {state}")
@@ -481,7 +492,7 @@ class PlayFile(ttk.Button):
         ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
     def play(self):
         print(f'setting input to {self.filename}')
-        cl1.set_input_settings(PLAYBACK_INPUT, {'local_file': self.filename}, overlay=True)
+        obsreq.set_input_settings(PLAYBACK_INPUT, {'local_file': self.filename}, overlay=True)
 playback_buttons = { }
 for i, file_ in enumerate(PLAYBACK_FILES, start=2):
     pf = playback_buttons[file_['label']] = PlayFile(frm, **file_)
@@ -492,7 +503,7 @@ class PlayStop(ttk.Button):
         super().__init__(frm, text='StopPlay', command=self.stop)
     def stop(self):
         print("stopping playback")
-        cl1.trigger_media_input_action(PLAYBACK_INPUT, 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP')
+        obsreq.trigger_media_input_action(PLAYBACK_INPUT, 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP')
 ps = PlayStop(frm)
 ps.grid(row=6, column=2+len(PLAYBACK_FILES))
 ToolTip(ps, "Stop all playbacks", delay=TOOLTIP_DELAY)
@@ -511,7 +522,7 @@ class ScrollNotes(ttk.Button):
         if tooltip:
             ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
     def click(self):
-        cl1.broadcast_custom_event({'eventData': {self.event: True}})
+        obsreq.broadcast_custom_event({'eventData': {self.event: True}})
     def on_custom_event(self, event):
         pass
 sn_frame= ttk.Frame(frm)
@@ -534,15 +545,15 @@ b = ScrollNotes(sn_frame, "Down", event='notes_scroll_down', grid=(0,2), tooltip
 #def ann_toggle():
 #    if ann_toggle = False
 #    for scene in SCENES:
-#        id_ = cl1.get_scene_item_id(scene, 'Announcement'.scene_item_id
-#        transform = cl1.get_scene_item_transform(scene, id_).scene_item_transform
+#        id_ = obsreq.get_scene_item_id(scene, 'Announcement'.scene_item_id
+#        transform = obsreq.get_scene_item_transform(scene, id_).scene_item_transform
 #
 #def ann_update(text=None, from_obs=False):
 #    if from_obs: # set value
 #        ann.set(text)
 #    text = ann.get()
 #    print(text)
-#    cl1.set_input_settings('Announcement', {'text': text}, True)
+#    obsreq.set_input_settings('Announcement', {'text': text}, True)
 #ann_toggle = Button(frm, text="Ann text", command=ann_toggle) ; ann_toggle.grid(row=6, column=0)
 #ann_toggle.state = False
 #ToolTip(ann_toggle, 'Toggle anouncement text visibility.', delay=TOOLTIP_DELAY)
@@ -554,22 +565,23 @@ b = ScrollNotes(sn_frame, "Down", event='notes_scroll_down', grid=(0,2), tooltip
 
 
 # Initialize with our current state
-# scene
-switch(cl1.get_current_program_scene().current_program_scene_name, from_obs=True)
-# audio mute
-for input_ in mute:
-    mute[input_].obs_update(cl1.get_input_mute(input_).input_muted)
-# audio volume
-dB = cl1.get_input_volume(volume.input).input_volume_db
-print(f"from OBS: {dB} (volume_state)")
-volume.obs_update(dB)
-# pip size
-pip_id = cl1.get_scene_item_id(NOTES, PIP).scene_item_id
-def update_pip_size():
-    """The on_scene_item_transform_changed doesn't seem to work, so we have to poll here... unfortunately."""
-    pip_size.obs_update(cl1.get_scene_item_transform(NOTES, pip_id).scene_item_transform['scaleX'])
-    pip_size.after(1000, update_pip_size)
-#update_pip_size()
+if not args.test:
+    # scene
+    switch(obsreq.get_current_program_scene().current_program_scene_name, from_obs=True)
+    # audio mute
+    for input_ in mute:
+        mute[input_].obs_update(obsreq.get_input_mute(input_).input_muted)
+    # audio volume
+    dB = obsreq.get_input_volume(volume.input).input_volume_db
+    print(f"from OBS: {dB} (volume_state)")
+    volume.obs_update(dB)
+    # pip size
+    pip_id = obsreq.get_scene_item_id(NOTES, PIP).scene_item_id
+    def update_pip_size():
+        """The on_scene_item_transform_changed doesn't seem to work, so we have to poll here... unfortunately."""
+        pip_size.obs_update(obsreq.get_scene_item_transform(NOTES, pip_id).scene_item_transform['scaleX'])
+        pip_size.after(1000, update_pip_size)
+    #update_pip_size()
 
 def on_current_program_scene_changed(data):
     """Scene changing"""
@@ -617,7 +629,7 @@ def on_custom_event(data):
 # xdotool search --onlyvisible --name '^Collaborative document.*Private' windowfocus key Down windowfocus $(xdotool getwindowfocus)
 
 
-cl.callback.register([
+obssubscribe([
     on_current_program_scene_changed,
     on_input_volume_changed,
     on_input_mute_state_changed,
