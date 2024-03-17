@@ -65,6 +65,7 @@ parser.add_argument('--notes-window',
                     help='window name regex for notes document (for scrolling), get via xwininfo -tree -root | less')
 parser.add_argument('--small', action='store_true')
 parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel")
+parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
 parser.add_argument('--verbose', action='store_true')
 args = cli_args = parser.parse_args()
 
@@ -90,14 +91,15 @@ else:
 class Helper:
     grid_pos = None
     grid_s_pos = None
+    tt = None   # tooltip object
     def __init__(self, *args, tooltip=None, grid=None, grid_s=None, **kwargs):
-        print("Helper init", grid, tooltip)
+        #print("Helper init", grid, tooltip if isinstance(tooltip, str) else '[non-string tooltip]')
         #print(self)
         super().__init__(*args, **kwargs)
         if tooltip is None and hasattr(self, 'tooltip'):
             tooltip = self.tooltip
         if tooltip:
-            ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
+            self.tt = ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
 
         if not grid and self.grid_pos:
             grid = self.grid_pos
@@ -198,15 +200,14 @@ class IndicatorLight(Helper, Button):
         if hasattr(event, self.event_name):
             self.update_(getattr(event, self.event_name))
 class IndicatorMasterLive(Helper, Button):
-    def __init__(self, frm, event_name, label, color='cyan', **kwargs):
+    def __init__(self, frm, event_name, label, color='cyan', tooltip=None, **kwargs):
         self.event_name = event_name
         self.color = color
-        super().__init__(frm, text=label, state='disabled', **kwargs)
-        self.tt = None
+        if tooltip:
+            self.tt_default = tooltip
+            tooltip = self.tt_msg
         self.state = { }
-        if kwargs['tooltip']:
-            self.tt_default = kwargs['tooltip']
-            self.tt = ToolTip(self, msg=self.tt_msg, delay=TOOLTIP_DELAY)
+        super().__init__(frm, text=label, state='disabled', tooltip=tooltip, **kwargs)
     def update_(self, name, value):
         self.state[name] = value
         if any(self.state.values()):
@@ -250,7 +251,7 @@ class QuickBreak(Helper, ttk.Button):
     def click(self):
         mute[AUDIO_INPUT].click(True)
         mute[AUDIO_INPUT_BRCD].click(True)
-        Scene.switch(NOTES)
+        SceneButton.switch(NOTES)
         pip_size.save_last()
         pip_size.update(0)
 class QuickBack(Helper, ttk.Button):
@@ -265,12 +266,13 @@ class QuickBack(Helper, ttk.Button):
         if quick_sound.state() == ('selected', ):
             playback_buttons['short'].play()
             time.sleep(3)
-        Scene.switch(self.scene)
+        SceneButton.switch(self.scene)
         pip_size.restore_last()
         print('sound state: ', quick_sound.state())
-qa_label = ttk.Label(frm, text="Presets:")
-qa_label.grid(row=1, column=0)
-ToolTip(qa_label, "Quick actions.  Clicking button does something for you.", delay=TOOLTIP_DELAY)
+if not args.small:
+    qa_label = ttk.Label(frm, text="Presets:")
+    qa_label.grid(row=1, column=0)
+    ToolTip(qa_label, "Quick actions.  Clicking button does something for you.", delay=TOOLTIP_DELAY)
 #l2 = Label2(frm, text="Presets:", grid=g(1, 0))
 QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes',
            grid=g(1,1), grid_s=g(1,1))
@@ -289,7 +291,7 @@ if not args.small:
 
 
 # Scenes
-class Scene(Helper, Button):
+class SceneButton(Helper, Button):
     _instances = [ ]
     def __init__(self, frame, scene_name, label, selectable=True, **kwargs):
         self.scene_name = scene_name
@@ -298,8 +300,11 @@ class Scene(Helper, Button):
                          **kwargs)
         self._instances.append(self)
         if not args.test:
-            if obsreq.get_current_program_scene().current_program_scene_name == scene_name:
+            current_scene = obsreq.get_current_program_scene().current_program_scene_name
+            if current_scene == scene_name:
                 self.update_(True)
+                indicators['live'].update_('scene-visible', scene_name if (scene_name not in SCENES_SAFE) else '')
+                print(f"Current scene {current_scene}")
             obssubscribe([self.on_current_program_scene_changed])
     @classmethod
     def switch(self, name):
@@ -330,28 +335,34 @@ class Scene(Helper, Button):
             print(f"OBS: scene to {name}")
             indicators['live'].update_('scene-visible', name if (name not in SCENES_SAFE) else '')
         self.update_(name == self.scene_name)
-#def switch(name, from_obs=False):
-#    print(f'switching to {name}')
-#    # Disable currently active buttons
-#    for n, b in SCENES.items():
-#        if name != n:
-#            b.configure(background=default_color, activebackground=default_activecolor)
-#    if name not in SCENES:
-#        print(f"Unknown scene {name}")
-#        return
-#    # Set new button
-#    if not from_obs:
-#        obsreq.set_current_program_scene(name)
-#    color = ACTIVE
-#    if name in SCENES_SAFE:
-#        color = ACTIVE_SAFE
-#    SCENES[name].configure(background=color, activebackground=color)
-    #SCENES[name].configure()
-for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
-    b = Scene(frm, scene_name=scene, label=label, selectable=selectable,
-              tooltip=tooltip,
-              grid=g(2, i))
+class SceneLabel(Helper, Label):
+    def __init__(self, frm, *args, tooltip=None, **kwargs):
+        self.tt_default = tooltip or 'Current scene'
+        super().__init__(frm, *args, tooltip=self.tt_msg, **kwargs)
+        self.configure(text='[scene]')
+        obssubscribe(self.on_current_program_scene_changed)
+        if not cli_args.test:
+            self.update_(obsreq.get_current_program_scene().current_program_scene_name)
+    def update_(self, scene_name):
+        self.scene_name = scene_name
+        label = self.label = SCENE_NAMES.get(scene_name, (scene_name,))[0]
+        self.configure(text=label)
+        if scene_name in SCENES_SAFE:
+            color = default_color
+        else:
+            color = ACTIVE
+        self.configure(background=color, activebackground=color)
+    def on_current_program_scene_changed(self, data):
+        self.update_(data.scene_name)
+    def tt_msg(self):
+        return '\n'.join([self.tt_default, f'{self.label} ({self.scene_name})'])
 
+for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
+    b = SceneButton(frm, scene_name=scene, label=label, selectable=selectable,
+                    tooltip=tooltip,
+                    grid=g(2, i))
+if args.small:
+    SceneLabel(frm, grid_s=g(1,0), tooltip="Current scene")
 
 # Audio
 class Mute(Helper, Button):
@@ -449,7 +460,8 @@ class PipSize(Helper, ttk.Frame):
         if not args.test:
             self.pip_id = obsreq.get_scene_item_id(NOTES, PIP).scene_item_id
             obssubscribe(self.on_custom_event)
-            self.update_pip_size()
+            if not cli_args.no_pip_poll:
+                self.update_pip_size()
     def update(self, state):
         """Update callback of slider"""
         state = float(state)
@@ -595,7 +607,7 @@ class ScrollNotes(Helper, ttk.Button):
 sn_frame= ttk.Frame(frm)
 sn_frame.columnconfigure(tuple(range(3)), weight=1)
 if args.small:
-    sn_frame.grid(row=1, column=3, columnspan=3)
+    sn_frame.grid(row=1, column=3, columnspan=2)
 else:
     sn_frame.grid(row=8, column=0, columnspan=3)
 
@@ -673,11 +685,11 @@ if not args.test:
 #    """Playing media"""
 #    print("OBS: media playback started")
 #    playback.update_timer()
-def on_scene_item_transform_changed(data):
-    """PIP size change.  This doesnt' work."""
-    print(f"OBS: transform change of {data.scene_item_id}")
-    if data.scene_item_id == pip_id:
-        pip_size.obs_update(data.scene_item_transform['scaleX'])
+#def on_scene_item_transform_changed(data):
+#    """PIP size change.  This doesnt' work."""
+#    print(f"OBS: transform change of {data.scene_item_id}")
+#    if data.scene_item_id == pip_id:
+#        pip_size.obs_update(data.scene_item_transform['scaleX'])
 
 def on_custom_event(data):
     if not args.notes_window:
