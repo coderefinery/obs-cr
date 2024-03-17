@@ -66,13 +66,14 @@ parser.add_argument('--notes-window',
 parser.add_argument('--small', action='store_true')
 parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel")
 parser.add_argument('--verbose', action='store_true')
-args = parser.parse_args()
-hostname = args.hostname_port.split(':')[0]
-port = args.hostname_port.split(':')[1]
-password = args.password
+args = cli_args = parser.parse_args()
 
 # OBS websocket
 if not args.test:
+    hostname = args.hostname_port.split(':')[0]
+    port = args.hostname_port.split(':')[1]
+    password = args.password
+
     import obsws_python as obs
     obsreq = obs.ReqClient(host=hostname, port=port, password=password, timeout=3)
     cl = obs.EventClient(host=hostname, port=port, password=password, timeout=3)
@@ -87,7 +88,9 @@ else:
     obssubscribe = getattr(obsreq, 'callback.register')
 
 class Helper:
-    def __init__(self, *args, tooltip=None, grid=None, grid_small=None, **kwargs):
+    grid_pos = None
+    grid_s_pos = None
+    def __init__(self, *args, tooltip=None, grid=None, grid_s=None, **kwargs):
         print("Helper init", grid, tooltip)
         #print(self)
         super().__init__(*args, **kwargs)
@@ -96,14 +99,14 @@ class Helper:
         if tooltip:
             ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
 
-        if not grid and hasattr(self, 'grid_pos'):
+        if not grid and self.grid_pos:
             grid = self.grid_pos
-        if not grid_small and hasattr(self, 'grid_pos_small'):
-            grid_small = self.grid_pos
+        if not grid_s and self.grid_s_pos:
+            grid_s = self.grid_s_pos
 
-        if grid_small and args.small:
-            self.grid(grid_small)
-        elif grid:
+        if grid_s and cli_args.small:
+            self.grid(grid_s)
+        if grid and not cli_args.small:
             self.grid(grid)
 class Label2(Helper, Label):
     def __init__(self, *args, **kwargs):
@@ -132,7 +135,7 @@ frm.grid()
 frm.pack()
 #ttk.Label(frm, text="Hello World!").grid(column=0, row=0)
 class Time(Helper, ttk.Label):
-    grid_pos = g(0, 7)
+    grid_pos = grid_s_pos = g(0, 7)
     tooltip = "Current time"
     def __init__(self, frame):
         super().__init__(frm, text=time.strftime('%H:%M:%S'))
@@ -222,7 +225,7 @@ indicator_frame = ttk.Frame(frm)
 indicator_frame.grid(row=0, column=1, columnspan=5, sticky=W)
 indicator_frame.columnconfigure(tuple(range(10)), weight=1)
 indicators = { }
-indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="Live", color='red', grid=g(row=0, column=0), tooltip="Master live warning.  RED if anything is live on stream (tooltip will indicate what is on).")
+indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="Live", color='red', grid=g(0,0), grid_s=g(0,0), tooltip="Master live warning.  RED if anything is live on stream (tooltip will indicate what is on).")
 for i, (name, label, color, tt, kwargs) in enumerate([
     ('warning',  'Warn',     'red',    'Master warning: some urgent issue, please check.', {'blink': 500}),
     ('caution',  'Caution',  'yellow', 'Master caution: some issue, please check.', {}),
@@ -231,7 +234,10 @@ for i, (name, label, color, tt, kwargs) in enumerate([
     ('question', 'Question', 'cyan',   'Important question, check chat or notes', {}),
     ('chat',     'Chat',     'cyan',   'Check chat indicator', {}),
     ]):
-    indicators[name] = IndicatorLight(indicator_frame, 'indicator-'+name, label, color=color, grid=g(row=0, column=i+1), tooltip=tt, **kwargs)
+    indicators[name] = IndicatorLight(indicator_frame, 'indicator-'+name, label, color=color,
+                                      grid  =g(row=0, column=i+1),
+                                      grid_s=g(row=0, column=i+1),
+                                      tooltip=tt, **kwargs)
 
 
 
@@ -266,13 +272,14 @@ qa_label = ttk.Label(frm, text="Presets:")
 qa_label.grid(row=1, column=0)
 ToolTip(qa_label, "Quick actions.  Clicking button does something for you.", delay=TOOLTIP_DELAY)
 #l2 = Label2(frm, text="Presets:", grid=g(1, 0))
-QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes', grid=g(1,1))
+QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes',
+           grid=g(1,1), grid_s=g(1,1))
 
 if not args.small:
-    QuickBack(frm, 'Screenshare',       'BACK(ss) ',     tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings', grid=g(1,2))
-    QuickBack(frm, 'ScreenshareCrop', 'BACK(ss-c)', tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings',grid=g(1,4))
-    QuickBack(frm, 'ScreenshareLandscape',   'BACK(ss-ls)',  tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings',  grid=g(1,3))
-    QuickBack(frm, NOTES,         'BACK(n)',       tooltip='Back from break\nSwitch to Notes,\ntry to restore settings',                grid=g(1,5))
+    QuickBack(frm, 'Screenshare',         'BACK(ss) ',  grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings')
+    QuickBack(frm, 'ScreenshareCrop',     'BACK(ss-c)', grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings')
+    QuickBack(frm, 'ScreenshareLandscape','BACK(ss-ls)',grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings')
+    QuickBack(frm, NOTES,                 'BACK(n)',    grid=g(1,2), tooltip='Back from break\nSwitch to Notes,\ntry to restore settings')
     quick_sound = ttk.Checkbutton(frm, text="Jingle?", onvalue=True, offvalue=False)
     quick_sound.grid(row=1, column=7)
     ToolTip(quick_sound,
@@ -344,8 +351,6 @@ for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
     b = Scene(frm, scene_name=scene, label=label, selectable=selectable,
               tooltip=tooltip,
               grid=g(2, i))
-    if args.small:
-        b.grid_forget()
 
 
 # Audio
@@ -354,7 +359,8 @@ class Mute(Helper, Button):
         self.state = None  # True = Muted, False = unmuted (LIVE)
         self.input = input_
         super().__init__(frm, text=text, command=self.click, state='normal' if enabled else 'disabled', **kwargs)
-        self.obs_update(obsreq.get_input_mute(input_).input_muted)
+        if not args.test:
+            self.obs_update(obsreq.get_input_mute(input_).input_muted)
         obssubscribe(self.on_input_mute_state_changed)
     def click(self, state=None):
         """True = muted"""
@@ -386,9 +392,10 @@ class Volume(Helper, ttk.Frame):
         self.label.grid(row=0, column=5)
         self.columnconfigure(tuple(range(6)), weight=1)
         # Initial update
-        dB = obsreq.get_input_volume(input_).input_volume_db
-        print(f"from OBS: {input_} {dB} (volume_state)")
-        self.obs_update(dB)
+        if not args.test:
+            dB = obsreq.get_input_volume(input_).input_volume_db
+            print(f"from OBS: {input_} {dB} (volume_state)")
+            self.obs_update(dB)
         # Callback update
         obssubscribe(self.on_input_volume_changed)
     def to_dB(self, state):
@@ -416,42 +423,17 @@ class Volume(Helper, ttk.Frame):
             print(f"OBS: Volume {data.input_name} to {data.input_volume_db}")
             self.obs_update(data.input_volume_db)
 
-audio_l = ttk.Label(frm, text="Audio:")
-audio_l.grid(row=3, column=0)
-ToolTip(audio_l, "Audio controls (mute/unmute/level)", delay=TOOLTIP_DELAY)
+if not args.small:
+    audio_l = ttk.Label(frm, text="Audio:")
+    audio_l.grid(row=3, column=0)
+    ToolTip(audio_l, "Audio controls (mute/unmute/level)", delay=TOOLTIP_DELAY)
 mute = { }
-mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False, grid=g(3, 1))
-mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "Instr", tooltip="Mute/unmute instructor capture, red=ON", grid=g(3, 2))
+mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", grid=g(3, 1), tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False)
+mute[AUDIO_INPUT]      = Mute(frm, AUDIO_INPUT,     "Instr", grid=g(3, 2), tooltip="Mute/unmute instructor capture, red=ON", )
 volume = Volume(frm, AUDIO_INPUT, grid=g(row=3, column=3, columnspan=4, sticky=E+W))
-#volume.grid()
-if args.small:
-    audio_l.grid_forget()
-    [ x.grid_forget() for x in mute.values() ]
-    volume.grid_forget()
 
 
 # PIP
-#def pip_size(scale, from_obs=False, save=False):
-#    scale = float(scale)
-#    if save:
-#        pip.last_scale = pip.scale
-#    #print(f'PIP size: {scale}')
-#    pip_value.config(text=f"{scale:0.2f}")
-#    pip.scale = scale
-#    if scale == 0:
-#        color = default_color
-#    else:
-#        color = ACTIVE
-#    if from_obs:
-#        pip.set(scale)
-#    for scene in SCENES_WITH_PIP:
-#        pip.configure(background=color, activebackground=color)
-#        if not from_obs:
-#            id_ = obsreq.get_scene_item_id(scene, PIP).scene_item_id
-#            transform = obsreq.get_scene_item_transform(scene, id_).scene_item_transform
-#            transform['scaleX'] = scale
-#            transform['scaleY'] = scale
-#            obsreq.set_scene_item_transform(scene, id_, transform)
 class PipSize(Helper, ttk.Frame):
     def __init__(self, frame, **kwargs):
         self.last_state = 0.25
@@ -460,13 +442,14 @@ class PipSize(Helper, ttk.Frame):
         self.scale = Scale(self, from_=0, to=1, orient=HORIZONTAL, command=self.update, showvalue=0, resolution=.01, variable=self.value)
         self.scale.grid(row=0, column=0, columnspan=5, sticky=E+W)
         ToolTip(self.scale, "Change the size of the instructor picture-in-picture, 0=invisible", delay=TOOLTIP_DELAY)
-        self.label = ttk.Label(self, text="?");
+        self.label = ttk.Label(self, text="?")
         self.label.grid(row=0, column=5)
         self.columnconfigure(tuple(range(6)), weight=1)
         # update polling
-        self.pip_id = obsreq.get_scene_item_id(NOTES, PIP).scene_item_id
-        obssubscribe(self.on_custom_event)
-        self.update_pip_size()
+        if not args.test:
+            self.pip_id = obsreq.get_scene_item_id(NOTES, PIP).scene_item_id
+            obssubscribe(self.on_custom_event)
+            self.update_pip_size()
     def update(self, state):
         """Update callback of slider"""
         state = float(state)
@@ -511,9 +494,10 @@ class PipSize(Helper, ttk.Frame):
         self.obs_update(obsreq.get_scene_item_transform(NOTES, self.pip_id).scene_item_transform['scaleX'])
         self.after(1000, self.update_pip_size)
 
-b_pip = ttk.Label(frm, text="PIP size:")
-b_pip.grid(row=4, column=0)
-ToolTip(b_pip, "Change size of instuctor picture-in-picture.", delay=TOOLTIP_DELAY)
+if not args.small:
+    b_pip = ttk.Label(frm, text="PIP size:")
+    b_pip.grid(row=4, column=0)
+    ToolTip(b_pip, "Change size of instuctor picture-in-picture.", delay=TOOLTIP_DELAY)
 pip_size = PipSize(frm, grid=g(row=4, column=1, columnspan=6, sticky=E+W))
 # PIP crop selection
 def pip_crop(n):
@@ -527,9 +511,10 @@ def pip_crop(n):
             transform['crop'+k.title()] = v
         #print('====new:', transform)
         obsreq.set_scene_item_transform(scene, id_, transform)
-b_cropbuttons = ttk.Label(frm, text="PIP crop:")
-b_cropbuttons.grid(row=5, column=0)
-ToolTip(b_cropbuttons,
+if not args.small:
+    b_cropbuttons = ttk.Label(frm, text="PIP crop:")
+    b_cropbuttons.grid(row=5, column=0)
+    ToolTip(b_cropbuttons,
         "PIP insert can be cropped to suit different numbers of people (this comes from "
         "how Zoom lays it out for different numbers of people.  Click a button if "
         "it doesn't fit right into the corner.", delay=TOOLTIP_DELAY)
@@ -538,16 +523,11 @@ crop_buttons.columnconfigure(tuple(range(5)), weight=1)
 crop_buttons.grid(row=5, column=1, columnspan=5)
 for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
     b = ttk.Button(crop_buttons, text=label, command=partial(pip_crop, n))
-    b.grid(row=0, column=i)
+    if not args.small:
+        b.grid(row=0, column=i)
     ToolTip(b, 'Set PIP to be cropped for this many people.  None=no crop', delay=TOOLTIP_DELAY)
-if args.small:
-    for x in [b_pip, pip_size, b_cropbuttons, crop_buttons]:
-        x.grid_forget()
 
 # Playback
-playback_label = ttk.Label(frm, text="Jingle:")
-playback_label.grid(row=6, column=0)
-ToolTip(playback_label, "Row deals with playing transition sounds", delay=TOOLTIP_DELAY)
 class PlaybackTimer(Helper, ttk.Label):
     def __init__(self, frm, input_name, *args, **kwargs):
         self.input_name = input_name
@@ -592,14 +572,15 @@ class PlayStop(Helper, ttk.Button):
     def stop(self):
         print("stopping playback")
         obsreq.trigger_media_input_action(PLAYBACK_INPUT, 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP')
-playback = PlaybackTimer(frm, PLAYBACK_INPUT, grid=g(6, 1), tooltip="Countdown time for current file playing")
+if not args.small:
+    playback_label = ttk.Label(frm, text="Jingle:")
+    playback_label.grid(row=6, column=0)
+    ToolTip(playback_label, "Row deals with playing transition sounds", delay=TOOLTIP_DELAY)
+playback = PlaybackTimer(frm, PLAYBACK_INPUT, grid=g(6, 1), grid_s=g(1, 2), tooltip="Countdown time for current file playing")
 playback_buttons = { }
 for i, file_ in enumerate(PLAYBACK_FILES, start=2):
     pf = playback_buttons[file_['label']] = PlayFile(frm, **file_, grid=g(6, i))
 ps = PlayStop(frm, grid=g(6, 2+len(PLAYBACK_FILES)), tooltip="Stop all playbacks")
-if args.small:
-    for x in [playback_label, playback, ps] + list(playback_buttons.values()):
-        x.grid_forget()
 
 
 
@@ -621,8 +602,8 @@ else:
 sn_label = Label(sn_frame, text="Notes scroll:")
 sn_label.grid(row=0, column=0)
 ToolTip(sn_label, "Tools for scrolling notes up and down (on the broadcaster computer), in the Notes view.", delay=TOOLTIP_DELAY)
-b = ScrollNotes(sn_frame, "Up", event='notes_scroll_up', grid=g(0,1), tooltip="Scroll notes up")
-b = ScrollNotes(sn_frame, "Down", event='notes_scroll_down', grid=g(0,2), tooltip="Scroll notes down")
+b = ScrollNotes(sn_frame, "Up",   event='notes_scroll_up',   grid=g(0,1), grid_s=g(0,1), tooltip="Scroll notes up")
+b = ScrollNotes(sn_frame, "Down", event='notes_scroll_down', grid=g(0,2), grid_s=g(0,2), tooltip="Scroll notes down")
 
 
 
