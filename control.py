@@ -57,6 +57,16 @@ PIP_CROP_FACTORS = {
 #
 import argparse
 import os
+class DictAction(argparse.Action):
+    """Argparse action that collects x=y values into a dict."""
+    def __init__(self, *args, default=None, **kwargs):
+        if default is None: default = {}
+        super().__init__(*args, default=default, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        settings = getattr(namespace, self.dest)
+        for x in values:
+            if '=' not in x: raise argparse.ArgumentError(x, f'Argument missing "=": "{x}"')
+            settings[x.split('=', 1)[0]] = x.split('=', 1)[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('hostname_port')
 parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
@@ -65,6 +75,8 @@ parser.add_argument('--notes-window',
                     help='window name regex for notes document (for scrolling), get via xwininfo -tree -root | less')
 parser.add_argument('--small', action='store_true')
 parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel")
+parser.add_argument('--scene-hook', action=DictAction, nargs=1,
+                    help="Local command line hooks for switching to each scene, format SCENENAME=command")
 parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
 parser.add_argument('--verbose', action='store_true')
 args = cli_args = parser.parse_args()
@@ -304,7 +316,7 @@ class SceneButton(Helper, Button):
             if current_scene == scene_name:
                 self.update_(True)
                 indicators['live'].update_('scene-visible', scene_name if (scene_name not in SCENES_SAFE) else '')
-                print(f"Current scene {current_scene}")
+                print(f"Init: Current scene {current_scene}")
             obssubscribe([self.on_current_program_scene_changed])
     @classmethod
     def switch(self, name):
@@ -312,7 +324,7 @@ class SceneButton(Helper, Button):
             instance.update_(instance.scene_name is name)
     def click(self):
         """Clicked, update this and others, and send to OBS"""
-        print(f'switching to {self.scene_name}')
+        print(f'Local: switching to {self.scene_name}')
         obsreq.set_current_program_scene(self.scene_name)
         self.update_(True)
         if args.test:
@@ -325,6 +337,8 @@ class SceneButton(Helper, Button):
             color = ACTIVE
             if self.scene_name in SCENES_SAFE:
                 color = ACTIVE_SAFE
+            if self.scene_name in cli_args.scene_hook:
+                subprocess.call(cli_args.scene_hook[self.scene_name], shell=True)
         else:
             color = default_color
         self.configure(background=color, activebackground=color)
