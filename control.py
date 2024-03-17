@@ -43,6 +43,13 @@ PLAYBACK_FILES = [
      'label': 'long',
      'tooltip': 'Long theme song for starting/ending day, 1:23 duration'},
     ]
+PIP_CROP_FACTORS = {
+    None: {'top':  0, 'bottom':  0, 'left':  0, 'right':  0, },
+    1:    {'top':  0, 'bottom':  0, 'left': 59, 'right':  59, },
+    2:    {'top': 90, 'bottom':  0, 'left': 12, 'right': 12, },  # checked
+    3:    {'top':  4, 'bottom':  0, 'left': 60, 'right': 60, },  # checked
+    5:    {'top': 50, 'bottom':  0, 'left': 11, 'right': 11, },  # checked
+    }
 
 
 #
@@ -69,7 +76,7 @@ if not args.test:
     import obsws_python as obs
     obsreq = obs.ReqClient(host=hostname, port=port, password=password, timeout=3)
     cl = obs.EventClient(host=hostname, port=port, password=password, timeout=3)
-    obssubscribe = cl.callabck.register
+    obssubscribe = cl.callback.register
 else:
     class Request():
         def __call(self, _method, *args, **kwargs):
@@ -78,6 +85,39 @@ else:
             return partial(self.__call, name)
     obsreq = Request()
     obssubscribe = getattr(obsreq, 'callback.register')
+
+class Helper:
+    def __init__(self, *args, tooltip=None, grid=None, grid_small=None, **kwargs):
+        print("Helper init", grid, tooltip)
+        #print(self)
+        super().__init__(*args, **kwargs)
+        if tooltip is None and hasattr(self, 'tooltip'):
+            tooltip = self.tooltip
+        if tooltip:
+            ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
+
+        if not grid and hasattr(self, 'grid_pos'):
+            grid = self.grid_pos
+        if not grid_small and hasattr(self, 'grid_pos_small'):
+            grid_small = self.grid_pos
+
+        if grid_small and args.small:
+            self.grid(grid_small)
+        elif grid:
+            self.grid(grid)
+class Label2(Helper, Label):
+    def __init__(self, *args, **kwargs):
+        print('init'*10, kwargs['text'])
+        super().__init__(*args, **kwargs)
+    pass
+
+def g(*args, **kwargs):
+    grid_ = { }
+    if args:
+        grid_['row'] = args[0]
+        grid_['column'] = args[1]
+    grid_.update(kwargs)
+    return grid_
 
 
 #
@@ -91,38 +131,42 @@ frm.rowconfigure(tuple(range(10)), weight=1)
 frm.grid()
 frm.pack()
 #ttk.Label(frm, text="Hello World!").grid(column=0, row=0)
-t = ttk.Label(frm, text=time.strftime('%H:%M:%S'))
-t.grid(row=0, column=7)
-ToolTip(t, "Current time", delay=TOOLTIP_DELAY)
-def update_time():
-    t.config(text=time.strftime('%H:%M:%S'))
-    t.after(1000, update_time)
-update_time()
-b_quit = ttk.Button(frm, text="Quit", command=root.destroy)
-#b_quit.grid(column=7, row=0, columnspan=1)
-ToolTip(b_quit, "Quit the control panel (does not affect the stream)", delay=TOOLTIP_DELAY)
+class Time(Helper, ttk.Label):
+    grid_pos = g(0, 7)
+    tooltip = "Current time"
+    def __init__(self, frame):
+        super().__init__(frm, text=time.strftime('%H:%M:%S'))
+        self.after(1000, self.update_)
+    def update_(self):
+        self.config(text=time.strftime('%H:%M:%S'))
+        self.after(1000, self.update_)
+class Quit(Helper, ttk.Button):
+    tooltip = "Quit the control panel (does not affect the stream)"
+    #grid_pos = g(0, 8)
+    def __init__(self, frame):
+        super().__init__(frame, text='Quit', command=root.destroy)
+time_l = Time(frm)
+quit_b = Quit(frm)
+
 default_color = root.cget("background")
 default_activecolor = default_color
 color_default = {'background': default_color, 'activebackground': default_color}
 
 
 
-class IndicatorLight(Button):
-    def __init__(self, frm, event_name, label, color='cyan', grid=None, tooltip=None, blink=None):
+class IndicatorLight(Helper, Button):
+    def __init__(self, frm, event_name, label, color='cyan', blink=None, **kwargs):
         self.event_name = event_name
         self.color = color
         self.blink = blink
-        super().__init__(frm, text=label, command=self.click)
-        if grid:
-            self.grid(**grid)
-        if tooltip:
-            ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
+        super().__init__(frm, text=label, command=self.click, **kwargs)
         saved_state = obsreq.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name)
         self.state = None
         self.blink_id = None
         if saved_state:
             self.state = saved_state.slot_value
         self.update_(self.state)
+        obssubscribe(self.on_custom_event)
     def click(self):
         self.state = not self.state
         obsreq.broadcast_custom_event({'eventData': {self.event_name: self.state}})
@@ -150,17 +194,15 @@ class IndicatorLight(Button):
     def on_custom_event(self, event):
         if hasattr(event, self.event_name):
             self.update_(getattr(event, self.event_name))
-class IndicatorMasterLive(Button):
-    def __init__(self, frm, event_name, label, color='cyan', grid=None, tooltip=None):
+class IndicatorMasterLive(Helper, Button):
+    def __init__(self, frm, event_name, label, color='cyan', **kwargs):
         self.event_name = event_name
         self.color = color
-        super().__init__(frm, text=label, state='disabled')
-        if grid:
-            self.grid(**grid)
+        super().__init__(frm, text=label, state='disabled', **kwargs)
         self.tt = None
         self.state = { }
-        if tooltip:
-            self.tt_default = tooltip
+        if kwargs['tooltip']:
+            self.tt_default = kwargs['tooltip']
             self.tt = ToolTip(self, msg=self.tt_msg, delay=TOOLTIP_DELAY)
     def update_(self, name, value):
         self.state[name] = value
@@ -174,48 +216,41 @@ class IndicatorMasterLive(Button):
         pass
 il = Label(frm, text="Indicator:")
 il.grid(row=0, column=0)
-ToolTip(il, "Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.", delay=TOOLTIP_DELAY)
+ToolTip(il, "Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.")
+#il = Label2(frm, text="Indicator:", grid=g(0,0), tooltip="Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.")
 indicator_frame = ttk.Frame(frm)
 indicator_frame.grid(row=0, column=1, columnspan=5, sticky=W)
 indicator_frame.columnconfigure(tuple(range(10)), weight=1)
 indicators = { }
-indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="Live", color='red', grid=dict(row=0, column=0), tooltip="Master live warning.  RED if anything is live on stream.")
+indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="Live", color='red', grid=g(row=0, column=0), tooltip="Master live warning.  RED if anything is live on stream (tooltip will indicate what is on).")
 for i, (name, label, color, tt, kwargs) in enumerate([
-    ('masterwarning', 'Warn', 'red', 'Master warning: some urgent issue, please check.', {'blink': 500}),
-    ('mastercaution', 'Caution', 'yellow', 'Master caution: some issue, please check.', {}),
-    ('time', 'Time', 'yellow', 'General "check time" indicator.', {}),
-    ('notes', 'Notes', 'cyan', 'General "check shared notes" indicator.', {}),
-    ('question', 'Question', 'cyan', 'Important question, check chat or notes', {}),
-    ('question', 'Chat', 'cyan', 'check chat', {}),
+    ('warning',  'Warn',     'red',    'Master warning: some urgent issue, please check.', {'blink': 500}),
+    ('caution',  'Caution',  'yellow', 'Master caution: some issue, please check.', {}),
+    ('time',     'Time',     'yellow', 'General "check time" indicator.', {}),
+    ('notes',    'Notes',    'cyan',   'General "check shared notes" indicator.', {}),
+    ('question', 'Question', 'cyan',   'Important question, check chat or notes', {}),
+    ('chat',     'Chat',     'cyan',   'Check chat indicator', {}),
     ]):
-    indicators[name] = IndicatorLight(indicator_frame, 'indicator-'+name, label, color=color, grid=dict(row=0, column=i+1), tooltip=tt, **kwargs)
+    indicators[name] = IndicatorLight(indicator_frame, 'indicator-'+name, label, color=color, grid=g(row=0, column=i+1), tooltip=tt, **kwargs)
 
 
 
 
 
 # Quick actions
-class QuickBreak(ttk.Button):
-    def __init__(self, frm, text, tooltip=None, grid=None):
-        super().__init__(frm, command=self.click, text=text)
-        if grid:
-            self.grid(row=grid[0], column=grid[1])
-        if tooltip:
-            ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
+class QuickBreak(Helper, ttk.Button):
+    def __init__(self, frm, text, **kwargs):
+        super().__init__(frm, command=self.click, text=text, **kwargs)
     def click(self):
         mute[AUDIO_INPUT].click(True)
         mute[AUDIO_INPUT_BRCD].click(True)
-        switch(NOTES)
+        Scene.switch(NOTES)
         pip_size.save_last()
         pip_size.update(0)
-class QuickBack(ttk.Button):
-    def __init__(self, frm, scene, text, tooltip=None, grid=None):
+class QuickBack(Helper, ttk.Button):
+    def __init__(self, frm, scene, text, **kwargs):
         self.scene = scene
-        super().__init__(frm, command=self.click, text=text)
-        if tooltip:
-            ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
-        if grid:
-            self.grid(row=grid[0], column=grid[1])
+        super().__init__(frm, command=self.click, text=text, **kwargs)
     def click(self):
         import threading
         threading.Thread(target=self.run).start()
@@ -224,19 +259,20 @@ class QuickBack(ttk.Button):
         if quick_sound.state() == ('selected', ):
             playback_buttons['short'].play()
             time.sleep(3)
-        switch(self.scene)
+        Scene.switch(self.scene)
         pip_size.restore_last()
         print('sound state: ', quick_sound.state())
 qa_label = ttk.Label(frm, text="Presets:")
 qa_label.grid(row=1, column=0)
 ToolTip(qa_label, "Quick actions.  Clicking button does something for you.", delay=TOOLTIP_DELAY)
-QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes', grid=(1,1))
+#l2 = Label2(frm, text="Presets:", grid=g(1, 0))
+QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes', grid=g(1,1))
 
 if not args.small:
-    QuickBack(frm, 'Screenshare',       'BACK(ss) ',     tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings', grid=(1,2))
-    QuickBack(frm, 'ScreenshareLandscape',   'BACK(ss-ls)',  tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings',  grid=(1,3))
-    QuickBack(frm, 'ScreenshareCrop', 'BACK(ss-c)', tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings',grid=(1,4))
-    QuickBack(frm, NOTES,         'BACK(n)',       tooltip='Back from break\nSwitch to Notes,\ntry to restore settings',                grid=(1,5))
+    QuickBack(frm, 'Screenshare',       'BACK(ss) ',     tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings', grid=g(1,2))
+    QuickBack(frm, 'ScreenshareCrop', 'BACK(ss-c)', tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings',grid=g(1,4))
+    QuickBack(frm, 'ScreenshareLandscape',   'BACK(ss-ls)',  tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings',  grid=g(1,3))
+    QuickBack(frm, NOTES,         'BACK(n)',       tooltip='Back from break\nSwitch to Notes,\ntry to restore settings',                grid=g(1,5))
     quick_sound = ttk.Checkbutton(frm, text="Jingle?", onvalue=True, offvalue=False)
     quick_sound.grid(row=1, column=7)
     ToolTip(quick_sound,
@@ -246,45 +282,80 @@ if not args.small:
 
 
 # Scenes
-def switch(name, from_obs=False):
-    print(f'switching to {name}')
-    # Disable currently active buttons
-    for n, b in SCENES.items():
-        if name != n:
-            b.configure(background=default_color, activebackground=default_activecolor)
-    if name not in SCENES:
-        print(f"Unknown scene {name}")
-        return
-    # Set new button
-    if not from_obs:
-        obsreq.set_current_program_scene(name)
-    color = ACTIVE
-    if name in SCENES_SAFE:
-        color = ACTIVE_SAFE
-    SCENES[name].configure(background=color, activebackground=color)
-    indicators['live'].update_('scene-visible', name if (name not in SCENES_SAFE) else '')
+class Scene(Helper, Button):
+    _instances = [ ]
+    def __init__(self, frame, scene_name, label, selectable=True, **kwargs):
+        self.scene_name = scene_name
+        super().__init__(frame, text=label, command=self.click,
+                         state='normal' if selectable else 'disabled',
+                         **kwargs)
+        self._instances.append(self)
+        if not args.test:
+            if obsreq.get_current_program_scene().current_program_scene_name == scene_name:
+                self.update_(True)
+            obssubscribe([self.on_current_program_scene_changed])
+    @classmethod
+    def switch(self, name):
+        for instance in self._instances:
+            instance.update_(instance.scene_name is name)
+    def click(self):
+        """Clicked, update this and others, and send to OBS"""
+        print(f'switching to {self.scene_name}')
+        obsreq.set_current_program_scene(self.scene_name)
+        self.update_(True)
+        if args.test:
+            for instance in self._instances:
+                if instance is not self:
+                    instance.update_(instance.scene_name == self.scene_name)
+        indicators['live'].update_('scene-visible', self.scene_name if (self.scene_name not in SCENES_SAFE) else '')
+    def update_(self, state):
+        if state:
+            color = ACTIVE
+            if self.scene_name in SCENES_SAFE:
+                color = ACTIVE_SAFE
+        else:
+            color = default_color
+        self.configure(background=color, activebackground=color)
+
+    def on_current_program_scene_changed(self, data):
+        name = data.scene_name
+        if name == self.scene_name:
+            print(f"OBS: scene to {name}")
+            indicators['live'].update_('scene-visible', name if (name not in SCENES_SAFE) else '')
+        self.update_(name == self.scene_name)
+#def switch(name, from_obs=False):
+#    print(f'switching to {name}')
+#    # Disable currently active buttons
+#    for n, b in SCENES.items():
+#        if name != n:
+#            b.configure(background=default_color, activebackground=default_activecolor)
+#    if name not in SCENES:
+#        print(f"Unknown scene {name}")
+#        return
+#    # Set new button
+#    if not from_obs:
+#        obsreq.set_current_program_scene(name)
+#    color = ACTIVE
+#    if name in SCENES_SAFE:
+#        color = ACTIVE_SAFE
+#    SCENES[name].configure(background=color, activebackground=color)
     #SCENES[name].configure()
-SCENES = { }
 for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
-    b = SCENES[scene] = Button(frm, text=label, command=partial(switch, scene),
-                               state='normal' if selectable else 'disabled')
-    b.grid(column=i, row=2)
-    if tooltip:
-        ToolTip(b, tooltip, delay=TOOLTIP_DELAY)
+    b = Scene(frm, scene_name=scene, label=label, selectable=selectable,
+              tooltip=tooltip,
+              grid=g(2, i))
     if args.small:
         b.grid_forget()
 
 
 # Audio
-class Mute(Button):
-    def __init__(self, frm, input_, text, enabled=True, tooltip=None, grid=None):
+class Mute(Helper, Button):
+    def __init__(self, frm, input_, text, enabled=True, **kwargs):
         self.state = None  # True = Muted, False = unmuted (LIVE)
         self.input = input_
-        super().__init__(frm, text=text, command=self.click, state='normal' if enabled else 'disabled')
-        if tooltip:
-            ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
-        if grid:
-            self.grid(row=grid[0], column=grid[1])
+        super().__init__(frm, text=text, command=self.click, state='normal' if enabled else 'disabled', **kwargs)
+        self.obs_update(obsreq.get_input_mute(input_).input_muted)
+        obssubscribe(self.on_input_mute_state_changed)
     def click(self, state=None):
         """True = muted"""
         if state is None:
@@ -298,10 +369,15 @@ class Mute(Button):
         else:    # mute off
             self.configure(background=ACTIVE, activebackground=ACTIVE)
         indicators['live'].update_('mute-'+self.input, 'unmuted' if not state else None)
-class Volume(ttk.Frame):
-    def __init__(self, frame, input_):
+    def on_input_mute_state_changed(self, data):
+        """Muting/unmuting"""
+        if data.input_name == self.input:
+            print(f"OBS: mute {data.input_name} to {data.input_muted}")
+            self.obs_update(state=data.input_muted)
+class Volume(Helper, ttk.Frame):
+    def __init__(self, frame, input_, **kwargs):
         self.input = input_
-        super().__init__(frame)
+        super().__init__(frame, **kwargs)
         self.value = DoubleVar()
         self.scale = Scale(self, from_=-2, to=0, orient=HORIZONTAL, command=self.update, showvalue=0, resolution=.05, variable=self.value)
         self.scale.grid(row=0, column=0, columnspan=5, sticky=E+W)
@@ -309,6 +385,12 @@ class Volume(ttk.Frame):
         self.label = ttk.Label(self, text="x");
         self.label.grid(row=0, column=5)
         self.columnconfigure(tuple(range(6)), weight=1)
+        # Initial update
+        dB = obsreq.get_input_volume(input_).input_volume_db
+        print(f"from OBS: {input_} {dB} (volume_state)")
+        self.obs_update(dB)
+        # Callback update
+        obssubscribe(self.on_input_volume_changed)
     def to_dB(self, state):
         return - 10**(-state) + 1
     def to_state(self, dB):
@@ -328,15 +410,20 @@ class Volume(ttk.Frame):
         print(f'<= Setting volume: {state}    <- {dB}')
         self.label.config(text=f"{dB:.1f} dB")
         self.value.set(state)
+    def on_input_volume_changed(self, data):
+        """Volume change callback"""
+        if data.input_name == self.input:
+            print(f"OBS: Volume {data.input_name} to {data.input_volume_db}")
+            self.obs_update(data.input_volume_db)
 
 audio_l = ttk.Label(frm, text="Audio:")
 audio_l.grid(row=3, column=0)
 ToolTip(audio_l, "Audio controls (mute/unmute/level)", delay=TOOLTIP_DELAY)
 mute = { }
-mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False, grid=(3, 1))
-mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "Instr", tooltip="Mute/unmute instructor capture, red=ON", grid=(3, 2))
-volume = Volume(frm, AUDIO_INPUT)
-volume.grid(row=3, column=3, columnspan=4, sticky=E+W)
+mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False, grid=g(3, 1))
+mute[AUDIO_INPUT] = Mute(frm, AUDIO_INPUT, "Instr", tooltip="Mute/unmute instructor capture, red=ON", grid=g(3, 2))
+volume = Volume(frm, AUDIO_INPUT, grid=g(row=3, column=3, columnspan=4, sticky=E+W))
+#volume.grid()
 if args.small:
     audio_l.grid_forget()
     [ x.grid_forget() for x in mute.values() ]
@@ -344,13 +431,6 @@ if args.small:
 
 
 # PIP
-CROP_FACTORS = {
-    None: {'top':  0, 'bottom':  0, 'left':  0, 'right':  0, },
-    1:    {'top':  0, 'bottom':  0, 'left': 59, 'right':  59, },
-    2:    {'top': 90, 'bottom':  0, 'left': 12, 'right': 12, },  # checked
-    3:    {'top':  4, 'bottom':  0, 'left': 60, 'right': 60, },  # checked
-    5:    {'top': 50, 'bottom':  0, 'left': 11, 'right': 11, },  # checked
-    }
 #def pip_size(scale, from_obs=False, save=False):
 #    scale = float(scale)
 #    if save:
@@ -372,10 +452,10 @@ CROP_FACTORS = {
 #            transform['scaleX'] = scale
 #            transform['scaleY'] = scale
 #            obsreq.set_scene_item_transform(scene, id_, transform)
-class PipSize(ttk.Frame):
-    def __init__(self, frame):
+class PipSize(Helper, ttk.Frame):
+    def __init__(self, frame, **kwargs):
         self.last_state = 0.25
-        super().__init__(frame)
+        super().__init__(frame, **kwargs)
         self.value = DoubleVar()
         self.scale = Scale(self, from_=0, to=1, orient=HORIZONTAL, command=self.update, showvalue=0, resolution=.01, variable=self.value)
         self.scale.grid(row=0, column=0, columnspan=5, sticky=E+W)
@@ -383,6 +463,10 @@ class PipSize(ttk.Frame):
         self.label = ttk.Label(self, text="?");
         self.label.grid(row=0, column=5)
         self.columnconfigure(tuple(range(6)), weight=1)
+        # update polling
+        self.pip_id = obsreq.get_scene_item_id(NOTES, PIP).scene_item_id
+        obssubscribe(self.on_custom_event)
+        self.update_pip_size()
     def update(self, state):
         """Update callback of slider"""
         state = float(state)
@@ -415,18 +499,22 @@ class PipSize(ttk.Frame):
         if state == 0:   color = default_color
         else:            color = ACTIVE
         self.scale.configure(background=color, activebackground=color)
+        indicators['live'].update_('pip-size', 'visible' if state != 0 else None)
     def on_custom_event(self, data):
         """Custom event listener callback from OBS."""
         #print(f'OBS custom event: {vars(data)}')
         if hasattr(data, 'pip_last_state'):
             self.last_state = data.pip_last_state
             print(f"Saving last pip size: {self.last_state}")
+    def update_pip_size(self):
+        """The on_scene_item_transform_changed doesn't seem to work, so we have to poll here... unfortunately."""
+        self.obs_update(obsreq.get_scene_item_transform(NOTES, self.pip_id).scene_item_transform['scaleX'])
+        self.after(1000, self.update_pip_size)
 
 b_pip = ttk.Label(frm, text="PIP size:")
 b_pip.grid(row=4, column=0)
 ToolTip(b_pip, "Change size of instuctor picture-in-picture.", delay=TOOLTIP_DELAY)
-pip_size = PipSize(frm)
-pip_size.grid(row=4, column=1, columnspan=6, sticky=E+W)
+pip_size = PipSize(frm, grid=g(row=4, column=1, columnspan=6, sticky=E+W))
 # PIP crop selection
 def pip_crop(n):
     print(f"PIP crop → {n} people")
@@ -435,7 +523,7 @@ def pip_crop(n):
         id_ = obsreq.get_scene_item_id(scene, PIP).scene_item_id
         transform = obsreq.get_scene_item_transform(scene, id_).scene_item_transform
         #print('====old', transform)
-        for (k,v) in CROP_FACTORS[n].items():
+        for (k,v) in PIP_CROP_FACTORS[n].items():
             transform['crop'+k.title()] = v
         #print('====new:', transform)
         obsreq.set_scene_item_transform(scene, id_, transform)
@@ -460,11 +548,12 @@ if args.small:
 playback_label = ttk.Label(frm, text="Jingle:")
 playback_label.grid(row=6, column=0)
 ToolTip(playback_label, "Row deals with playing transition sounds", delay=TOOLTIP_DELAY)
-class PlaybackTimer(ttk.Label):
-    def __init__(self, frm, input_name, *args):
+class PlaybackTimer(Helper, ttk.Label):
+    def __init__(self, frm, input_name, *args, **kwargs):
         self.input_name = input_name
-        super().__init__(frm, *args)
+        super().__init__(frm, *args, **kwargs)
         self.configure(text='-')
+        obssubscribe(self.on_media_input_playback_started)
     def update_timer(self):
         event = obsreq.get_media_input_status(self.input_name)
         state = event.media_state  # 'OBS_MEDIA_STATE_PAUSED', 'OBS_MEDIA_STATE_PLAYING'
@@ -486,45 +575,38 @@ class PlaybackTimer(ttk.Label):
         self.configure(text=f'-{s_to_mmss((duration-cursor)//1000)}/{s_to_mmss(duration//1000)}',
                        background=ACTIVE)
         self.after(500, self.update_timer)
-playback = PlaybackTimer(frm, PLAYBACK_INPUT)
-playback.grid(row=6, column=1)
-ToolTip(playback, f"Countdown time for current file playing", delay=TOOLTIP_DELAY)
-class PlayFile(ttk.Button):
-    def __init__(self, frm, filename, label, tooltip):
+    def on_media_input_playback_started(self, data):
+        """Playing media"""
+        print("OBS: media playback started")
+        self.update_timer()
+class PlayFile(Helper, ttk.Button):
+    def __init__(self, frm, filename, label, **kwargs):
         self.filename = filename
-        super().__init__(frm, text=label, command=self.play)
-        ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
+        super().__init__(frm, text=label, command=self.play, **kwargs)
     def play(self):
         print(f'setting input to {self.filename}')
         obsreq.set_input_settings(PLAYBACK_INPUT, {'local_file': self.filename}, overlay=True)
-playback_buttons = { }
-for i, file_ in enumerate(PLAYBACK_FILES, start=2):
-    pf = playback_buttons[file_['label']] = PlayFile(frm, **file_)
-    pf.grid(row=6, column=i)
-    ToolTip(pf, f"Play the audio file {file_['label']}", delay=TOOLTIP_DELAY)
-class PlayStop(ttk.Button):
-    def __init__(self, frm):
-        super().__init__(frm, text='StopPlay', command=self.stop)
+class PlayStop(Helper, ttk.Button):
+    def __init__(self, frm, **kwargs):
+        super().__init__(frm, text='StopPlay', command=self.stop, **kwargs)
     def stop(self):
         print("stopping playback")
         obsreq.trigger_media_input_action(PLAYBACK_INPUT, 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP')
-ps = PlayStop(frm)
-ps.grid(row=6, column=2+len(PLAYBACK_FILES))
-ToolTip(ps, "Stop all playbacks", delay=TOOLTIP_DELAY)
+playback = PlaybackTimer(frm, PLAYBACK_INPUT, grid=g(6, 1), tooltip="Countdown time for current file playing")
+playback_buttons = { }
+for i, file_ in enumerate(PLAYBACK_FILES, start=2):
+    pf = playback_buttons[file_['label']] = PlayFile(frm, **file_, grid=g(6, i))
+ps = PlayStop(frm, grid=g(6, 2+len(PLAYBACK_FILES)), tooltip="Stop all playbacks")
 if args.small:
     for x in [playback_label, playback, ps] + list(playback_buttons.values()):
         x.grid_forget()
 
 
 
-class ScrollNotes(ttk.Button):
-    def __init__(self, frm, label, event, grid=None, tooltip=None):
+class ScrollNotes(Helper, ttk.Button):
+    def __init__(self, frm, label, event, **kwargs):
         self.event = event
-        super().__init__(frm, text=label, command=self.click)
-        if grid:
-            self.grid(row=grid[0], column=grid[1])
-        if tooltip:
-            ToolTip(self, tooltip, delay=TOOLTIP_DELAY)
+        super().__init__(frm, text=label, command=self.click, **kwargs)
     def click(self):
         obsreq.broadcast_custom_event({'eventData': {self.event: True}})
     def on_custom_event(self, event):
@@ -539,8 +621,8 @@ else:
 sn_label = Label(sn_frame, text="Notes scroll:")
 sn_label.grid(row=0, column=0)
 ToolTip(sn_label, "Tools for scrolling notes up and down (on the broadcaster computer), in the Notes view.", delay=TOOLTIP_DELAY)
-b = ScrollNotes(sn_frame, "Up", event='notes_scroll_up', grid=(0,1), tooltip="Scroll notes up")
-b = ScrollNotes(sn_frame, "Down", event='notes_scroll_down', grid=(0,2), tooltip="Scroll notes down")
+b = ScrollNotes(sn_frame, "Up", event='notes_scroll_up', grid=g(0,1), tooltip="Scroll notes up")
+b = ScrollNotes(sn_frame, "Down", event='notes_scroll_down', grid=g(0,2), tooltip="Scroll notes down")
 
 
 
@@ -570,45 +652,46 @@ b = ScrollNotes(sn_frame, "Down", event='notes_scroll_down', grid=(0,2), tooltip
 
 # Initialize with our current state
 if not args.test:
+    pass
     # scene
-    switch(obsreq.get_current_program_scene().current_program_scene_name, from_obs=True)
+    #switch(obsreq.get_current_program_scene().current_program_scene_name, from_obs=True)
     # audio mute
-    for input_ in mute:
-        mute[input_].obs_update(obsreq.get_input_mute(input_).input_muted)
+    #for input_ in mute:
+    #    mute[input_].obs_update(obsreq.get_input_mute(input_).input_muted)
     # audio volume
-    dB = obsreq.get_input_volume(volume.input).input_volume_db
-    print(f"from OBS: {dB} (volume_state)")
-    volume.obs_update(dB)
+    #dB = obsreq.get_input_volume(volume.input).input_volume_db
+    #print(f"from OBS: {dB} (volume_state)")
+    #volume.obs_update(dB)
     # pip size
-    pip_id = obsreq.get_scene_item_id(NOTES, PIP).scene_item_id
-    def update_pip_size():
-        """The on_scene_item_transform_changed doesn't seem to work, so we have to poll here... unfortunately."""
-        pip_size.obs_update(obsreq.get_scene_item_transform(NOTES, pip_id).scene_item_transform['scaleX'])
-        pip_size.after(1000, update_pip_size)
+    #pip_id = obsreq.get_scene_item_id(NOTES, PIP).scene_item_id
+    #def update_pip_size():
+    #    """The on_scene_item_transform_changed doesn't seem to work, so we have to poll here... unfortunately."""
+    #    pip_size.obs_update(obsreq.get_scene_item_transform(NOTES, pip_id).scene_item_transform['scaleX'])
+    #    pip_size.after(1000, update_pip_size)
     #update_pip_size()
 
-def on_current_program_scene_changed(data):
-    """Scene changing"""
-    #print(data.attrs())
-    print(f"OBS: scene to {data.scene_name}")
-    switch(data.scene_name, from_obs=True)
-def on_input_volume_changed(data):
-    """Volume change"""
-    #print(data.attrs())
-    #print(data.input_name, data.input_volume_db)
-    if data.input_name == volume.input:
-        print(f"OBS: Volume {data.input_name} to {data.input_volume_db}")
-        volume.obs_update(data.input_volume_db)
-def on_input_mute_state_changed(data):
-    """Muting/unmuting"""
-    #print(data.attrs())
-    if data.input_name in mute:
-        print(f"OBS: mute {data.input_name} to {data.input_muted}")
-        mute[data.input_name].obs_update(state=data.input_muted)
-def on_media_input_playback_started(data):
-    """Playing media"""
-    print("OBS: media playback started")
-    playback.update_timer()
+#def on_current_program_scene_changed(data):
+#    """Scene changing"""
+#    #print(data.attrs())
+#    print(f"OBS: scene to {data.scene_name}")
+#    switch(data.scene_name, from_obs=True)
+#def on_input_volume_changed(data):
+#    """Volume change"""
+#    #print(data.attrs())
+#    #print(data.input_name, data.input_volume_db)
+#    if data.input_name == volume.input:
+#        print(f"OBS: Volume {data.input_name} to {data.input_volume_db}")
+#        volume.obs_update(data.input_volume_db)
+#def on_input_mute_state_changed(data):
+#    """Muting/unmuting"""
+#    #print(data.attrs())
+#    if data.input_name in mute:
+#        print(f"OBS: mute {data.input_name} to {data.input_muted}")
+#        mute[data.input_name].obs_update(state=data.input_muted)
+#def on_media_input_playback_started(data):
+#    """Playing media"""
+#    print("OBS: media playback started")
+#    playback.update_timer()
 def on_scene_item_transform_changed(data):
     """PIP size change.  This doesnt' work."""
     print(f"OBS: transform change of {data.scene_item_id}")
@@ -634,14 +717,14 @@ def on_custom_event(data):
 
 
 obssubscribe([
-    on_current_program_scene_changed,
-    on_input_volume_changed,
-    on_input_mute_state_changed,
-    on_media_input_playback_started,
+    #on_current_program_scene_changed,
+    #on_input_volume_changed,
+    #on_input_mute_state_changed,
+    #on_media_input_playback_started,
     #on_scene_item_transform_changed,
-    pip_size.on_custom_event,
+    #pip_size.on_custom_event,
     *([on_custom_event] if args.notes_window else []),
-    *[x.on_custom_event for x in indicators.values()],
+    #*[x.on_custom_event for x in indicators.values()],
     ])
 
 if args.verbose:
