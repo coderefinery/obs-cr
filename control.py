@@ -350,6 +350,8 @@ class SceneButton(Helper, Button):
             indicators['live'].update_('scene-visible', name if (name not in SCENES_SAFE) else '')
         self.update_(name == self.scene_name)
 class SceneLabel(Helper, Label):
+    label = ''
+    scene_name = ''
     def __init__(self, frm, *args, tooltip=None, **kwargs):
         self.tt_default = tooltip or 'Current scene'
         super().__init__(frm, *args, tooltip=self.tt_msg, **kwargs)
@@ -357,8 +359,6 @@ class SceneLabel(Helper, Label):
         obssubscribe(self.on_current_program_scene_changed)
         if not cli_args.test:
             self.update_(obsreq.get_current_program_scene().current_program_scene_name)
-        self.label = ''
-        self.scene_name = ''
     def update_(self, scene_name):
         self.scene_name = scene_name
         label = self.label = SCENE_NAMES.get(scene_name, (scene_name,))[0]
