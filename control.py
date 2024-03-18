@@ -235,7 +235,7 @@ il.grid(row=0, column=0)
 ToolTip(il, "Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.")
 #il = Label2(frm, text="Indicator:", grid=g(0,0), tooltip="Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.")
 indicator_frame = ttk.Frame(frm)
-indicator_frame.grid(row=0, column=1, columnspan=5, sticky=W)
+indicator_frame.grid(row=0, column=1, columnspan=6, sticky=W)
 indicator_frame.columnconfigure(tuple(range(10)), weight=1)
 indicators = { }
 indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="Live", color='red', grid=g(0,0), grid_s=g(0,0), tooltip="Master live warning.  RED if anything is live on stream (tooltip will indicate what is on).")
@@ -246,6 +246,8 @@ for i, (name, label, color, tt, kwargs) in enumerate([
     ('notes',    'Notes',    'cyan',   'General "check shared notes" indicator.', {}),
     ('question', 'Question', 'cyan',   'Important question, check chat or notes', {}),
     ('chat',     'Chat',     'cyan',   'Check chat indicator', {}),
+    ('slower',     '<',      'yellow', 'Slower', {}),
+    ('faster',     '>',      'yellow', 'Faster', {}),
     ]):
     indicators[name] = IndicatorLight(indicator_frame, 'indicator-'+name, label, color=color,
                                       grid  =g(row=0, column=i+1),
@@ -624,7 +626,7 @@ class ScrollNotes(Helper, ttk.Button):
 sn_frame= ttk.Frame(frm)
 sn_frame.columnconfigure(tuple(range(3)), weight=1)
 if args.small:
-    sn_frame.grid(row=1, column=3, columnspan=2)
+    sn_frame.grid(row=1, column=3, columnspan=4)
 else:
     sn_frame.grid(row=8, column=0, columnspan=3)
 
