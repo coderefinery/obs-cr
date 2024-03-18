@@ -291,9 +291,9 @@ QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich 
 
 if not args.small:
     QuickBack(frm, 'Screenshare',         'BACK(ss) ',  grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings')
-    QuickBack(frm, 'ScreenshareCrop',     'BACK(ss-c)', grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings')
-    QuickBack(frm, 'ScreenshareLandscape','BACK(ss-ls)',grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings')
-    QuickBack(frm, NOTES,                 'BACK(n)',    grid=g(1,2), tooltip='Back from break\nSwitch to Notes,\ntry to restore settings')
+    QuickBack(frm, 'ScreenshareCrop',     'BACK(ss-c)', grid=g(1,3), tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings')
+    QuickBack(frm, 'ScreenshareLandscape','BACK(ss-ls)',grid=g(1,4), tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings')
+    QuickBack(frm, NOTES,                 'BACK(n)',    grid=g(1,6), tooltip='Back from break\nSwitch to Notes,\ntry to restore settings')
     quick_sound = ttk.Checkbutton(frm, text="Jingle?", onvalue=True, offvalue=False)
     quick_sound.grid(row=1, column=7)
     ToolTip(quick_sound,
