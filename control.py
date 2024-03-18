@@ -357,6 +357,8 @@ class SceneLabel(Helper, Label):
         obssubscribe(self.on_current_program_scene_changed)
         if not cli_args.test:
             self.update_(obsreq.get_current_program_scene().current_program_scene_name)
+        self.label = ''
+        self.scene_name = ''
     def update_(self, scene_name):
         self.scene_name = scene_name
         label = self.label = SCENE_NAMES.get(scene_name, (scene_name,))[0]
