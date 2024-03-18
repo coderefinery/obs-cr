@@ -320,6 +320,7 @@ class SceneButton(Helper, Button):
             obssubscribe([self.on_current_program_scene_changed])
     @classmethod
     def switch(self, name):
+        obsreq.set_current_program_scene(name)
         for instance in self._instances:
             instance.update_(instance.scene_name is name)
     def click(self):
