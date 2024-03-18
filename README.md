@@ -60,6 +60,12 @@ screenshot, so try not to make it too close to realtime.  0.2 is
 probably fine, even 0.1.
 
 
+## Cheatsheet
+
+Commands for copying and pasting
+
+* Linux, Firefox: `python control.py HOSTNAME:PORT TOKEN --notes-window='^Collaborative document.*Private' --scene-hook=Screenshare="xdotool search --onlyvisible --name '^Zoom$' windowsize 840, 1080;" --scene-hook=ScreenshareCrop="xdotool search --onlyvisible --name '^Zoom$' windowsize 1920, 1080;" --scene-hook=ScreenshareLandscape="xdotool search --onlyvisible --name '^Zoom$' windowsize 1920, 1080;"`
+
 
 ## Status
 
