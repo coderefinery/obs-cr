@@ -11,6 +11,38 @@ from tktooltip import ToolTip
 # pylint: disable=redefined-outer-name
 
 #
+# Application setup
+#
+import argparse
+import os
+class DictAction(argparse.Action):
+    """Argparse action that collects x=y values into a dict."""
+    def __init__(self, *args, default=None, **kwargs):
+        if default is None: default = {}
+        super().__init__(*args, default=default, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        settings = getattr(namespace, self.dest)
+        for x in values:
+            if '=' not in x: raise argparse.ArgumentError(x, f'Argument missing "=": "{x}"')
+            settings[x.split('=', 1)[0]] = x.split('=', 1)[1]
+parser = argparse.ArgumentParser()
+parser.add_argument('hostname_port')
+parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
+                  help='or set env var OBS_PASSWORD')
+parser.add_argument('--notes-window',
+                    help='window name regex for notes document (for scrolling), get via xwininfo -tree -root | less')
+parser.add_argument('--small', action='store_true')
+parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel")
+parser.add_argument('--scene-hook', action=DictAction, nargs=1,
+                    help="Local command line hooks for switching to each scene, format SCENENAME=command")
+parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
+parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer")
+parser.add_argument('--verbose', action='store_true')
+args = cli_args = parser.parse_args()
+print(cli_args)
+
+
+#
 # Definitions
 #
 ACTIVE = 'red'
@@ -25,7 +57,7 @@ SCENE_NAMES = {
     'Screenshare': ('Screen', 'Screenshare, normal portrait mode', True),
     'ScreenshareCrop': ('ScrLSCrp', 'Screenshare, landscape share but crop portrait out of the left 840 pixels (requires local setup)', True),
     'ScreenshareLandscape': ('ScreenLS', 'Screenshare, actual full landscape mode inserted into portrait mode (requires local setup)', True),
-    'Broadcaster-Screen': ('BrdScr', 'Broadcaster local screen (only broadcaster may select)', False),
+    'Broadcaster-Screen': ('BrdScr', 'Broadcaster local screen (only broadcaster may select)', args.broadcaster),
     NOTES: ('Notes', 'Notes, from the broadcaster computer', True),
     'Empty': ('Empty', 'Empty black screen', True),
     }
@@ -52,34 +84,6 @@ PIP_CROP_FACTORS = {
     }
 
 
-#
-# Application setup
-#
-import argparse
-import os
-class DictAction(argparse.Action):
-    """Argparse action that collects x=y values into a dict."""
-    def __init__(self, *args, default=None, **kwargs):
-        if default is None: default = {}
-        super().__init__(*args, default=default, **kwargs)
-    def __call__(self, parser, namespace, values, option_string=None):
-        settings = getattr(namespace, self.dest)
-        for x in values:
-            if '=' not in x: raise argparse.ArgumentError(x, f'Argument missing "=": "{x}"')
-            settings[x.split('=', 1)[0]] = x.split('=', 1)[1]
-parser = argparse.ArgumentParser()
-parser.add_argument('hostname_port')
-parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
-                  help='or set env var OBS_PASSWORD')
-parser.add_argument('--notes-window',
-                    help='window name regex for notes document (for scrolling), get via xwininfo -tree -root | less')
-parser.add_argument('--small', action='store_true')
-parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel")
-parser.add_argument('--scene-hook', action=DictAction, nargs=1,
-                    help="Local command line hooks for switching to each scene, format SCENENAME=command")
-parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
-parser.add_argument('--verbose', action='store_true')
-args = cli_args = parser.parse_args()
 
 # OBS websocket
 if not args.test:
@@ -458,7 +462,7 @@ if not args.small:
     audio_l.grid(row=3, column=0)
     ToolTip(audio_l, "Audio controls (mute/unmute/level)", delay=TOOLTIP_DELAY)
 mute = { }
-mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", grid=g(3, 1), tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=False)
+mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", grid=g(3, 1), tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=args.broadcaster)
 mute[AUDIO_INPUT]      = Mute(frm, AUDIO_INPUT,     "Instr", grid=g(3, 2), tooltip="Mute/unmute instructor capture, red=ON", )
 volume = Volume(frm, AUDIO_INPUT, grid=g(row=3, column=3, columnspan=4, sticky=E+W))
 
