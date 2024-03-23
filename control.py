@@ -54,9 +54,9 @@ SCENE_NAMES = {
     # obs_name: (label, tooltip),
     'Title': ('Title', 'Title screen with logo', True),
     'Gallery': ('Gallery', 'All instructors gallery', True),
-    'Screenshare': ('Screen', 'Screenshare, normal portrait mode', True),
-    'ScreenshareCrop': ('ScrLSCrp', 'Screenshare, landscape share but crop portrait out of the left 840 pixels (requires local setup)', True),
-    'ScreenshareLandscape': ('ScreenLS', 'Screenshare, actual full landscape mode inserted into portrait mode (requires local setup)', True),
+    'Screenshare': ('SS Portrait', 'Screenshare, normal portrait mode', True),
+    'ScreenshareCrop': ('SS Crop', 'Screenshare, landscape share but crop portrait out of the left 840 pixels (requires local setup)', True),
+    'ScreenshareLandscape': ('SS Landscape', 'Screenshare, actual full landscape mode inserted into portrait mode (requires local setup)', True),
     'Broadcaster-Screen': ('BrdScr', 'Broadcaster local screen (only broadcaster may select)', args.broadcaster),
     NOTES: ('Notes', 'Notes, from the broadcaster computer', True),
     'Empty': ('Empty', 'Empty black screen', True),
@@ -296,9 +296,9 @@ QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich 
            grid=g(1,1), grid_s=g(1,1))
 
 if not args.small:
-    QuickBack(frm, 'Screenshare',         'BACK(ss) ',  grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings')
-    QuickBack(frm, 'ScreenshareCrop',     'BACK(ss-c)', grid=g(1,3), tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings')
-    QuickBack(frm, 'ScreenshareLandscape','BACK(ss-ls)',grid=g(1,4), tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings')
+    QuickBack(frm, 'Screenshare',         'BACK(SS-P) ',  grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings')
+    QuickBack(frm, 'ScreenshareCrop',     'BACK(SS-C)', grid=g(1,3), tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings')
+    QuickBack(frm, 'ScreenshareLandscape','BACK(SS-LS)',grid=g(1,4), tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings')
     QuickBack(frm, NOTES,                 'BACK(n)',    grid=g(1,6), tooltip='Back from break\nSwitch to Notes,\ntry to restore settings')
     quick_sound = ttk.Checkbutton(frm, text="Jingle?", onvalue=True, offvalue=False)
     quick_sound.grid(row=1, column=7)
