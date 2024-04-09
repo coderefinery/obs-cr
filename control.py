@@ -116,9 +116,10 @@ class ObsState:
     def __getattr__(self, name):
         if name.startswith('_'):
             raise AttributeError(f'Invalid attribute {name}')
-        value = self._req.obsreq.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name)
+        value = self._req.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name)
         self._LOG.debug('obs.getattr {name}={value}')
         return value
+
     def __setattr__(self, name, value):
         if name in self._dir:
             super().__setattr__(name, value)
@@ -127,9 +128,18 @@ class ObsState:
         self._LOG.debug('obs.setattr %s=%s', name, value)
         self._req.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name, value)
         self._req.broadcast_custom_event({'eventData': {name: value}})
+        if args.test:
+            self.on_custom_event(type('dummy', (), {name: value, 'attrs': lambda: [name]}))
+
+    def on_custom_event(self, event):
+        """Watcher for custom events"""
+        for attr in event.attrs():
+            if attr in self._watchers:
+                for func in self._watchers[attr]:
+                    func(getattr(event, attr))
 
     def _watch(self, name, func):
-        self._LOG.debug('obs._watch add %s=%s', name, func.__name__)
+        self._LOG.debug('obs._watch add %s=%s', name, func)
         self._watchers[name].add(func)
 
     # Custom properties
@@ -147,7 +157,7 @@ class ObsState:
     def on_current_program_scene_changed(self, data):
         print('z'*50)
         for func in self._watchers['scene']:
-            self._LOG.debug('obs.scene watch scene %s', func.__name__)
+            self._LOG.debug('obs.scene watch scene %s', func)
             func(data.scene_name)
 
 
@@ -251,18 +261,16 @@ class IndicatorLight(Helper, Button):
         self.color = color
         self.blink = blink
         super().__init__(frm, text=label, command=self.click, **kwargs)
-        saved_state = obsreq.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name)
+        saved_state = getattr(obs, event_name)
         self.state = None
         self.blink_id = None
         if saved_state:
             self.state = saved_state.slot_value
         self.update_(self.state)
-        obssubscribe(self.on_custom_event)
+        obs._watch(event_name, self.update_)
     def click(self):
         self.state = not self.state
-        obsreq.broadcast_custom_event({'eventData': {self.event_name: self.state}})
-        obsreq.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', self.event_name, self.state)
-        self.update_(self.state)
+        setattr(obs, self.event_name, self.state)
     def update_(self, state):
         """Callback anytime state is updated."""
         self.state = state
@@ -282,9 +290,7 @@ class IndicatorLight(Helper, Button):
         else:
             self.configure(background=default_color, activebackground=default_color)
         self.after(self.blink, self.do_blink, blink_id, not next_state)
-    def on_custom_event(self, event):
-        if hasattr(event, self.event_name):
-            self.update_(getattr(event, self.event_name))
+
 class IndicatorMasterLive(Helper, Button):
     def __init__(self, frm, event_name, label, color='cyan', tooltip=None, **kwargs):
         self.event_name = event_name
