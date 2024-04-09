@@ -644,7 +644,17 @@ b = ScrollNotes(sn_frame, "Down", event='notes_scroll_down', grid=g(0,2), grid_s
 
 
 # Announcement text
-#def ann_toggle():
+class AnnouncementButton(Helper, Button):
+    def __init__(self, frame, name, label, **kwargs):
+        self.name = name
+        self.state = False
+        super().__init__(frame, command=self.click_, *kwargs)
+    def click_(self):
+        pass
+class AnnouncementLabel(Helper, Frame):
+    pass
+
+    #def ann_toggle():
 #    if ann_toggle = False
 #    for scene in SCENES:
 #        id_ = obsreq.get_scene_item_id(scene, 'Announcement'.scene_item_id
