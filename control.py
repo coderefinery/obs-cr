@@ -142,6 +142,8 @@ class ObsState:
     def scene(self, value):
         self._LOG.debug('obs.scene set scene=%s', value)
         self._req.set_current_program_scene(value)
+        if args.test:
+            self.on_current_program_scene_changed(type('dummy', (), {'scene_name': value}))
     def on_current_program_scene_changed(self, data):
         print('z'*50)
         for func in self._watchers['scene']:
@@ -167,6 +169,7 @@ else:
             return partial(self.__call, name)
     obsreq = Request()
     obssubscribe = getattr(obsreq, 'callback.register')
+    cl = type('null', (), {'callback':type('null', (), {'register': lambda *args, **kwargs: None})})
 
 obs = ObsState(obsreq, cl)
 
@@ -380,7 +383,8 @@ class SceneButton(Helper, Button):
     _instances = [ ]
     def __init__(self, frame, scene_name, label, selectable=True, **kwargs):
         self.scene_name = scene_name
-        super().__init__(frame, text=label, command=self.click,
+        super().__init__(frame, text=label,
+                         command=partial(self.switch, scene_name),
                          state='normal' if selectable else 'disabled',
                          **kwargs)
         self._instances.append(self)
@@ -390,38 +394,31 @@ class SceneButton(Helper, Button):
                 self.update_(True)
                 indicators['live'].update_('scene-visible', scene_name if (scene_name not in SCENES_SAFE) else '')
                 print(f"Init: Current scene {current_scene}")
-        obs._watch('scene', self.on_current_program_scene_changed)
+        obs._watch('scene', self.switched)
     @classmethod
     def switch(self, name):
-        obsreq.set_current_program_scene(name)
+        """Trigger a switch"""
+        print(f'Remote: triggered scene {name}')
+        obs.scene = name
+        self.switched(name)
+    @classmethod
+    def switched(self, name):
+        """Handle a switch triggered externally"""
+        indicators['live'].update_('scene-visible', name if (name not in SCENES_SAFE) else '')
         for instance in self._instances:
-            instance.update_(instance.scene_name is name)
-    def click(self):
-        """Clicked, update this and others, and send to OBS"""
-        print(f'Local: switching to {self.scene_name}')
-        obs.scene = self.scene_name
-        self.update_(True)
-        if args.test:
-            for instance in self._instances:
-                if instance is not self:
-                    instance.update_(instance.scene_name == self.scene_name)
-        indicators['live'].update_('scene-visible', self.scene_name if (self.scene_name not in SCENES_SAFE) else '')
+            instance.update_(instance.scene_name == name)
+        if name in cli_args.scene_hook:
+            subprocess.call(cli_args.scene_hook[name], shell=True)
     def update_(self, state):
-        if state:
+        """Update button's apperance if clicked"""
+        if state and self.scene_name in SCENES_SAFE:
+            color = ACTIVE_SAFE
+        elif state:
             color = ACTIVE
-            if self.scene_name in SCENES_SAFE:
-                color = ACTIVE_SAFE
-            if self.scene_name in cli_args.scene_hook:
-                subprocess.call(cli_args.scene_hook[self.scene_name], shell=True)
         else:
             color = default_color
         self.configure(background=color, activebackground=color)
 
-    def on_current_program_scene_changed(self, name):
-        if name == self.scene_name:
-            print(f"OBS: scene to {name}")
-            indicators['live'].update_('scene-visible', name if (name not in SCENES_SAFE) else '')
-        self.update_(name == self.scene_name)
 class SceneLabel(Helper, Label):
     label = ''
     scene_name = ''
