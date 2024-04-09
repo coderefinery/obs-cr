@@ -432,9 +432,9 @@ class SceneLabel(Helper, Label):
         self.tt_default = tooltip or 'Current scene'
         super().__init__(frm, *args, tooltip=self.tt_msg, **kwargs)
         self.configure(text='[scene]')
-        obssubscribe(self.on_current_program_scene_changed)
+        obs._watch('scene', self.update_)
         if not cli_args.test:
-            self.update_(obsreq.get_current_program_scene().current_program_scene_name)
+            self.update_(obs.scene)
     def update_(self, scene_name):
         self.scene_name = scene_name
         label = self.label = SCENE_NAMES.get(scene_name, (scene_name,))[0]
@@ -444,8 +444,6 @@ class SceneLabel(Helper, Label):
         else:
             color = ACTIVE
         self.configure(background=color, activebackground=color)
-    def on_current_program_scene_changed(self, data):
-        self.update_(data.scene_name)
     def tt_msg(self):
         return '\n'.join([self.tt_default, f'{self.label} ({self.scene_name})'])
 
