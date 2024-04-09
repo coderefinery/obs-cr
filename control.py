@@ -1,4 +1,7 @@
+import collections
 from functools import partial
+import inspect
+import logging
 import math
 import random
 import subprocess
@@ -37,9 +40,15 @@ parser.add_argument('--scene-hook', action=DictAction, nargs=1,
                     help="Local command line hooks for switching to each scene, format SCENENAME=command")
 parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
 parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer")
-parser.add_argument('--verbose', action='store_true')
+parser.add_argument('--verbose', '-v', action='count', default=0)
 args = cli_args = parser.parse_args()
-print(cli_args)
+LOG = logging.getLogger(__name__)
+if args.verbose >= 2:
+    logging.basicConfig(level=logging.DEBUG)
+elif args.verbose >= 1:
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger('obsws_python').setLevel(logging.INFO)
+LOG.debug("Arguments: %s", cli_args)
 
 
 #
@@ -84,6 +93,61 @@ PIP_CROP_FACTORS = {
     }
 
 
+class ObsState:
+    """Manager class for all OBS state
+    """
+    ATTRS = {
+        ''
+        }
+    _LOG = logging.getLogger('ObsState')
+    def __init__(self, obsreq, obsev):
+        super().__setattr__('_req', obsreq)
+        super().__setattr__('_ev', obsev)
+        super().__setattr__('_watchers', collections.defaultdict(set))
+        super().__setattr__('_dir', set(dir(self)))
+
+        watching_funcs = [func
+                          for (name, func) in inspect.getmembers(self, predicate=inspect.ismethod)
+                          if name.startswith('on_')
+                          ]
+        self._LOG.debug('Registering functions: %s', watching_funcs)
+        self._ev.callback.register(watching_funcs)
+
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError(f'Invalid attribute {name}')
+        value = self._req.obsreq.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name)
+        self._LOG.debug('obs.getattr {name}={value}')
+        return value
+    def __setattr__(self, name, value):
+        if name in self._dir:
+            super().__setattr__(name, value)
+        if name.startswith('_'):
+            raise AttributeError(f'Invalid attribute {name}')
+        self._LOG.debug('obs.setattr %s=%s', name, value)
+        self._req.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name, value)
+        self._req.broadcast_custom_event({'eventData': {name: value}})
+
+    def _watch(self, name, func):
+        self._LOG.debug('obs._watch add %s=%s', name, func.__name__)
+        self._watchers[name].add(func)
+
+    # Custom properties
+    @property
+    def scene(self):
+        value = self._req.get_current_program_scene().current_program_scene_name
+        self._LOG.debug('obs.scene get scene=%s', value)
+        return value
+    @scene.setter
+    def scene(self, value):
+        self._LOG.debug('obs.scene set scene=%s', value)
+        self._req.set_current_program_scene(value)
+    def on_current_program_scene_changed(self, data):
+        print('z'*50)
+        for func in self._watchers['scene']:
+            self._LOG.debug('obs.scene watch scene %s', func.__name__)
+            func(data.scene_name)
+
 
 # OBS websocket
 if not args.test:
@@ -91,9 +155,9 @@ if not args.test:
     port = args.hostname_port.split(':')[1]
     password = args.password
 
-    import obsws_python as obs
-    obsreq = obs.ReqClient(host=hostname, port=port, password=password, timeout=3)
-    cl = obs.EventClient(host=hostname, port=port, password=password, timeout=3)
+    import obsws_python
+    obsreq = obsws_python.ReqClient(host=hostname, port=port, password=password, timeout=3)
+    cl = obsws_python.EventClient(host=hostname, port=port, password=password, timeout=3)
     obssubscribe = cl.callback.register
 else:
     class Request():
@@ -103,6 +167,9 @@ else:
             return partial(self.__call, name)
     obsreq = Request()
     obssubscribe = getattr(obsreq, 'callback.register')
+
+obs = ObsState(obsreq, cl)
+
 
 class Helper:
     grid_pos = None
@@ -318,12 +385,12 @@ class SceneButton(Helper, Button):
                          **kwargs)
         self._instances.append(self)
         if not args.test:
-            current_scene = obsreq.get_current_program_scene().current_program_scene_name
+            current_scene = obs.scene
             if current_scene == scene_name:
                 self.update_(True)
                 indicators['live'].update_('scene-visible', scene_name if (scene_name not in SCENES_SAFE) else '')
                 print(f"Init: Current scene {current_scene}")
-            obssubscribe([self.on_current_program_scene_changed])
+        obs._watch('scene', self.on_current_program_scene_changed)
     @classmethod
     def switch(self, name):
         obsreq.set_current_program_scene(name)
@@ -332,7 +399,7 @@ class SceneButton(Helper, Button):
     def click(self):
         """Clicked, update this and others, and send to OBS"""
         print(f'Local: switching to {self.scene_name}')
-        obsreq.set_current_program_scene(self.scene_name)
+        obs.scene = self.scene_name
         self.update_(True)
         if args.test:
             for instance in self._instances:
@@ -350,8 +417,7 @@ class SceneButton(Helper, Button):
             color = default_color
         self.configure(background=color, activebackground=color)
 
-    def on_current_program_scene_changed(self, data):
-        name = data.scene_name
+    def on_current_program_scene_changed(self, name):
         if name == self.scene_name:
             print(f"OBS: scene to {name}")
             indicators['live'].update_('scene-visible', name if (name not in SCENES_SAFE) else '')
@@ -752,10 +818,6 @@ obssubscribe([
     *([on_custom_event] if args.notes_window else []),
     #*[x.on_custom_event for x in indicators.values()],
     ])
-
-if args.verbose:
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
 
 #import IPython ; IPython.embed()
 
