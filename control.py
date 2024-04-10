@@ -383,9 +383,10 @@ class QuickBack(Helper, ttk.Button):
         threading.Thread(target=self.run).start()
     def run(self):
         mute[AUDIO_INPUT].click(False)
-        if quick_sound.state() == ('selected', ):
+        if quick_sound.instate(('selected', )):
             playback_buttons['short'].play()
             time.sleep(3)
+            quick_sound.state(('!selected',))
         SceneButton.switch(self.scene)
         pip_size.restore_last()
         print('sound state: ', quick_sound.state())
@@ -404,6 +405,8 @@ if not args.small:
     QuickBack(frm, NOTES,                 'BACK(n)',    grid=g(1,6), tooltip='Back from break\nSwitch to Notes,\ntry to restore settings')
     quick_sound = ttk.Checkbutton(frm, text="Jingle?", onvalue=True, offvalue=False)
     quick_sound.grid(row=1, column=7)
+    quick_sound.state(('!selected', '!alternate',))
+
     ToolTip(quick_sound,
             "Play short sound when coming back from break?\n"
             "If yes, then unmute, play jingle for 3s, then switch scene and increase PIP size.\n"
