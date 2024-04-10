@@ -766,21 +766,24 @@ class ScrollNotes(Helper, ttk.Button):
         self.event = event
         super().__init__(frm, text=label, command=self.click, **kwargs)
     def click(self):
-        obsreq.broadcast_custom_event({'eventData': {self.event: True}})
+        obs['notes_scroll'] = self.event
     def on_custom_event(self, event):
         pass
 sn_frame= ttk.Frame(frm)
 sn_frame.columnconfigure(tuple(range(3)), weight=1)
 if args.small:
-    sn_frame.grid(row=1, column=3, columnspan=4)
+    sn_frame.grid(row=1, column=3, columnspan=7)
 else:
-    sn_frame.grid(row=8, column=0, columnspan=3)
+    sn_frame.grid(row=8, column=0, columnspan=6)
 
 sn_label = Label(sn_frame, text="Notes scroll:")
 sn_label.grid(row=0, column=0)
 ToolTip(sn_label, "Tools for scrolling notes up and down (on the broadcaster computer), in the Notes view.", delay=TOOLTIP_DELAY)
-b = ScrollNotes(sn_frame, "Up",   event='notes_scroll_up',   grid=g(0,1), grid_s=g(0,1), tooltip="Scroll notes up")
-b = ScrollNotes(sn_frame, "Down", event='notes_scroll_down', grid=g(0,2), grid_s=g(0,2), tooltip="Scroll notes down")
+b = ScrollNotes(sn_frame, "Up",   event='Up',   grid=g(0,1), grid_s=g(0,1), tooltip="Scroll notes up")
+b = ScrollNotes(sn_frame, "Down", event='Down', grid=g(0,2), grid_s=g(0,2), tooltip="Scroll notes down")
+b = ScrollNotes(sn_frame, "PgUp", event='Prior',grid=g(0,3), grid_s=g(0,1), tooltip="Scroll notes up")
+b = ScrollNotes(sn_frame, "PgDn", event='Next', grid=g(0,4), grid_s=g(0,2), tooltip="Scroll notes down")
+b = ScrollNotes(sn_frame, "End",  event='End',  grid=g(0,5), grid_s=g(0,1), tooltip="Scroll notes up")
 
 
 
@@ -942,7 +945,7 @@ a = Preset(frm, 'preset-f', "F", grid=g(11,4, columnspan=3, sticky=E+W))
 #
 # Handle keystrokes on notes doc
 #
-def on_custom_event(data):
+def notes_scroll(value):
     """Scroll notes up/down"""
     # xdotool search --onlyvisible --name '^Collaborative document.*Private' windowfocus key Down windowfocus $(xdotool getwindowfocus)
     if not args.notes_window:
@@ -952,16 +955,13 @@ def on_custom_event(data):
            'key', 'KEY',
            'windowfocus', subprocess.getoutput('xdotool getwindowfocus')
            ]
-    if hasattr(data, 'notes_scroll_down'):
-        cmd[cmd.index('KEY')] = 'Down'
-        subprocess.call(cmd)
-    if hasattr(data, 'notes_scroll_up'):
-        cmd[cmd.index('KEY')] = 'Up'
+    if value in {'Up', 'Down', 'Prior', 'Next', 'End'}:
+        cmd[cmd.index('KEY')] = value
+        LOG.info('Scrolling notes: %s', value)
         subprocess.call(cmd)
 
-obssubscribe([
-    *([on_custom_event] if args.notes_window else []),
-    ])
+if args.notes_window:
+    obs._watch('notes_scroll', notes_scroll)
 
 #import IPython ; IPython.embed()
 
