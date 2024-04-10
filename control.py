@@ -522,8 +522,16 @@ class SceneLabel(Helper, Label):
     def tt_msg(self):
         return '\n'.join([self.tt_default, f'{self.label} ({self.scene_name})'])
 
+if not args.small:
+    scene_label = ttk.Label(frm, text='Scene:')
+    scene_label.grid(row=2, column=0)
+    ToolTip(scene_label, "Raw scene selection")
+
+scene_frame = ttk.Frame(frm)
+if not args.small:
+    scene_frame.grid(row=2, column=1, columnspan=7)
 for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
-    b = SceneButton(frm, scene_name=scene, label=label, selectable=selectable,
+    b = SceneButton(scene_frame, scene_name=scene, label=label, selectable=selectable,
                     tooltip=tooltip,
                     grid=g(2, i))
 if args.small:
@@ -601,12 +609,12 @@ class Volume(Helper, ttk.Frame):
 
 if not args.small:
     audio_l = ttk.Label(frm, text="Audio:")
-    audio_l.grid(row=3, column=0)
+    audio_l.grid(row=6, column=0)
     ToolTip(audio_l, "Audio controls (mute/unmute/level)", delay=TOOLTIP_DELAY)
 mute = { }
-mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", grid=g(3, 1), tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=args.broadcaster)
-mute[AUDIO_INPUT]      = Mute(frm, AUDIO_INPUT,     "Instr", grid=g(3, 2), tooltip="Mute/unmute instructor capture, red=ON", )
-volume = Volume(frm, AUDIO_INPUT, grid=g(row=3, column=3, columnspan=4, sticky=E+W))
+mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", grid=g(6, 1), tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=args.broadcaster)
+mute[AUDIO_INPUT]      = Mute(frm, AUDIO_INPUT,     "Instr", grid=g(6, 2), tooltip="Mute/unmute instructor capture, red=ON", )
+volume = Volume(frm, AUDIO_INPUT, grid=g(row=6, column=3, columnspan=4, sticky=E+W))
 
 
 # PIP
@@ -673,9 +681,9 @@ class PipSize(Helper, ttk.Frame):
 
 if not args.small:
     b_pip = ttk.Label(frm, text="PIP size:")
-    b_pip.grid(row=4, column=0)
+    b_pip.grid(row=7, column=0)
     ToolTip(b_pip, "Change size of instuctor picture-in-picture.", delay=TOOLTIP_DELAY)
-pip_size = PipSize(frm, grid=g(row=4, column=1, columnspan=6, sticky=E+W))
+pip_size = PipSize(frm, grid=g(row=7, column=1, columnspan=6, sticky=E+W))
 # PIP crop selection
 def pip_crop(n):
     print(f"PIP crop → {n} people")
@@ -690,14 +698,14 @@ def pip_crop(n):
         obsreq.set_scene_item_transform(scene, id_, transform)
 if not args.small:
     b_cropbuttons = ttk.Label(frm, text="PIP crop:")
-    b_cropbuttons.grid(row=5, column=0)
+    b_cropbuttons.grid(row=8, column=0)
     ToolTip(b_cropbuttons,
         "PIP insert can be cropped to suit different numbers of people (this comes from "
         "how Zoom lays it out for different numbers of people.  Click a button if "
         "it doesn't fit right into the corner.", delay=TOOLTIP_DELAY)
 crop_buttons = ttk.Frame(frm)
 crop_buttons.columnconfigure(tuple(range(5)), weight=1)
-crop_buttons.grid(row=5, column=1, columnspan=5)
+crop_buttons.grid(row=8, column=1, columnspan=5)
 for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
     b = ttk.Button(crop_buttons, text=label, command=partial(pip_crop, n))
     if not args.small:
@@ -751,13 +759,13 @@ class PlayStop(Helper, ttk.Button):
         obsreq.trigger_media_input_action(PLAYBACK_INPUT, 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP')
 if not args.small:
     playback_label = ttk.Label(frm, text="Jingle:")
-    playback_label.grid(row=6, column=0)
+    playback_label.grid(row=9, column=0)
     ToolTip(playback_label, "Row deals with playing transition sounds", delay=TOOLTIP_DELAY)
-playback = PlaybackTimer(frm, PLAYBACK_INPUT, grid=g(6, 1), grid_s=g(1, 2), tooltip="Countdown time for current file playing")
+playback = PlaybackTimer(frm, PLAYBACK_INPUT, grid=g(9, 1), grid_s=g(1, 2), tooltip="Countdown time for current file playing")
 playback_buttons = { }
 for i, file_ in enumerate(PLAYBACK_FILES, start=2):
-    pf = playback_buttons[file_['label']] = PlayFile(frm, **file_, grid=g(6, i))
-ps = PlayStop(frm, grid=g(6, 2+len(PLAYBACK_FILES)), tooltip="Stop all playbacks")
+    pf = playback_buttons[file_['label']] = PlayFile(frm, **file_, grid=g(9, i))
+ps = PlayStop(frm, grid=g(9, 2+len(PLAYBACK_FILES)), tooltip="Stop all playbacks")
 
 
 
@@ -774,7 +782,7 @@ sn_frame.columnconfigure(tuple(range(3)), weight=1)
 if args.small:
     sn_frame.grid(row=1, column=3, columnspan=7)
 else:
-    sn_frame.grid(row=8, column=0, columnspan=6)
+    sn_frame.grid(row=11, column=0, columnspan=6)
 
 sn_label = Label(sn_frame, text="Notes scroll:")
 sn_label.grid(row=0, column=0)
@@ -823,6 +831,8 @@ class Preset():
     def __init__(self, frame, name, label, row, column, **kwargs):
         self.name = name
         self.label = label
+        self._last_scene = None
+        self._last_res = None
 
         self.button = Button(frame, text=label, command=self.click)
         self.button.grid(row=row, column=column)
@@ -834,14 +844,14 @@ class Preset():
                                '-', *[scene_to_label(x) for x in SCENE_NAMES],
                                command=self.click_sbox)
         self.sbox.grid(row=row, column=column+1)
-        self._last_scene = obs.scene
+        ToolTip(self.sbox, lambda: f'Scene for preset {self.label}', delay=TOOLTIP_DELAY)
 
         # Resolution choices
         self.rbox_value = StringVar()
         self.rbox = OptionMenu(frame, self.rbox_value, '-', *SCENE_SIZES,
                                command=self.click_rbox)
         self.rbox.grid(row=row, column=column+2)
-        self._last_res = obs.ss_resolution
+        ToolTip(self.rbox, lambda: f'Zoom capture resolution for preset {self.label}', delay=TOOLTIP_DELAY)
 
         self.rename_button = Button(frame, text='r', command=self.rename)
         self.rename_button.grid(row=row, column=column+3)
@@ -927,9 +937,9 @@ class Preset():
 
 
 l_presets = ttk.Label(frm, text="Scene presets:")
-l_presets.grid(row=9, column=0)
+l_presets.grid(row=3, column=0)
 f_presets = ttk.Frame(frm)
-f_presets.grid(row=9, column=1, rowspan=3, columnspan=8, sticky=S)
+f_presets.grid(row=3, column=1, rowspan=3, columnspan=8, sticky=S)
 ttk.Separator(f_presets, orient=VERTICAL).grid(column=4, row=0, rowspan=3, sticky=NS)
 f_presets.columnconfigure((0,1,2,5,6,7), weight=15)
 f_presets.columnconfigure((3,8), weight=5)
