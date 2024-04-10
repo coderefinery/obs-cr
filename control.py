@@ -38,6 +38,8 @@ parser.add_argument('--small', action='store_true')
 parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel")
 parser.add_argument('--scene-hook', action=DictAction, nargs=1,
                     help="Local command line hooks for switching to each scene, format SCENENAME=command")
+parser.add_argument('--resolution-hook',
+                    help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers")
 parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
 parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer")
 parser.add_argument('--verbose', '-v', action='count', default=0)
@@ -70,9 +72,14 @@ SCENE_NAMES = {
     NOTES: ('Notes', 'Notes, from the broadcaster computer', True),
     'Empty': ('Empty', 'Empty black screen', True),
     }
+SCENE_NAMES_REVERSE = { v[0]: n for n,v in SCENE_NAMES.items() }
 SCENES_WITH_PIP = ['Screenshare', 'ScreenshareCrop', 'ScreenshareLandscape', 'Broadcaster-Screen', NOTES]
 SCENES_WITH_GALLERY = SCENES_WITH_PIP + ['Gallery']
 SCENES_SAFE = ['Title', NOTES, 'Empty'] # scenes suitable for breaks
+SCENE_SIZES = [
+   "840x1080",
+   "1920x1080",
+   ]
 PIP = '_GalleryCapture[hidden]'
 PLAYBACK_INPUT = 'CRaudio'  # for playing transitions sounds, etc.
 TOOLTIP_DELAY = 0.5
@@ -116,9 +123,10 @@ class ObsState:
     def __getattr__(self, name):
         if name.startswith('_'):
             raise AttributeError(f'Invalid attribute {name}')
-        value = self._req.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name)
+        value = self._req.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name).slot_value
         self._LOG.debug('obs.getattr {name}={value}')
         return value
+    __getitem__ = __getattr__
 
     def __setattr__(self, name, value):
         if name in self._dir:
@@ -130,12 +138,21 @@ class ObsState:
         self._req.broadcast_custom_event({'eventData': {name: value}})
         if args.test:
             self.on_custom_event(type('dummy', (), {name: value, 'attrs': lambda: [name]}))
+    __setitem__ = __setattr__
+
+    def __hasattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError(f'Invalid attribute {name}')
+        value = self._req.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name)
+        self._LOG.debug('obs.hasattr {name}')
 
     def on_custom_event(self, event):
         """Watcher for custom events"""
+        self._LOG.debug('custom event %s (%s)', event, event.attrs())
         for attr in event.attrs():
             if attr in self._watchers:
                 for func in self._watchers[attr]:
+                    self._LOG.debug('custom event attr=%s func=%s', attr, func)
                     func(getattr(event, attr))
 
     def _watch(self, name, func):
@@ -245,6 +262,13 @@ def g(*args, **kwargs):
         grid_['column'] = args[1]
     grid_.update(kwargs)
     return grid_
+
+def scene_to_label(name):
+    return SCENE_NAMES.get(name, [('-')])[0]
+
+def label_to_scene(name):
+    return SCENE_NAMES_REVERSE.get(name, name)
+
 
 
 #
@@ -768,6 +792,112 @@ class AnnouncementLabel(Helper, Frame):
 #ann = Entry(frm) ; ann.grid(row=6, column=1, columnspan=6, sticky=W+E)
 #b = Button(frm, text="Update", command=ann_update) ; b.grid(row=6, column=5)
 #ToolTip(b, 'Update the announcement text in OBS', delay=TOOLTIP_DELAY)
+
+
+class Preset(Helper, ttk.Frame):
+    def __init__(self, frame, name, label, **kwargs):
+        super().__init__(frame, **kwargs)
+        self.name = name
+
+        self.button = Button(self, text=label, command=self.click)
+        self.button.grid(row=0, column=0)
+
+        # Scene choices
+        self.sbox_value = StringVar()
+        self.sbox_value.set(scene_to_label(obs[f'preset-{self.name}-sbox'] or '-'))
+        self.sbox = OptionMenu(self, self.sbox_value,
+                               '-', *[scene_to_label(x) for x in SCENE_NAMES],
+                               command=self.click_sbox)
+        self.sbox.grid(row=0, column=1)
+        self._last_scene = obs.scene
+
+        # Resolution choices
+        self.rbox_value = StringVar()
+        self.rbox_value.set(obs[f'preset-{self.name}-rbox'] or '-')
+        self.rbox = OptionMenu(self, self.rbox_value, '-', *SCENE_SIZES,
+                               command=self.click_rbox)
+        self.rbox.grid(row=0, column=2)
+        self._last_res = obs.ss_resolution
+
+        self.watch_scene(obs.scene)
+        self.watch_resolution(obs.ss_resolution)
+        obs._watch('scene', self.watch_scene)
+        obs._watch('ss_resolution', self.watch_resolution)
+        obs._watch(f'preset-{self.name}-sbox', self.watch_sbox)
+        obs._watch(f'preset-{self.name}-rbox', self.watch_rbox)
+
+    def click(self):
+        """Button is clicked.  Switch to this preset"""
+        scene_name = label_to_scene(self.sbox_value.get())
+        resolution = self.rbox_value.get()
+        print(f'Setting to preset {scene_name} at {resolution}')
+        obs.scene = scene_name
+        obs.ss_resolution = resolution
+        w, h = resolution.split('x')
+        w = int(w)
+        h = int(h)
+        set_resolution(w, h)
+
+    def click_sbox(self, name):
+        name = label_to_scene(name)
+        obs[f'preset-{self.name}-sbox'] = name
+        #self.update_()
+    def click_rbox(self, name):
+        obs[f'preset-{self.name}-rbox'] = name
+        #self.update_()
+
+    def watch_scene(self, name):
+        self._last_scene = name
+        self.update_()
+    def watch_resolution(self, res):
+        self._last_res = res
+        self.update_()
+
+    def watch_sbox(self, value):
+        LOG.debug('watch sbox')
+        self.sbox_value.set(scene_to_label(value))
+        self.update_()
+    def watch_rbox(self, value):
+        LOG.debug('watch rbox')
+        self.rbox_value.set(value)
+        self.update_()
+
+    def update_(self):
+        """Update coloring"""
+        LOG.debug('preset-%s: %s = %s', self.name, self._last_scene, self.sbox_value.get())
+        LOG.debug('preset-%s: %s = %s', self.name, self._last_res, self.rbox_value.get())
+        state = (self._last_scene == label_to_scene(self.sbox_value.get())
+                 and self._last_res == self.rbox_value.get() )
+        if state and self._last_scene in SCENES_SAFE:
+            color = ACTIVE_SAFE
+        elif state:
+            color = ACTIVE
+        else:
+            color = default_color
+        self.button.configure(background=color, activebackground=color)
+
+
+l_presets = ttk.Label(frm, text="Scene presets:")
+l_presets.grid(row=9, column=0)
+a = Preset(frm, 'a', "A", grid=g(9,1, columnspan=3, sticky=E+W))
+
+
+
+
+def set_resolution(w, h):
+    if not args.resolution_hook:
+        LOG.warning("No resolution hook to set %d, %d", w, h)
+        return
+    cmd = args.resolution_hook
+    w = int(w)
+    h = int(h)
+    if not  200 < w < 5000:
+        raise ValueError(f"invalid width: {w}")
+    if not 200 < h < 3000:
+        raise ValueError(f"invalid height: {w}")
+    cmd = cmd.replace('WIDTH', str(w)).replace('HEIGHT', str(h))
+    subprocess.call(cmd, shell=True)
+
 
 
 
