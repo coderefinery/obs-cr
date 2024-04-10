@@ -437,7 +437,7 @@ class QuickBack(Helper, ttk.Button):
         pip_size.restore_last()
         print('sound state: ', quick_sound.state())
 if not args.small:
-    qa_label = ttk.Label(frm, text="Presets:")
+    qa_label = ttk.Label(frm, text="QuickAct:")
     qa_label.grid(row=1, column=0)
     ToolTip(qa_label, "Quick actions.  Clicking button does something for you.", delay=TOOLTIP_DELAY)
 #l2 = Label2(frm, text="Presets:", grid=g(1, 0))
@@ -819,37 +819,32 @@ class AnnouncementLabel(Helper, Frame):
 #ToolTip(b, 'Update the announcement text in OBS', delay=TOOLTIP_DELAY)
 
 
-class Preset(Helper, ttk.Frame):
-    def __init__(self, frame, name, label, **kwargs):
-        super().__init__(frame, **kwargs)
+class Preset():
+    def __init__(self, frame, name, label, row, column, **kwargs):
         self.name = name
         self.label = label
-        self.columnconfigure((0,), weight=3)  # column, weight
-        self.columnconfigure((1,), weight=3)
-        self.columnconfigure((2,), weight=3)
-        self.columnconfigure((3,), weight=1)
 
-        self.button = Button(self, text=label, command=self.click)
-        self.button.grid(row=0, column=0)
+        self.button = Button(frame, text=label, command=self.click)
+        self.button.grid(row=row, column=column)
         ToolTip(self.button, lambda: f'Switch to preset {self.label}', delay=TOOLTIP_DELAY)
 
         # Scene choices
         self.sbox_value = StringVar()
-        self.sbox = OptionMenu(self, self.sbox_value,
+        self.sbox = OptionMenu(frame, self.sbox_value,
                                '-', *[scene_to_label(x) for x in SCENE_NAMES],
                                command=self.click_sbox)
-        self.sbox.grid(row=0, column=1)
+        self.sbox.grid(row=row, column=column+1)
         self._last_scene = obs.scene
 
         # Resolution choices
         self.rbox_value = StringVar()
-        self.rbox = OptionMenu(self, self.rbox_value, '-', *SCENE_SIZES,
+        self.rbox = OptionMenu(frame, self.rbox_value, '-', *SCENE_SIZES,
                                command=self.click_rbox)
-        self.rbox.grid(row=0, column=2)
+        self.rbox.grid(row=row, column=column+2)
         self._last_res = obs.ss_resolution
 
-        self.rename_button = Button(self, text='r', command=self.rename)
-        self.rename_button.grid(row=0, column=3)
+        self.rename_button = Button(frame, text='r', command=self.rename)
+        self.rename_button.grid(row=row, column=column+3)
         ToolTip(self.rename_button, lambda: f"Rename {self.label}")
 
         obs._watch_init('scene', self.watch_scene)
@@ -933,12 +928,18 @@ class Preset(Helper, ttk.Frame):
 
 l_presets = ttk.Label(frm, text="Scene presets:")
 l_presets.grid(row=9, column=0)
-a = Preset(frm, 'preset-a', "A", grid=g( 9,1, columnspan=3, sticky=E+W))
-a = Preset(frm, 'preset-b', "B", grid=g( 9,4, columnspan=3, sticky=E+W))
-a = Preset(frm, 'preset-c', "C", grid=g(10,1, columnspan=3, sticky=E+W))
-a = Preset(frm, 'preset-d', "D", grid=g(10,4, columnspan=3, sticky=E+W))
-a = Preset(frm, 'preset-e', "E", grid=g(11,1, columnspan=3, sticky=E+W))
-a = Preset(frm, 'preset-f', "F", grid=g(11,4, columnspan=3, sticky=E+W))
+f_presets = ttk.Frame(frm)
+f_presets.grid(row=9, column=1, rowspan=3, columnspan=8, sticky=S)
+ttk.Separator(f_presets, orient=VERTICAL).grid(column=4, row=0, rowspan=3, sticky=NS)
+f_presets.columnconfigure((0,1,2,5,6,7), weight=15)
+f_presets.columnconfigure((3,8), weight=5)
+f_presets.columnconfigure((4), minsize=20)
+a = Preset(f_presets, 'preset-a', "A", row=0, column=0)
+a = Preset(f_presets, 'preset-b', "B", row=0, column=5)
+a = Preset(f_presets, 'preset-c', "C", row=1, column=0)
+a = Preset(f_presets, 'preset-d', "D", row=1, column=5)
+a = Preset(f_presets, 'preset-e', "E", row=2, column=0)
+a = Preset(f_presets, 'preset-f', "F", row=2, column=5)
 
 
 
