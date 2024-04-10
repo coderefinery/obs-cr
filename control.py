@@ -79,6 +79,8 @@ SCENES_SAFE = ['Title', NOTES, 'Empty'] # scenes suitable for breaks
 SCENE_SIZES = [
    "840x1080",
    "1920x1080",
+   "1680x1080",
+   "3840x1080",
    ]
 PIP = '_GalleryCapture[hidden]'
 PLAYBACK_INPUT = 'CRaudio'  # for playing transitions sounds, etc.
@@ -789,9 +791,9 @@ sn_label.grid(row=0, column=0)
 ToolTip(sn_label, "Tools for scrolling notes up and down (on the broadcaster computer), in the Notes view.", delay=TOOLTIP_DELAY)
 b = ScrollNotes(sn_frame, "Up",   event='Up',   grid=g(0,1), grid_s=g(0,1), tooltip="Scroll notes up")
 b = ScrollNotes(sn_frame, "Down", event='Down', grid=g(0,2), grid_s=g(0,2), tooltip="Scroll notes down")
-b = ScrollNotes(sn_frame, "PgUp", event='Prior',grid=g(0,3), grid_s=g(0,1), tooltip="Scroll notes up")
-b = ScrollNotes(sn_frame, "PgDn", event='Next', grid=g(0,4), grid_s=g(0,2), tooltip="Scroll notes down")
-b = ScrollNotes(sn_frame, "End",  event='End',  grid=g(0,5), grid_s=g(0,1), tooltip="Scroll notes up")
+b = ScrollNotes(sn_frame, "PgUp", event='Prior',grid=g(0,3),                tooltip="Scroll notes PgUp")
+b = ScrollNotes(sn_frame, "PgDn", event='Next', grid=g(0,4),                tooltip="Scroll notes PgDn")
+b = ScrollNotes(sn_frame, "End",  event='End',  grid=g(0,5),                tooltip="Scroll notes End key")
 
 
 
@@ -935,11 +937,11 @@ class Preset():
         cancel.grid(row=1, column=0)
 
 
-
 l_presets = ttk.Label(frm, text="Scene presets:")
-l_presets.grid(row=3, column=0)
 f_presets = ttk.Frame(frm)
-f_presets.grid(row=3, column=1, rowspan=3, columnspan=8, sticky=S)
+if not args.small:
+    l_presets.grid(row=3, column=0)
+    f_presets.grid(row=3, column=1, rowspan=3, columnspan=8, sticky=S)
 ttk.Separator(f_presets, orient=VERTICAL).grid(column=4, row=0, rowspan=3, sticky=NS)
 f_presets.columnconfigure((0,1,2,5,6,7), weight=15)
 f_presets.columnconfigure((3,8), weight=5)
