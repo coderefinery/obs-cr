@@ -160,6 +160,32 @@ class ObsState:
             self._LOG.debug('obs.scene watch scene %s', func)
             func(data.scene_name)
 
+    @property
+    def muted(self):
+        return self._req.get_input_mute(AUDIO_INPUT).input_muted
+    @muted.setter
+    def muted(self, value):
+        self._req.set_input_mute(AUDIO_INPUT, value)
+        if args.test:
+            self.on_input_mute_state_changed(type('dummy', (), {'input_muted': value}))
+    @property
+    def muted_brcd(self):
+        return self._req.get_input_mute(AUDIO_INPUT).input_muted
+    @muted_brcd.setter
+    def muted_brcd(self, value):
+        self._req.set_input_mute(AUDIO_INPUT, value)
+        if args.test:
+            self.on_input_mute_state_changed(type('dummy', (), {'input_muted': value}))
+    def on_input_mute_state_changed(self, data):
+        print(f"OBS: mute {data.input_name} to {data.input_muted}")
+        for ctrl, name in [
+            (AUDIO_INPUT, 'muted'),
+            (AUDIO_INPUT_BRCD, 'muted_brcd'),
+            ]:
+            if data.input_name == ctrl:
+                for func in self._watchers[name]:
+                    func(data.input_muted)
+
 
 # OBS websocket
 if not args.test:
