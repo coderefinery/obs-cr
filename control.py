@@ -156,8 +156,15 @@ class ObsState:
                     func(getattr(event, attr))
 
     def _watch(self, name, func):
+        """Set a watcher for updates of this key"""
         self._LOG.debug('obs._watch add %s=%s', name, func)
         self._watchers[name].add(func)
+
+    def _watch_init(self, name, func):
+        """Set a watcher for this key.  Also run the callback once with the current value."""
+        self._LOG.debug('obs._watch_init add %s=%s', name, func)
+        self._watchers[name].add(func)
+        func(getattr(self, name))
 
     # Custom properties
     @property
@@ -268,6 +275,21 @@ def scene_to_label(name):
 
 def label_to_scene(name):
     return SCENE_NAMES_REVERSE.get(name, name)
+
+def set_resolution(w, h):
+    if not args.resolution_hook:
+        LOG.warning("No resolution hook to set %d, %d", w, h)
+        return
+    cmd = args.resolution_hook
+    w = int(w)
+    h = int(h)
+    if not  200 < w < 5000:
+        raise ValueError(f"invalid width: {w}")
+    if not 200 < h < 3000:
+        raise ValueError(f"invalid height: {w}")
+    cmd = cmd.replace('WIDTH', str(w)).replace('HEIGHT', str(h))
+    subprocess.call(cmd, shell=True)
+
 
 
 
@@ -798,13 +820,18 @@ class Preset(Helper, ttk.Frame):
     def __init__(self, frame, name, label, **kwargs):
         super().__init__(frame, **kwargs)
         self.name = name
+        self.label = label
+        self.columnconfigure((0,), weight=3)  # column, weight
+        self.columnconfigure((1,), weight=3)
+        self.columnconfigure((2,), weight=3)
+        self.columnconfigure((3,), weight=1)
 
         self.button = Button(self, text=label, command=self.click)
         self.button.grid(row=0, column=0)
+        ToolTip(self.button, lambda: f'Switch to preset {self.label}', delay=TOOLTIP_DELAY)
 
         # Scene choices
         self.sbox_value = StringVar()
-        self.sbox_value.set(scene_to_label(obs[f'preset-{self.name}-sbox'] or '-'))
         self.sbox = OptionMenu(self, self.sbox_value,
                                '-', *[scene_to_label(x) for x in SCENE_NAMES],
                                command=self.click_sbox)
@@ -813,18 +840,20 @@ class Preset(Helper, ttk.Frame):
 
         # Resolution choices
         self.rbox_value = StringVar()
-        self.rbox_value.set(obs[f'preset-{self.name}-rbox'] or '-')
         self.rbox = OptionMenu(self, self.rbox_value, '-', *SCENE_SIZES,
                                command=self.click_rbox)
         self.rbox.grid(row=0, column=2)
         self._last_res = obs.ss_resolution
 
-        self.watch_scene(obs.scene)
-        self.watch_resolution(obs.ss_resolution)
-        obs._watch('scene', self.watch_scene)
-        obs._watch('ss_resolution', self.watch_resolution)
-        obs._watch(f'preset-{self.name}-sbox', self.watch_sbox)
-        obs._watch(f'preset-{self.name}-rbox', self.watch_rbox)
+        self.rename_button = Button(self, text='r', command=self.rename)
+        self.rename_button.grid(row=0, column=3)
+        ToolTip(self.rename_button, lambda: f"Rename {self.label}")
+
+        obs._watch_init('scene', self.watch_scene)
+        obs._watch_init('ss_resolution', self.watch_resolution)
+        obs._watch_init(f'preset-{self.name}-sbox', self.watch_sbox)
+        obs._watch_init(f'preset-{self.name}-rbox', self.watch_rbox)
+        obs._watch_init(f'preset-{self.name}-label', self.watch_label)
 
     def click(self):
         """Button is clicked.  Switch to this preset"""
@@ -834,24 +863,27 @@ class Preset(Helper, ttk.Frame):
         obs.scene = scene_name
         obs.ss_resolution = resolution
         w, h = resolution.split('x')
-        w = int(w)
-        h = int(h)
-        set_resolution(w, h)
+        if w.isdigit and h.isdigit():
+            w = int(w)
+            h = int(h)
+            set_resolution(w, h)
 
     def click_sbox(self, name):
         name = label_to_scene(name)
         obs[f'preset-{self.name}-sbox'] = name
-        #self.update_()
     def click_rbox(self, name):
         obs[f'preset-{self.name}-rbox'] = name
-        #self.update_()
 
     def watch_scene(self, name):
-        self._last_scene = name
+        self._last_scene = name or '-'
         self.update_()
     def watch_resolution(self, res):
-        self._last_res = res
+        self._last_res = res or '-'
         self.update_()
+    def watch_label(self, label):
+        if label:
+            self.label = label
+            self.button.configure(text=label)
 
     def watch_sbox(self, value):
         LOG.debug('watch sbox')
@@ -877,80 +909,42 @@ class Preset(Helper, ttk.Frame):
         self.button.configure(background=color, activebackground=color)
 
 
+    def rename(self):
+        dialog = Toplevel()
+        dialog.wm_title(f"Rename {self.name}.")
+        newname = ttk.Entry(dialog, text=self.label)
+        newname.grid(row=0, column=0, columnspan=2)
+
+        def do_rename():
+            label = newname.get()
+            self.label = label
+            obs[f'preset-{self.name}-label'] = label
+            dialog.destroy()
+
+        ok = ttk.Button(dialog, text="Go", command=do_rename)
+        ok.grid(row=1, column=1)
+        cancel = ttk.Button(dialog, text="Cancel", command=dialog.destroy)
+        cancel.grid(row=1, column=0)
+
+
+
 l_presets = ttk.Label(frm, text="Scene presets:")
 l_presets.grid(row=9, column=0)
-a = Preset(frm, 'a', "A", grid=g(9,1, columnspan=3, sticky=E+W))
+a = Preset(frm, 'preset-a', "A", grid=g( 9,1, columnspan=3, sticky=E+W))
+a = Preset(frm, 'preset-b', "B", grid=g( 9,4, columnspan=3, sticky=E+W))
+a = Preset(frm, 'preset-c', "C", grid=g(10,1, columnspan=3, sticky=E+W))
+a = Preset(frm, 'preset-d', "D", grid=g(10,4, columnspan=3, sticky=E+W))
+a = Preset(frm, 'preset-e', "E", grid=g(11,1, columnspan=3, sticky=E+W))
+a = Preset(frm, 'preset-f', "F", grid=g(11,4, columnspan=3, sticky=E+W))
 
 
 
-
-def set_resolution(w, h):
-    if not args.resolution_hook:
-        LOG.warning("No resolution hook to set %d, %d", w, h)
-        return
-    cmd = args.resolution_hook
-    w = int(w)
-    h = int(h)
-    if not  200 < w < 5000:
-        raise ValueError(f"invalid width: {w}")
-    if not 200 < h < 3000:
-        raise ValueError(f"invalid height: {w}")
-    cmd = cmd.replace('WIDTH', str(w)).replace('HEIGHT', str(h))
-    subprocess.call(cmd, shell=True)
-
-
-
-
-
-# Initialize with our current state
-if not args.test:
-    pass
-    # scene
-    #switch(obsreq.get_current_program_scene().current_program_scene_name, from_obs=True)
-    # audio mute
-    #for input_ in mute:
-    #    mute[input_].obs_update(obsreq.get_input_mute(input_).input_muted)
-    # audio volume
-    #dB = obsreq.get_input_volume(volume.input).input_volume_db
-    #print(f"from OBS: {dB} (volume_state)")
-    #volume.obs_update(dB)
-    # pip size
-    #pip_id = obsreq.get_scene_item_id(NOTES, PIP).scene_item_id
-    #def update_pip_size():
-    #    """The on_scene_item_transform_changed doesn't seem to work, so we have to poll here... unfortunately."""
-    #    pip_size.obs_update(obsreq.get_scene_item_transform(NOTES, pip_id).scene_item_transform['scaleX'])
-    #    pip_size.after(1000, update_pip_size)
-    #update_pip_size()
-
-#def on_current_program_scene_changed(data):
-#    """Scene changing"""
-#    #print(data.attrs())
-#    print(f"OBS: scene to {data.scene_name}")
-#    switch(data.scene_name, from_obs=True)
-#def on_input_volume_changed(data):
-#    """Volume change"""
-#    #print(data.attrs())
-#    #print(data.input_name, data.input_volume_db)
-#    if data.input_name == volume.input:
-#        print(f"OBS: Volume {data.input_name} to {data.input_volume_db}")
-#        volume.obs_update(data.input_volume_db)
-#def on_input_mute_state_changed(data):
-#    """Muting/unmuting"""
-#    #print(data.attrs())
-#    if data.input_name in mute:
-#        print(f"OBS: mute {data.input_name} to {data.input_muted}")
-#        mute[data.input_name].obs_update(state=data.input_muted)
-#def on_media_input_playback_started(data):
-#    """Playing media"""
-#    print("OBS: media playback started")
-#    playback.update_timer()
-#def on_scene_item_transform_changed(data):
-#    """PIP size change.  This doesnt' work."""
-#    print(f"OBS: transform change of {data.scene_item_id}")
-#    if data.scene_item_id == pip_id:
-#        pip_size.obs_update(data.scene_item_transform['scaleX'])
-
+#
+# Handle keystrokes on notes doc
+#
 def on_custom_event(data):
+    """Scroll notes up/down"""
+    # xdotool search --onlyvisible --name '^Collaborative document.*Private' windowfocus key Down windowfocus $(xdotool getwindowfocus)
     if not args.notes_window:
         return
     cmd = ['xdotool', 'search', '--name', args.notes_window,
@@ -965,18 +959,8 @@ def on_custom_event(data):
         cmd[cmd.index('KEY')] = 'Up'
         subprocess.call(cmd)
 
-# xdotool search --onlyvisible --name '^Collaborative document.*Private' windowfocus key Down windowfocus $(xdotool getwindowfocus)
-
-
 obssubscribe([
-    #on_current_program_scene_changed,
-    #on_input_volume_changed,
-    #on_input_mute_state_changed,
-    #on_media_input_playback_started,
-    #on_scene_item_transform_changed,
-    #pip_size.on_custom_event,
     *([on_custom_event] if args.notes_window else []),
-    #*[x.on_custom_event for x in indicators.values()],
     ])
 
 #import IPython ; IPython.embed()
