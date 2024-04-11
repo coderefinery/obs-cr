@@ -291,17 +291,13 @@ class SyncedCheckbutton(Helper, ttk.Checkbutton):
 
 
 
-class SyncedLabel(Helper, ttk.Label):
+class SyncedLabel(Helper, Label):
     """A label that is synced via the key"""
     def __init__(self, frm, key, *args, **kwargs):
         self.key = key
         super().__init__(frm, *args, **kwargs)
         if key:
             obs._watch_init(self.key, self.watch)
-    def update_(self, value):
-        """Local update"""
-        if self.key:
-            obs[self.key] = value
     def watch(self, value):
         """Remote update"""
         self.configure(text=value)
@@ -334,6 +330,22 @@ def set_resolution(w, h):
         raise ValueError(f"invalid height: {w}")
     cmd = cmd.replace('WIDTH', str(w)).replace('HEIGHT', str(h))
     subprocess.call(cmd, shell=True)
+
+
+def switch(name):
+    """Switch to preset (or scene) with this name"""
+    LOG.info('switch: triggered switch to scene %r', name)
+    preset = Preset.by_label(name)
+    if preset is not None:
+        preset._switch_to()
+        obs['scene_humanname'] = name
+        return
+    print(name, type(name), name in SCENE_NAMES)
+    if name in SCENE_NAMES:
+        SceneButton.switch(name)
+        obs['scene_humanname'] = name
+        return
+    LOG.error("switch: could not find scene %s to switch to", name)
 
 
 
@@ -462,7 +474,7 @@ class QuickBreak(Helper, ttk.Button):
     def click(self):
         mute[AUDIO_INPUT].click(True)
         mute[AUDIO_INPUT_BRCD].click(True)
-        SceneButton.switch(NOTES)
+        switch(NOTES)
         pip_size.save_last()
         pip_size.update(0)
 class QuickBack(Helper, ttk.Button):
@@ -478,7 +490,7 @@ class QuickBack(Helper, ttk.Button):
             playback_buttons['short'].play()
             time.sleep(3)
             quick_jingle.state(('!selected',))
-        SceneButton.switch(self.scene)
+        switch(self.scene)
         pip_size.restore_last()
         print('sound state: ', quick_jingle.state())
 if not args.small:
@@ -514,7 +526,7 @@ class SceneButton(Helper, Button):
     def __init__(self, frame, scene_name, label, selectable=True, **kwargs):
         self.scene_name = scene_name
         super().__init__(frame, text=label,
-                         command=partial(self.switch, scene_name),
+                         command=partial(switch, scene_name),
                          state='normal' if selectable else 'disabled',
                          **kwargs)
         self._instances.append(self)
@@ -549,27 +561,35 @@ class SceneButton(Helper, Button):
             color = default_color
         self.configure(background=color, activebackground=color)
 
-class SceneLabel(Helper, Label):
-    label = ''
+class SceneLabel(SyncedLabel):
+    scene_label = ''
     scene_name = ''
-    def __init__(self, frm, *args, tooltip=None, **kwargs):
-        self.tt_default = tooltip or 'Current scene'
-        super().__init__(frm, *args, tooltip=self.tt_msg, **kwargs)
-        self.configure(text='[scene]')
-        obs._watch('scene', self.update_)
-        if not cli_args.test:
-            self.update_(obs.scene)
-    def update_(self, scene_name):
-        self.scene_name = scene_name
-        label = self.label = SCENE_NAMES.get(scene_name, (scene_name,))[0]
-        self.configure(text=label)
-        if scene_name in SCENES_SAFE:
+    def __init__(self, frm, *args, **kwargs):
+        super().__init__(frm, *args, key='scene_humanname', **kwargs)
+        #obs._watch_init('scene_humanname', self.update_)
+    def tooltip(self):
+        return '\n'.join(['Current scene',
+                          f'{self.scene_label} ({self.scene_name})'])
+    def watch(self, value):
+        # value could be a scene name, or a preset label
+        LOG.debug('SceneLabel: watching %s', value)
+        if value in SCENE_NAMES:
+            self.scene_name = value
+            self.scene_label = scene_to_label(value)
+        else:
+            self.scene_label = value
+            preset = Preset.by_label(value)
+            if preset is not None:
+                self.scene_name = preset.sbox_value.get()
+            else:
+                self.scene_name = ''
+        #label = self.label = SCENE_NAMES.get(scene_name, (scene_name,))[0]
+        super().watch(self.scene_label)
+        if self.scene_name in SCENES_SAFE:
             color = default_color
         else:
             color = ACTIVE
         self.configure(background=color, activebackground=color)
-    def tt_msg(self):
-        return '\n'.join([self.tt_default, f'{self.label} ({self.scene_name})'])
 
 if not args.small:
     scene_label = ttk.Label(frm, text='Scene:')
@@ -584,7 +604,7 @@ for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
                     tooltip=tooltip,
                     grid=g(2, i))
 if args.small:
-    SceneLabel(frm, grid_s=g(1,0), tooltip="Current scene")
+    SceneLabel(frm, grid_s=g(1,0))
 
 # Audio
 class Mute(Helper, Button):
@@ -914,8 +934,16 @@ class Preset():
         obs._watch_init(f'preset-{self.name}-rbox', self.watch_rbox)
         obs._watch_init(f'preset-{self.name}-label', self.watch_label)
 
+    @classmethod
+    def by_label(cls, label):
+        for instance in cls._instances:
+            if instance.label == label:
+                return instance
+
     def click(self):
         """Button is clicked.  Switch to this preset"""
+        switch(self.label)
+    def _switch_to(self):
         scene_name = label_to_scene(self.sbox_value.get())
         resolution = self.rbox_value.get()
         print(f'Setting to preset {self.label} ({scene_name} at {resolution})')
@@ -982,9 +1010,11 @@ class Preset():
             label = newname.get()
             self.label = label
             if not label:
-                LOG.error("A renamed label can not be blank")
+                LOG.error("A renamed label can not be blank: %s", label)
+            elif label in SCENE_NAMES:
+                LOG.error("A renamed label can be the same as a scene name: %s", label)
             elif self.label in [x.label for x in Preset._instances if x is not self]:
-                LOG.error("A renamed label can not be the same as an existing label")
+                LOG.error("A renamed label can not be the same as an existing label: %s", label)
             else:
                 obs[f'preset-{self.name}-label'] = label
             dialog.destroy()
@@ -994,16 +1024,6 @@ class Preset():
         cancel = ttk.Button(dialog, text="Cancel", command=dialog.destroy)
         cancel.grid(row=1, column=0)
 
-    @classmethod
-    def switch(self, label):
-        """Switch to preset (or scene) with this name"""
-        LOG.info('Preset: triggered scene %s', label)
-        for instance in self._instances:
-            if label == instance.label:
-                instance.click()
-                return
-        if label in SCENE_NAMES:
-            SceneButton.switch(label)
 
 
 l_presets = SyncedLabel(frm, key=None, text="Scene presets:", grid=g(row=3, column=0))
@@ -1089,7 +1109,7 @@ class QuickBackGo(Helper, ttk.Button):
         LOG.info("QuickBack phase 2: %s", scene)
         quick_jingle.click(False)
         quick_brcd.click(False)
-        Preset.switch(scene)
+        switch(scene)
         pip_size.restore_last()
 
 
