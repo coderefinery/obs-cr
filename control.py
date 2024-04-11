@@ -496,14 +496,14 @@ class QuickBack(Helper, ttk.Button):
 if not args.small:
     qa_label = ttk.Label(frm, text="QuickAct:")
     qa_label.grid(row=1, column=0)
-    ToolTip(qa_label, "Quick actions.  Clicking button does something for you.", delay=TOOLTIP_DELAY)
+    ToolTip(qa_label, "Quick actions.  Clicking quickly cuts you away from / back to the program.", delay=TOOLTIP_DELAY)
 #l2 = Label2(frm, text="Presets:", grid=g(1, 0))
 QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes',
            grid=g(1,1), grid_s=g(1,1))
 
 quick_jingle = SyncedCheckbutton(frm, grid=g(row=1, column=7), name='quick_jingle', text="Jingle?", onvalue=True, offvalue=False)
 quick_jingle.state(('!alternate',))
-quick_brcd = SyncedCheckbutton(frm, grid=g(row=1, column=6), name='quick_brcd', text="Brcd Audio?", onvalue=True, offvalue=False)
+quick_brcd = SyncedCheckbutton(frm, grid=g(row=1, column=6), name='quick_brcd', text="Brcd Audio?", onvalue=True, offvalue=False, tooltip="If checked, also unmute the broadcaster's microphone when returning.")
 quick_brcd.grid(row=1, column=6)
 quick_brcd.state(('!alternate', 'disabled' if not args.broadcaster else ''))
 ToolTip(quick_jingle,
@@ -1026,7 +1026,8 @@ class Preset():
 
 
 
-l_presets = SyncedLabel(frm, key=None, text="Scene presets:", grid=g(row=3, column=0))
+l_presets = SyncedLabel(frm, key=None, text="Scene presets:", grid=g(row=3, column=0),
+                        tooltip="Scene presets.  You can configure various presets and quickly jump to them.  Presets consist of a name, which scene, and resolution of the Zoom window.")
 l_presets_size = SyncedLabel(frm, 'ss_resolution', grid=g(row=4, column=0), tooltip="Last set Zoom resolution")
 
 f_presets = ttk.Frame(frm)
