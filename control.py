@@ -46,10 +46,13 @@ parser.add_argument('--broadcaster', action='store_true', help="This is running 
 parser.add_argument('--verbose', '-v', action='count', default=0)
 args = cli_args = parser.parse_args()
 LOG = logging.getLogger(__name__)
-if args.verbose >= 2:
+if args.verbose >= 3:
+    logging.basicConfig(level=9)
+elif args.verbose >= 2:
     logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger('obsws_python').setLevel(logging.INFO)
 elif args.verbose >= 1:
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     logging.getLogger('obsws_python').setLevel(logging.INFO)
 LOG.debug("Arguments: %s", cli_args)
 
@@ -125,10 +128,10 @@ class ObsState:
 
     def __getattr__(self, name):
         if name.startswith('_'):
-            raise AttributeError(f'Invalid attribute {name}')
+            raise AttributeError(f'Invalid attribute {name!r}')
         data = self._req.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name)
         value = getattr(data, 'slot_value', None)
-        self._LOG.debug('obs.getattr {name}={value}')
+        self._LOG.debug('obs.getattr {name!r}={value!r}')
         return value
     __getitem__ = __getattr__
 
@@ -136,8 +139,8 @@ class ObsState:
         if name in self._dir:
             super().__setattr__(name, value)
         if name.startswith('_'):
-            raise AttributeError(f'Invalid attribute {name}')
-        self._LOG.debug('obs.setattr %s=%s', name, value)
+            raise AttributeError(f'Invalid attribute {name!r}')
+        self._LOG.debug('obs.setattr %r=%r', name, value)
         self._req.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name, value)
         self._req.broadcast_custom_event({'eventData': {name: value}})
         if args.test:
@@ -145,28 +148,32 @@ class ObsState:
     __setitem__ = __setattr__
 
     def __hasattr__(self, name):
+        self._LOG.debug('obs.hasattr %r', name)
         if name.startswith('_'):
-            raise AttributeError(f'Invalid attribute {name}')
-        value = self._req.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name)
-        self._LOG.debug('obs.hasattr {name}')
+            raise AttributeError(f'Invalid attribute {name!r}')
+        data = self._req.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name)
+        value = getattr(data, 'slot_value', None)
+        if value is None:
+            return False
+        return True
 
     def on_custom_event(self, event):
         """Watcher for custom events"""
-        self._LOG.debug('custom event %s (%s)', event, event.attrs())
+        self._LOG.debug('custom event %r (%r)', event, event.attrs())
         for attr in event.attrs():
             if attr in self._watchers:
                 for func in self._watchers[attr]:
-                    self._LOG.debug('custom event attr=%s func=%s', attr, func)
+                    self._LOG.debug('custom event attr=%r func=%s', attr, func)
                     func(getattr(event, attr))
 
     def _watch(self, name, func):
         """Set a watcher for updates of this key"""
-        self._LOG.debug('obs._watch add %s=%s', name, func)
+        self._LOG.debug('obs._watch add %r=%s', name, func)
         self._watchers[name].add(func)
 
     def _watch_init(self, name, func):
         """Set a watcher for this key.  Also run the callback once with the current value."""
-        self._LOG.debug('obs._watch_init add %s=%s', name, func)
+        self._LOG.debug('obs._watch_init add %r=%s', name, func)
         self._watchers[name].add(func)
         func(getattr(self, name))
 
@@ -174,18 +181,17 @@ class ObsState:
     @property
     def scene(self):
         value = self._req.get_current_program_scene().current_program_scene_name
-        self._LOG.debug('obs.scene get scene=%s', value)
+        self._LOG.debug('obs.scene get scene=%r', value)
         return value
     @scene.setter
     def scene(self, value):
-        self._LOG.debug('obs.scene set scene=%s', value)
+        self._LOG.debug('obs.scene set scene=%r', value)
         self._req.set_current_program_scene(value)
         if args.test:
             self.on_current_program_scene_changed(type('dummy', (), {'scene_name': value}))
     def on_current_program_scene_changed(self, data):
-        print('z'*50)
         for func in self._watchers['scene']:
-            self._LOG.debug('obs.scene watch scene %s', func)
+            self._LOG.debug('obs.scene watch scene %r', func)
             func(data.scene_name)
 
     @property
@@ -205,7 +211,7 @@ class ObsState:
         if args.test:
             self.on_input_mute_state_changed(type('dummy', (), {'input_muted': value}))
     def on_input_mute_state_changed(self, data):
-        print(f"OBS: mute {data.input_name} to {data.input_muted}")
+        print(f"Mute {data.input_name!r} to {data.input_muted!r}")
         for ctrl, name in [
             (AUDIO_INPUT, 'muted'),
             (AUDIO_INPUT_BRCD, 'muted_brcd'),
@@ -265,7 +271,6 @@ class Helper:
 
 class Label2(Helper, Label):
     def __init__(self, *args, **kwargs):
-        print('init'*10, kwargs['text'])
         super().__init__(*args, **kwargs)
 
 
@@ -278,7 +283,6 @@ class SyncedCheckbutton(Helper, ttk.Checkbutton):
         obs._watch_init(f'checkbutton-{self.name}-value', self.update_)
     def click(self, value=None):
         """Click (or other local update)"""
-        print('n'*100, value)
         if value is None:
             value = self.instate(('selected',))
         else:
@@ -286,7 +290,6 @@ class SyncedCheckbutton(Helper, ttk.Checkbutton):
         obs[f'checkbutton-{self.name}-value'] = value
     def update_(self, value):
         """Trigger update from OBS side"""
-        print('m'*100, value, self.name)
         self.state(('selected' if value else '!selected', ))
 
 
@@ -319,33 +322,33 @@ def label_to_scene(name):
 
 def set_resolution(w, h):
     if not args.resolution_hook:
-        LOG.warning("No resolution hook to set %d, %d", w, h)
+        if args.broadcaster:
+            LOG.error("No resolution hook to set %d, %d", w, h)
         return
     cmd = args.resolution_hook
     w = int(w)
     h = int(h)
     if not  200 < w < 5000:
-        raise ValueError(f"invalid width: {w}")
+        raise ValueError(f"invalid width: {w!r}")
     if not 200 < h < 3000:
-        raise ValueError(f"invalid height: {w}")
+        raise ValueError(f"invalid height: {h!r}")
     cmd = cmd.replace('WIDTH', str(w)).replace('HEIGHT', str(h))
     subprocess.call(cmd, shell=True)
 
 
 def switch(name):
     """Switch to preset (or scene) with this name"""
-    LOG.info('switch: triggered switch to scene %r', name)
+    print(f'switch: triggered switch to scene {name!r}')
     preset = Preset.by_label(name)
     if preset is not None:
         preset._switch_to()
         obs['scene_humanname'] = name
         return
-    print(name, type(name), name in SCENE_NAMES)
     if name in SCENE_NAMES:
         SceneButton.switch(name)
         obs['scene_humanname'] = name
         return
-    LOG.error("switch: could not find scene %s to switch to", name)
+    LOG.error("switch: could not find scene %r to switch to", name)
 
 
 
@@ -389,6 +392,7 @@ class IndicatorLight(Helper, Button):
         self.event_name = event_name
         self.color = color
         self.blink = blink
+        self.label = label
         super().__init__(frm, text=label, command=self.click, **kwargs)
         saved_state = obs[event_name]
         self.state = None
@@ -399,10 +403,12 @@ class IndicatorLight(Helper, Button):
         obs._watch(event_name, self.update_)
     def click(self):
         self.state = not self.state
+        print(f"Indicator {self.label!r} -> {self.state}")
         setattr(obs, self.event_name, self.state)
     def update_(self, state):
         """Callback anytime state is updated."""
         self.state = state
+        print(f"OBS: Indicator {self.label!r} -> {self.state}")
         if self.state:
             self.configure(background=self.color, activebackground=self.color)
             if self.blink:
@@ -436,7 +442,7 @@ class IndicatorMasterLive(Helper, Button):
         else:
             self.configure(background=default_color, activebackground=default_color)
     def tt_msg(self):
-        return '\n'.join([self.tt_default] + [f'RED: {k} ({v})' for k,v in self.state.items() if v])
+        return '\n'.join([self.tt_default] + [f'RED: {k!r} ({v!r})' for k,v in self.state.items() if v])
     def on_custom_event(self, event):
         pass
 il = Label(frm, text="Indicator:")
@@ -492,7 +498,6 @@ class QuickBack(Helper, ttk.Button):
             quick_jingle.state(('!selected',))
         switch(self.scene)
         pip_size.restore_last()
-        print('sound state: ', quick_jingle.state())
 if not args.small:
     qa_label = ttk.Label(frm, text="QuickAct:")
     qa_label.grid(row=1, column=0)
@@ -535,12 +540,12 @@ class SceneButton(Helper, Button):
             if current_scene == scene_name:
                 self.update_(True)
                 indicators['live'].update_('scene-visible', scene_name if (scene_name not in SCENES_SAFE) else '')
-                print(f"Init: Current scene {current_scene}")
+                LOG.info("Init: Current scene %r", current_scene)
         obs._watch('scene', self.switched)
     @classmethod
     def switch(self, name):
         """Trigger a switch"""
-        print(f'SceneButton: triggered scene {name}')
+        LOG.info('SceneButton: triggered scene %r', name)
         obs.scene = name
         self.switched(name)
     @classmethod
@@ -569,10 +574,10 @@ class SceneLabel(SyncedLabel):
         #obs._watch_init('scene_humanname', self.update_)
     def tooltip(self):
         return '\n'.join(['Current scene',
-                          f'{self.scene_label} ({self.scene_name})'])
+                          f'{self.scene_label!r} ({self.scene_name!r})'])
     def watch(self, value):
         # value could be a scene name, or a preset label
-        LOG.debug('SceneLabel: watching %s', value)
+        LOG.debug('SceneLabel: watching %r', value)
         if value in SCENE_NAMES:
             self.scene_name = value
             self.scene_label = scene_to_label(value)
@@ -631,7 +636,7 @@ class Mute(Helper, Button):
     def on_input_mute_state_changed(self, data):
         """Muting/unmuting"""
         if data.input_name == self.input:
-            print(f"OBS: mute {data.input_name} to {data.input_muted}")
+            LOG.info("OBS: Mute %r to %r", data.input_name, data.input_muted)
             self.obs_update(state=data.input_muted)
 class Volume(Helper, ttk.Frame):
     def __init__(self, frame, input_, **kwargs):
@@ -647,7 +652,7 @@ class Volume(Helper, ttk.Frame):
         # Initial update
         if not args.test:
             dB = obsreq.get_input_volume(input_).input_volume_db
-            print(f"from OBS: {input_} {dB} (volume_state)")
+            LOG.info("OBS: %r %r (volume_state)", input_, dB)
             self.obs_update(dB)
         # Callback update
         obssubscribe(self.on_input_volume_changed)
@@ -657,23 +662,22 @@ class Volume(Helper, ttk.Frame):
         return -math.log10(-(dB-1))
 
     def update(self, state):
-        print('->')
         state = float(state)
         dB = self.to_dB(state)
-        print(f'-> Setting volume: {state}     ->  {dB}')
+        #print(f'-> Setting volume: {state!r}     ->  {dB!r}')
         self.label.config(text=f"{dB:.1f} dB")
         self.last_dB = dB
         obsreq.set_input_volume(self.input, vol_db=dB)
     def obs_update(self, dB):
-        print('<=')
+        #print('<=')
         state = self.to_state(dB)
-        print(f'<= Setting volume: {state}    <- {dB}')
+        #print(f'<= Setting volume: {state!r}    <- {dB!r}')
         self.label.config(text=f"{dB:.1f} dB")
         self.value.set(state)
     def on_input_volume_changed(self, data):
         """Volume change callback"""
         if data.input_name == self.input:
-            print(f"OBS: Volume {data.input_name} to {data.input_volume_db}")
+            #print(f"OBS: Volume {data.input_name!r} to {data.input_volume_db!r}")
             self.obs_update(data.input_volume_db)
 
 if not args.small:
@@ -725,7 +729,6 @@ class PipSize(Helper, ttk.Frame):
         # The custom event doesn't seem to work - somehow
         obsreq.broadcast_custom_event({'eventData': {'pip_last_state': self.last_state}})
         obsreq.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', 'pip_last_state', self.last_state)
-        print('setting')
     def restore_last(self):
         """Restore last pip size"""
         self.update(self.last_state)
@@ -739,10 +742,10 @@ class PipSize(Helper, ttk.Frame):
         indicators['live'].update_('pip-size', 'visible' if state != 0 else None)
     def on_custom_event(self, data):
         """Custom event listener callback from OBS."""
-        #print(f'OBS custom event: {vars(data)}')
+        #print(f'OBS custom event: {vars(data)!r}')
         if hasattr(data, 'pip_last_state'):
             self.last_state = data.pip_last_state
-            print(f"Saving last pip size: {self.last_state}")
+            print(f"Saving last pip size: {self.last_state!r}")
     def update_pip_size(self):
         """The on_scene_item_transform_changed doesn't seem to work, so we have to poll here... unfortunately."""
         self.obs_update(obsreq.get_scene_item_transform(NOTES, self.pip_id).scene_item_transform['scaleX'])
@@ -792,12 +795,12 @@ class PlaybackTimer(Helper, ttk.Label):
         event = obsreq.get_media_input_status(self.input_name)
         state = event.media_state  # 'OBS_MEDIA_STATE_PAUSED', 'OBS_MEDIA_STATE_PLAYING'
         if state in {'OBS_MEDIA_STATE_OPENING', 'OBS_MEDIA_STATE_BUFFERING', 'OBS_MEDIA_STATE_PAUSED', }:
-            print(f"OBS media state: {state}")
+            print(f"OBS media state: {state!r}")
             self.after(500, self.update_timer)
             return
         if state != 'OBS_MEDIA_STATE_PLAYING':
             self.configure(text='-', background=default_color)
-            print(f"OBS media state: {state}")
+            print(f"OBS media state: {state!r}")
             return
         duration = event.media_duration
         cursor = event.media_cursor
@@ -818,7 +821,7 @@ class PlayFile(Helper, ttk.Button):
         self.filename = filename
         super().__init__(frm, text=label, command=self.play, **kwargs)
     def play(self):
-        print(f'setting input to {self.filename}')
+        print(f'setting input to {self.filename!r}')
         obsreq.set_input_settings(PLAYBACK_INPUT, {'local_file': self.filename}, overlay=True)
 class PlayStop(Helper, ttk.Button):
     def __init__(self, frm, **kwargs):
@@ -907,7 +910,7 @@ class Preset():
 
         self.button = Button(frame, text=label, command=self.click)
         self.button.grid(row=row, column=column)
-        ToolTip(self.button, lambda: f'Switch to preset {self.label}', delay=TOOLTIP_DELAY)
+        ToolTip(self.button, lambda: f'Switch to preset {self.label!r}', delay=TOOLTIP_DELAY)
 
         # Scene choices
         self.sbox_value = StringVar()
@@ -915,18 +918,18 @@ class Preset():
                                '-', *[scene_to_label(x) for x in SCENE_NAMES],
                                command=self.click_sbox)
         self.sbox.grid(row=row, column=column+1)
-        ToolTip(self.sbox, lambda: f'Scene for preset {self.label}', delay=TOOLTIP_DELAY)
+        ToolTip(self.sbox, lambda: f'Scene for preset {self.label!r}', delay=TOOLTIP_DELAY)
 
         # Resolution choices
         self.rbox_value = StringVar()
         self.rbox = OptionMenu(frame, self.rbox_value, '-', *SCENE_SIZES,
                                command=self.click_rbox)
         self.rbox.grid(row=row, column=column+2)
-        ToolTip(self.rbox, lambda: f'Zoom capture resolution for preset {self.label}', delay=TOOLTIP_DELAY)
+        ToolTip(self.rbox, lambda: f'Zoom capture resolution for preset {self.label!r}', delay=TOOLTIP_DELAY)
 
         self.rename_button = Button(frame, text='r', command=self.rename)
         self.rename_button.grid(row=row, column=column+3)
-        ToolTip(self.rename_button, lambda: f"Rename {self.label}")
+        ToolTip(self.rename_button, lambda: f"Rename {self.label!r}")
 
         obs._watch_init('scene', self.watch_scene)
         obs._watch_init('ss_resolution', self.watch_resolution)
@@ -946,7 +949,7 @@ class Preset():
     def _switch_to(self):
         scene_name = label_to_scene(self.sbox_value.get())
         resolution = self.rbox_value.get()
-        print(f'Setting to preset {self.label} ({scene_name} at {resolution})')
+        print(f'Setting to preset {self.label!r} ({scene_name!r} at {resolution!r})')
         obs.scene = scene_name
         obs.ss_resolution = resolution
         w, h = resolution.split('x')
@@ -984,8 +987,8 @@ class Preset():
 
     def update_(self):
         """Update coloring"""
-        LOG.debug('preset-%s: %s = %s', self.name, self._last_scene, self.sbox_value.get())
-        LOG.debug('preset-%s: %s = %s', self.name, self._last_res, self.rbox_value.get())
+        LOG.debug('preset-%s: %r = %r', self.name, self._last_scene, self.sbox_value.get())
+        LOG.debug('preset-%s: %r = %r', self.name, self._last_res, self.rbox_value.get())
         state = (self._last_scene == label_to_scene(self.sbox_value.get())
                  and self._last_res == self.rbox_value.get() )
         if state and self._last_scene in SCENES_SAFE:
@@ -1002,7 +1005,7 @@ class Preset():
 
     def rename(self):
         dialog = Toplevel()
-        dialog.wm_title(f"Rename {self.name}.")
+        dialog.wm_title(f"Rename {self.name!r}.")
         newname = ttk.Entry(dialog, text=self.label)
         newname.grid(row=0, column=0, columnspan=2)
 
@@ -1010,16 +1013,16 @@ class Preset():
             label = newname.get()
             self.label = label
             if not label:
-                LOG.error("A renamed label can not be blank: %s", label)
+                LOG.error("A renamed label can not be blank: %r", label)
             elif label in SCENE_NAMES:
-                LOG.error("A renamed label can be the same as a scene name: %s", label)
+                LOG.error("A renamed label can be the same as a scene name: %r", label)
             elif self.label in [x.label for x in Preset._instances if x is not self]:
-                LOG.error("A renamed label can not be the same as an existing label: %s", label)
+                LOG.error("A renamed label can not be the same as an existing label: %r", label)
             else:
                 obs[f'preset-{self.name}-label'] = label
             dialog.destroy()
 
-        ok = ttk.Button(dialog, text=f"Rename {self.label}", command=do_rename)
+        ok = ttk.Button(dialog, text=f"Rename {self.label!r}", command=do_rename)
         ok.grid(row=1, column=1)
         cancel = ttk.Button(dialog, text="Cancel", command=dialog.destroy)
         cancel.grid(row=1, column=0)
@@ -1095,10 +1098,10 @@ class QuickBackGo(Helper, ttk.Button):
     def click(self, phase=1):
         scene = self.menu.value.get()
         if scene == '-' or not scene:
-            LOG.warning("QuickBack with scene %s, doing nothing", scene)
+            LOG.warning("QuickBack with scene %r, doing nothing", scene)
             return
         if phase == 1:
-            LOG.info("QuickBack phase 1: %s", scene)
+            LOG.info("QuickBack phase 1: %r", scene)
             mute[AUDIO_INPUT].click(False)
             if quick_brcd.instate(('selected', )):
                 mute[AUDIO_INPUT_BRCD].click(False)
@@ -1107,7 +1110,7 @@ class QuickBackGo(Helper, ttk.Button):
                 playback_buttons['short'].play()
                 return self.after(3000, partial(self.click, phase=2))
         # Only go directly here if no jingle.  If jingle, go here on callback.
-        LOG.info("QuickBack phase 2: %s", scene)
+        LOG.info("QuickBack phase 2: %r", scene)
         quick_jingle.click(False)
         quick_brcd.click(False)
         switch(scene)
@@ -1127,6 +1130,8 @@ def notes_scroll(value):
     """Scroll notes up/down"""
     # xdotool search --onlyvisible --name '^Collaborative document.*Private' windowfocus key Down windowfocus $(xdotool getwindowfocus)
     if not args.notes_window:
+        if args.broadcaster:
+            LOG.error(f"No notes_window defined for scrolling {value!r}")
         return
     cmd = ['xdotool', 'search', '--name', args.notes_window,
            'windowfocus',
@@ -1135,7 +1140,7 @@ def notes_scroll(value):
            ]
     if value in {'Up', 'Down', 'Prior', 'Next', 'End'}:
         cmd[cmd.index('KEY')] = value
-        LOG.info('Scrolling notes: %s', value)
+        LOG.info('Scrolling notes: %r', value)
         subprocess.call(cmd)
 
 if args.notes_window:
