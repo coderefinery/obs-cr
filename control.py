@@ -126,7 +126,8 @@ class ObsState:
     def __getattr__(self, name):
         if name.startswith('_'):
             raise AttributeError(f'Invalid attribute {name}')
-        value = self._req.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name).slot_value
+        data = self._req.get_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name)
+        value = getattr(data, 'slot_value', None)
         self._LOG.debug('obs.getattr {name}={value}')
         return value
     __getitem__ = __getattr__
@@ -289,6 +290,23 @@ class SyncedCheckbutton(Helper, ttk.Checkbutton):
         self.state(('selected' if value else '!selected', ))
 
 
+
+class SyncedLabel(Helper, ttk.Label):
+    """A label that is synced via the key"""
+    def __init__(self, frm, key, *args, **kwargs):
+        self.key = key
+        super().__init__(frm, *args, **kwargs)
+        if key:
+            obs._watch_init(self.key, self.watch)
+    def update_(self, value):
+        """Local update"""
+        if self.key:
+            obs[self.key] = value
+    def watch(self, value):
+        """Remote update"""
+        self.configure(text=value)
+
+
 def g(*args, **kwargs):
     grid_ = { }
     if args:
@@ -360,11 +378,11 @@ class IndicatorLight(Helper, Button):
         self.color = color
         self.blink = blink
         super().__init__(frm, text=label, command=self.click, **kwargs)
-        saved_state = getattr(obs, event_name)
+        saved_state = obs[event_name]
         self.state = None
         self.blink_id = None
         if saved_state:
-            self.state = saved_state.slot_value
+            self.state = saved_state
         self.update_(self.state)
         obs._watch(event_name, self.update_)
     def click(self):
@@ -471,22 +489,23 @@ if not args.small:
 QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes',
            grid=g(1,1), grid_s=g(1,1))
 
+quick_jingle = SyncedCheckbutton(frm, grid=g(row=1, column=7), name='quick_jingle', text="Jingle?", onvalue=True, offvalue=False)
+quick_jingle.state(('!alternate',))
+quick_brcd = SyncedCheckbutton(frm, grid=g(row=1, column=6), name='quick_brcd', text="Brcd Audio?", onvalue=True, offvalue=False)
+quick_brcd.grid(row=1, column=6)
+quick_brcd.state(('!alternate', 'disabled' if not args.broadcaster else ''))
+ToolTip(quick_jingle,
+        "Play short sound when coming back from break?\n"
+        "If yes, then unmute, play jingle for 3s, then switch scene and increase PIP size.\n"
+        "if no, immediately restore the settings.", delay=TOOLTIP_DELAY)
+
+
 if not args.small:
     #QuickBack(frm, 'Screenshare',         'BACK(SS-P) ',  grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings')
     #QuickBack(frm, 'ScreenshareCrop',     'BACK(SS-C)', grid=g(1,3), tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings')
     #QuickBack(frm, 'ScreenshareLandscape','BACK(SS-LS)',grid=g(1,4), tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings')
     #QuickBack(frm, NOTES,                 'BACK(n)',    grid=g(1,6), tooltip='Back from break\nSwitch to Notes,\ntry to restore settings')
-    quick_jingle = SyncedCheckbutton(frm, name='quick_jingle', text="Jingle?", onvalue=True, offvalue=False)
-    quick_jingle.grid(row=1, column=7)
-    quick_jingle.state(('!alternate',))
-    quick_brcd = SyncedCheckbutton(frm, name='quick_brcd', text="Brcd Audio?", onvalue=True, offvalue=False)
-    quick_brcd.grid(row=1, column=6)
-    quick_brcd.state(('!alternate', 'disabled' if not args.broadcaster else ''))
-
-    ToolTip(quick_jingle,
-            "Play short sound when coming back from break?\n"
-            "If yes, then unmute, play jingle for 3s, then switch scene and increase PIP size.\n"
-            "if no, immediately restore the settings.", delay=TOOLTIP_DELAY)
+    pass
 
 
 # Scenes
@@ -791,7 +810,7 @@ if not args.small:
     playback_label = ttk.Label(frm, text="Jingle:")
     playback_label.grid(row=9, column=0)
     ToolTip(playback_label, "Row deals with playing transition sounds", delay=TOOLTIP_DELAY)
-playback = PlaybackTimer(frm, PLAYBACK_INPUT, grid=g(9, 1), grid_s=g(1, 2), tooltip="Countdown time for current file playing")
+playback = PlaybackTimer(frm, PLAYBACK_INPUT, grid=g(9, 1), grid_s=g(1, 3), tooltip="Countdown time for current file playing")
 playback_buttons = { }
 for i, file_ in enumerate(PLAYBACK_FILES, start=2):
     pf = playback_buttons[file_['label']] = PlayFile(frm, **file_, grid=g(9, i))
@@ -810,7 +829,7 @@ class ScrollNotes(Helper, ttk.Button):
 sn_frame= ttk.Frame(frm)
 sn_frame.columnconfigure(tuple(range(3)), weight=1)
 if args.small:
-    sn_frame.grid(row=1, column=3, columnspan=7)
+    sn_frame.grid(row=1, column=4, columnspan=7)
 else:
     sn_frame.grid(row=11, column=0, columnspan=6)
 
@@ -928,11 +947,11 @@ class Preset():
 
     def watch_sbox(self, value):
         LOG.debug('watch sbox')
-        self.sbox_value.set(scene_to_label(value))
+        self.sbox_value.set(scene_to_label(value) or '-')
         self.update_()
     def watch_rbox(self, value):
         LOG.debug('watch rbox')
-        self.rbox_value.set(value)
+        self.rbox_value.set(value or '-')
         self.update_()
 
     def update_(self):
@@ -947,6 +966,10 @@ class Preset():
             color = ACTIVE
         else:
             color = default_color
+        if self.sbox_value.get() == '-':
+            self.button['state'] = 'disabled'
+        else:
+            self.button['state'] = 'normal'
         self.button.configure(background=color, activebackground=color)
 
     def rename(self):
@@ -960,7 +983,7 @@ class Preset():
             self.label = label
             if not label:
                 LOG.error("A renamed label can not be blank")
-            elif self.label in [x.label for x in presets if x is not self]:
+            elif self.label in [x.label for x in Preset._instances if x is not self]:
                 LOG.error("A renamed label can not be the same as an existing label")
             else:
                 obs[f'preset-{self.name}-label'] = label
@@ -983,11 +1006,11 @@ class Preset():
             SceneButton.switch(label)
 
 
+l_presets = SyncedLabel(frm, key=None, text="Scene presets:", grid=g(row=3, column=0))
+l_presets_size = SyncedLabel(frm, 'ss_resolution', grid=g(row=4, column=0), tooltip="Last set Zoom resolution")
 
-l_presets = ttk.Label(frm, text="Scene presets:")
 f_presets = ttk.Frame(frm)
 if not args.small:
-    l_presets.grid(row=3, column=0)
     f_presets.grid(row=3, column=1, rowspan=3, columnspan=8, sticky=NSEW)
 ttk.Separator(f_presets, orient=VERTICAL).grid(column=4, row=0, rowspan=3, sticky=NS)
 f_presets.columnconfigure((0,1,2,5,6,7), weight=15)
@@ -1000,8 +1023,6 @@ preset_d = Preset(f_presets, 'preset-d', "D", row=1, column=5)
 preset_e = Preset(f_presets, 'preset-e', "E", row=2, column=0)
 preset_f = Preset(f_presets, 'preset-f', "F", row=2, column=5)
 
-presets = [preset_a, preset_b, preset_c, preset_d, preset_e, preset_f]
-
 #
 # Quick actions
 #
@@ -1013,13 +1034,13 @@ class QuickBackSelect(Helper, ttk.OptionMenu):
                          **kwargs)
         #self.value.set(obs[f'quickback-{self.name}-value'] or '-')
         obs._watch_init(f'quickback-{self.name}-value', self.update_)
-        for preset in presets:
+        for preset in Preset._instances:
             obs._watch(f'preset-{preset.name}-label', self.update_options)
             obs._watch(f'preset-{preset.name}-sbox', self.update_options)
 
     @property
     def options(self):
-        return ['-'] + [x.label for x in presets if x.sbox_value.get() not in {'-', None}] + list(SCENE_NAMES)
+        return ['-'] + [x.label for x in Preset._instances if x.sbox_value.get() not in {'-', None}] + list(SCENE_NAMES)
     def update_options(self, _=None):
         self.update_()
     def update_(self, name=None):
@@ -1038,7 +1059,7 @@ class QuickBackGo(Helper, ttk.Button):
     def __init__(self, frm, menu, *args, **kwargs):
         self.menu = menu
         super().__init__(frm,*args,
-                         text="Go back to ->",
+                         text="BACK" + ("" if cli_args.small else " to ->"),
                          command=self.click,
                          **kwargs)
         ToolTip(self, self._tooltip, delay=TOOLTIP_DELAY)
@@ -1073,7 +1094,7 @@ class QuickBackGo(Helper, ttk.Button):
 
 
 qbs = QuickBackSelect(frm, name='quickback-a', grid=g(row=1, column=4))
-qbg = QuickBackGo(frm, qbs, grid=g(row=1, column=3))
+qbg = QuickBackGo(frm, qbs, grid=g(row=1, column=3), grid_s=g(row=1, column=2))
 
 
 
