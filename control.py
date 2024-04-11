@@ -5,6 +5,7 @@ import logging
 import math
 import random
 import subprocess
+import textwrap
 import time
 
 from tkinter import *
@@ -258,11 +259,35 @@ class Helper:
             self.grid(grid_s)
         if grid and not cli_args.small:
             self.grid(grid)
+
+
+
 class Label2(Helper, Label):
     def __init__(self, *args, **kwargs):
         print('init'*10, kwargs['text'])
         super().__init__(*args, **kwargs)
-    pass
+
+
+
+class SyncedCheckbutton(Helper, ttk.Checkbutton):
+    """Checkbutton synced through OBS"""
+    def __init__(self, frm, name, *args, **kwargs):
+        self.name = name
+        super().__init__(frm, *args, command=self.click, **kwargs)
+        obs._watch_init(f'checkbutton-{self.name}-value', self.update_)
+    def click(self, value=None):
+        """Click (or other local update)"""
+        print('n'*100, value)
+        if value is None:
+            value = self.instate(('selected',))
+        else:
+            self.state(('selected' if value else '!selected', ))
+        obs[f'checkbutton-{self.name}-value'] = value
+    def update_(self, value):
+        """Trigger update from OBS side"""
+        print('m'*100, value, self.name)
+        self.state(('selected' if value else '!selected', ))
+
 
 def g(*args, **kwargs):
     grid_ = { }
@@ -431,13 +456,13 @@ class QuickBack(Helper, ttk.Button):
         threading.Thread(target=self.run).start()
     def run(self):
         mute[AUDIO_INPUT].click(False)
-        if quick_sound.instate(('selected', )):
+        if quick_jingle.instate(('selected', )):
             playback_buttons['short'].play()
             time.sleep(3)
-            quick_sound.state(('!selected',))
+            quick_jingle.state(('!selected',))
         SceneButton.switch(self.scene)
         pip_size.restore_last()
-        print('sound state: ', quick_sound.state())
+        print('sound state: ', quick_jingle.state())
 if not args.small:
     qa_label = ttk.Label(frm, text="QuickAct:")
     qa_label.grid(row=1, column=0)
@@ -447,15 +472,18 @@ QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich 
            grid=g(1,1), grid_s=g(1,1))
 
 if not args.small:
-    QuickBack(frm, 'Screenshare',         'BACK(SS-P) ',  grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings')
-    QuickBack(frm, 'ScreenshareCrop',     'BACK(SS-C)', grid=g(1,3), tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings')
-    QuickBack(frm, 'ScreenshareLandscape','BACK(SS-LS)',grid=g(1,4), tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings')
-    QuickBack(frm, NOTES,                 'BACK(n)',    grid=g(1,6), tooltip='Back from break\nSwitch to Notes,\ntry to restore settings')
-    quick_sound = ttk.Checkbutton(frm, text="Jingle?", onvalue=True, offvalue=False)
-    quick_sound.grid(row=1, column=7)
-    quick_sound.state(('!selected', '!alternate',))
+    #QuickBack(frm, 'Screenshare',         'BACK(SS-P) ',  grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings')
+    #QuickBack(frm, 'ScreenshareCrop',     'BACK(SS-C)', grid=g(1,3), tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings')
+    #QuickBack(frm, 'ScreenshareLandscape','BACK(SS-LS)',grid=g(1,4), tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings')
+    #QuickBack(frm, NOTES,                 'BACK(n)',    grid=g(1,6), tooltip='Back from break\nSwitch to Notes,\ntry to restore settings')
+    quick_jingle = SyncedCheckbutton(frm, name='quick_jingle', text="Jingle?", onvalue=True, offvalue=False)
+    quick_jingle.grid(row=1, column=7)
+    quick_jingle.state(('!alternate',))
+    quick_brcd = SyncedCheckbutton(frm, name='quick_brcd', text="Brcd Audio?", onvalue=True, offvalue=False)
+    quick_brcd.grid(row=1, column=6)
+    quick_brcd.state(('!alternate', 'disabled' if not args.broadcaster else ''))
 
-    ToolTip(quick_sound,
+    ToolTip(quick_jingle,
             "Play short sound when coming back from break?\n"
             "If yes, then unmute, play jingle for 3s, then switch scene and increase PIP size.\n"
             "if no, immediately restore the settings.", delay=TOOLTIP_DELAY)
@@ -481,7 +509,7 @@ class SceneButton(Helper, Button):
     @classmethod
     def switch(self, name):
         """Trigger a switch"""
-        print(f'Remote: triggered scene {name}')
+        print(f'SceneButton: triggered scene {name}')
         obs.scene = name
         self.switched(name)
     @classmethod
@@ -830,11 +858,13 @@ class AnnouncementLabel(Helper, Frame):
 
 
 class Preset():
+    _instances = [ ]
     def __init__(self, frame, name, label, row, column, **kwargs):
         self.name = name
         self.label = label
         self._last_scene = None
         self._last_res = None
+        self._instances.append(self)
 
         self.button = Button(frame, text=label, command=self.click)
         self.button.grid(row=row, column=column)
@@ -869,7 +899,7 @@ class Preset():
         """Button is clicked.  Switch to this preset"""
         scene_name = label_to_scene(self.sbox_value.get())
         resolution = self.rbox_value.get()
-        print(f'Setting to preset {scene_name} at {resolution}')
+        print(f'Setting to preset {self.label} ({scene_name} at {resolution})')
         obs.scene = scene_name
         obs.ss_resolution = resolution
         w, h = resolution.split('x')
@@ -877,6 +907,7 @@ class Preset():
             w = int(w)
             h = int(h)
             set_resolution(w, h)
+        SceneButton.switch(scene_name)
 
     def click_sbox(self, name):
         name = label_to_scene(name)
@@ -918,7 +949,6 @@ class Preset():
             color = default_color
         self.button.configure(background=color, activebackground=color)
 
-
     def rename(self):
         dialog = Toplevel()
         dialog.wm_title(f"Rename {self.name}.")
@@ -928,30 +958,123 @@ class Preset():
         def do_rename():
             label = newname.get()
             self.label = label
-            obs[f'preset-{self.name}-label'] = label
+            if not label:
+                LOG.error("A renamed label can not be blank")
+            elif self.label in [x.label for x in presets if x is not self]:
+                LOG.error("A renamed label can not be the same as an existing label")
+            else:
+                obs[f'preset-{self.name}-label'] = label
             dialog.destroy()
 
-        ok = ttk.Button(dialog, text="Go", command=do_rename)
+        ok = ttk.Button(dialog, text=f"Rename {self.label}", command=do_rename)
         ok.grid(row=1, column=1)
         cancel = ttk.Button(dialog, text="Cancel", command=dialog.destroy)
         cancel.grid(row=1, column=0)
+
+    @classmethod
+    def switch(self, label):
+        """Switch to preset (or scene) with this name"""
+        LOG.info('Preset: triggered scene %s', label)
+        for instance in self._instances:
+            if label == instance.label:
+                instance.click()
+                return
+        if label in SCENE_NAMES:
+            SceneButton.switch(label)
+
 
 
 l_presets = ttk.Label(frm, text="Scene presets:")
 f_presets = ttk.Frame(frm)
 if not args.small:
     l_presets.grid(row=3, column=0)
-    f_presets.grid(row=3, column=1, rowspan=3, columnspan=8, sticky=S)
+    f_presets.grid(row=3, column=1, rowspan=3, columnspan=8, sticky=NSEW)
 ttk.Separator(f_presets, orient=VERTICAL).grid(column=4, row=0, rowspan=3, sticky=NS)
 f_presets.columnconfigure((0,1,2,5,6,7), weight=15)
 f_presets.columnconfigure((3,8), weight=5)
 f_presets.columnconfigure((4), minsize=20)
-a = Preset(f_presets, 'preset-a', "A", row=0, column=0)
-a = Preset(f_presets, 'preset-b', "B", row=0, column=5)
-a = Preset(f_presets, 'preset-c', "C", row=1, column=0)
-a = Preset(f_presets, 'preset-d', "D", row=1, column=5)
-a = Preset(f_presets, 'preset-e', "E", row=2, column=0)
-a = Preset(f_presets, 'preset-f', "F", row=2, column=5)
+preset_a = Preset(f_presets, 'preset-a', "A", row=0, column=0)
+preset_b = Preset(f_presets, 'preset-b', "B", row=0, column=5)
+preset_c = Preset(f_presets, 'preset-c', "C", row=1, column=0)
+preset_d = Preset(f_presets, 'preset-d', "D", row=1, column=5)
+preset_e = Preset(f_presets, 'preset-e', "E", row=2, column=0)
+preset_f = Preset(f_presets, 'preset-f', "F", row=2, column=5)
+
+presets = [preset_a, preset_b, preset_c, preset_d, preset_e, preset_f]
+
+#
+# Quick actions
+#
+class QuickBackSelect(Helper, ttk.OptionMenu):
+    def __init__(self, frm, name, **kwargs):
+        self.value = StringVar()
+        self.name = name
+        super().__init__(frm, self.value, '-', *self.options, command=self.click,
+                         **kwargs)
+        #self.value.set(obs[f'quickback-{self.name}-value'] or '-')
+        obs._watch_init(f'quickback-{self.name}-value', self.update_)
+        for preset in presets:
+            obs._watch(f'preset-{preset.name}-label', self.update_options)
+            obs._watch(f'preset-{preset.name}-sbox', self.update_options)
+
+    @property
+    def options(self):
+        return ['-'] + [x.label for x in presets if x.sbox_value.get() not in {'-', None}] + list(SCENE_NAMES)
+    def update_options(self, _=None):
+        self.update_()
+    def update_(self, name=None):
+        old = self.value.get()
+        options = self.options
+        self.set_menu('-', *self.options)
+        if old in options:
+            self.value.set(name or old or '-')
+        else:
+            self.value.set('-')
+    def click(self, name):
+        obs[f'quickback-{self.name}-value'] = name
+
+
+class QuickBackGo(Helper, ttk.Button):
+    def __init__(self, frm, menu, *args, **kwargs):
+        self.menu = menu
+        super().__init__(frm,*args,
+                         text="Go back to ->",
+                         command=self.click,
+                         **kwargs)
+        ToolTip(self, self._tooltip, delay=TOOLTIP_DELAY)
+    def _tooltip(self):
+        return textwrap.dedent(f"""\
+        Go back to the program.
+        Switch to {self.menu.value.get()}
+        Play jingle = {quick_jingle.instate(('selected', ))}
+        Unmute broadcaster audio = {quick_brcd.instate(('selected', ))}\
+        """)
+    i = 0
+    def click(self, phase=1):
+        scene = self.menu.value.get()
+        if scene == '-' or not scene:
+            LOG.warning("QuickBack with scene %s, doing nothing", scene)
+            return
+        if phase == 1:
+            LOG.info("QuickBack phase 1: %s", scene)
+            mute[AUDIO_INPUT].click(False)
+            if quick_brcd.instate(('selected', )):
+                mute[AUDIO_INPUT_BRCD].click(False)
+
+            if quick_jingle.instate(('selected', )):
+                playback_buttons['short'].play()
+                return self.after(3000, partial(self.click, phase=2))
+        # Only go directly here if no jingle.  If jingle, go here on callback.
+        LOG.info("QuickBack phase 2: %s", scene)
+        quick_jingle.click(False)
+        quick_brcd.click(False)
+        Preset.switch(scene)
+        pip_size.restore_last()
+
+
+qbs = QuickBackSelect(frm, name='quickback-a', grid=g(row=1, column=4))
+qbg = QuickBackGo(frm, qbs, grid=g(row=1, column=3))
+
 
 
 
