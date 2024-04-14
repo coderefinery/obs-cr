@@ -290,6 +290,7 @@ class SyncedCheckbutton(Helper, ttk.Checkbutton):
         obs[f'checkbutton-{self.name}-value'] = value
     def update_(self, value):
         """Trigger update from OBS side"""
+        self.state(('!alternate',))
         self.state(('selected' if value else '!selected', ))
 
 
@@ -349,6 +350,29 @@ def switch(name):
         obs['scene_humanname'] = name
         return
     LOG.error("switch: could not find scene %r to switch to", name)
+
+
+def notes_scroll(value):
+    """Scroll notes up/down"""
+    # xdotool search --onlyvisible --name '^Collaborative document.*Private' windowfocus key Down windowfocus $(xdotool getwindowfocus)
+    if not args.broadcaster:
+        return
+    if not args.notes_window:
+        LOG.error(f"No notes_window defined for scrolling {value!r}")
+        return
+    cmd = ['xdotool', 'search', '--name', args.notes_window,
+           'windowfocus',
+           'key', 'KEY',
+           'windowfocus', subprocess.getoutput('xdotool getwindowfocus')
+           ]
+    if value in {'Up', 'Down', 'Prior', 'Next', 'End'}:
+        cmd[cmd.index('KEY')] = value
+        LOG.info('Scrolling notes: %r', value)
+        subprocess.call(cmd)
+
+if args.notes_window:
+    obs._watch('notes_scroll', notes_scroll)
+
 
 
 
@@ -849,6 +873,33 @@ class ScrollNotes(Helper, ttk.Button):
         obs['notes_scroll'] = self.event
     def on_custom_event(self, event):
         pass
+class ScrollNotesAuto(SyncedCheckbutton):
+    """Checkbox that, when enabled, will periodically scroll the notes to the bottom.
+    """
+    state_ = None
+    scroll_id = None
+    delay = 10000 # ms
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name='notes_scroll_auto', text="Auto-scroll", **kwargs)
+    def tooltip(self):
+        return f"When checked, emit a PgDn event on the notes every {self.delay//1000} seconds."
+    def update_(self, value):
+        super().update_(value)
+        self.state_ = value
+        if value:
+            # the scroll ID is used to prevent multiple watchers from going at
+            # the same time
+            scroll_id = self.scroll_id = random.randint(0, 2**64-1)
+            if cli_args.broadcaster:
+                self.do_scroll(scroll_id)
+    def do_scroll(self, scroll_id):
+        if self.scroll_id != scroll_id or not self.state_:
+            return
+        notes_scroll('Next')
+        LOG.info("Scrolling notes (auto)...")
+        self.after(self.delay, self.do_scroll, scroll_id)
+
+
 sn_frame= ttk.Frame(frm)
 sn_frame.columnconfigure(tuple(range(3)), weight=1)
 if args.small:
@@ -864,7 +915,7 @@ b = ScrollNotes(sn_frame, "Down", event='Down', grid=g(0,2), grid_s=g(0,2), tool
 b = ScrollNotes(sn_frame, "PgUp", event='Prior',grid=g(0,3),                tooltip="Scroll notes PgUp")
 b = ScrollNotes(sn_frame, "PgDn", event='Next', grid=g(0,4),                tooltip="Scroll notes PgDn")
 b = ScrollNotes(sn_frame, "End",  event='End',  grid=g(0,5),                tooltip="Scroll notes End key")
-
+b = ScrollNotesAuto(sn_frame, grid=g(0,6))
 
 
 
@@ -1121,30 +1172,6 @@ qbs = QuickBackSelect(frm, name='quickback-a', grid=g(row=1, column=4))
 qbg = QuickBackGo(frm, qbs, grid=g(row=1, column=3), grid_s=g(row=1, column=2))
 
 
-
-
-#
-# Handle keystrokes on notes doc
-#
-def notes_scroll(value):
-    """Scroll notes up/down"""
-    # xdotool search --onlyvisible --name '^Collaborative document.*Private' windowfocus key Down windowfocus $(xdotool getwindowfocus)
-    if not args.notes_window:
-        if args.broadcaster:
-            LOG.error(f"No notes_window defined for scrolling {value!r}")
-        return
-    cmd = ['xdotool', 'search', '--name', args.notes_window,
-           'windowfocus',
-           'key', 'KEY',
-           'windowfocus', subprocess.getoutput('xdotool getwindowfocus')
-           ]
-    if value in {'Up', 'Down', 'Prior', 'Next', 'End'}:
-        cmd[cmd.index('KEY')] = value
-        LOG.info('Scrolling notes: %r', value)
-        subprocess.call(cmd)
-
-if args.notes_window:
-    obs._watch('notes_scroll', notes_scroll)
 
 #import IPython ; IPython.embed()
 
