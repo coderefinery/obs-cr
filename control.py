@@ -1,3 +1,6 @@
+
+# pylint: disable=too-many-ancestors
+
 import collections
 from functools import partial
 import inspect
@@ -8,7 +11,7 @@ import subprocess
 import textwrap
 import time
 
-from tkinter import *
+from tkinter import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from tkinter import ttk
 from tktooltip import ToolTip
 
@@ -30,19 +33,21 @@ class DictAction(argparse.Action):
             if '=' not in x: raise argparse.ArgumentError(x, f'Argument missing "=": "{x}"')
             settings[x.split('=', 1)[0]] = x.split('=', 1)[1]
 parser = argparse.ArgumentParser()
-parser.add_argument('hostname_port')
+parser.add_argument('hostname_port',
+                    help="HOSTNAME:PORT of the OBS to connect to")
 parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
-                  help='or set env var OBS_PASSWORD')
+                  help='Websocket password, or pass "-" and set env var OBS_PASSWORD')
 parser.add_argument('--notes-window',
-                    help='window name regex for notes document (for scrolling), get via xwininfo -tree -root | less')
-parser.add_argument('--small', action='store_true')
-parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel")
+                    help="window name regex for notes document (for scrolling), get via xwininfo -tree -root | less.  Example: '^Collaborative document.*Privat()e' (the parentheses prevent the regex from matching itself in the process listing)")
+parser.add_argument('--small', action='store_true',
+                    help="Start a smaller, more limited, control panel for instructors.")
+parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel in a test mode.  Some things may not work.")
 parser.add_argument('--scene-hook', action=DictAction, nargs=1,
                     help="Local command line hooks for switching to each scene, format SCENENAME=command")
-parser.add_argument('--resolution-hook',
+parser.add_argument('--resolution-command',
                     help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers")
 parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
-parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer")
+parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer.  Enable extra broadcaster functionality like unmuting and controlling Zoom.")
 parser.add_argument('--verbose', '-v', action='count', default=0)
 args = cli_args = parser.parse_args()
 LOG = logging.getLogger(__name__)
@@ -107,7 +112,26 @@ PIP_CROP_FACTORS = {
 
 
 class ObsState:
-    """Manager class for all OBS state
+    """Manager class for all OBS state.
+
+    This dictonary-like object (which also can be used as attribute
+    lookups) serves as a way to sync OBS state and broadcast it.  It
+    does:
+
+    - Setting an attribute
+      - broadcasts it as a custom event (which every other dict gets)
+      - saves it as OBS persistent state
+    - Getting an attribute
+      - Gets it from persistent state
+    - Watching an attribute
+      - Watches for those custom events and will trigger the callback
+        each time the attribute is updated
+    - The _watch_init() method installs a callback, and calls it once
+      with the saved value.
+
+    The combination of OBS persistent state and OBS custom events allows
+    clients to get updates as soon as a value is changed, but also sync
+    to the last-set value each time the program starts.
     """
     ATTRS = {
         ''
@@ -322,11 +346,12 @@ def label_to_scene(name):
     return SCENE_NAMES_REVERSE.get(name, name)
 
 def set_resolution(w, h):
-    if not args.resolution_hook:
-        if args.broadcaster:
-            LOG.error("No resolution hook to set %d, %d", w, h)
+    if not args.broadcaster:
         return
-    cmd = args.resolution_hook
+    if not args.resolution_command:
+        LOG.error("No resolution command to set %d, %d", w, h)
+        return
+    cmd = args.resolution_command
     w = int(w)
     h = int(h)
     if not  200 < w < 5000:
@@ -630,7 +655,7 @@ if not args.small:
     scene_frame.grid(row=2, column=1, columnspan=7)
 for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
     b = SceneButton(scene_frame, scene_name=scene, label=label, selectable=selectable,
-                    tooltip=tooltip,
+                    tooltip=tooltip+f'\n(OBS scene name: {scene})',
                     grid=g(2, i))
 if args.small:
     SceneLabel(frm, grid_s=g(1,0))
@@ -866,6 +891,8 @@ ps = PlayStop(frm, grid=g(9, 2+len(PLAYBACK_FILES)), tooltip="Stop all playbacks
 
 
 class ScrollNotes(Helper, ttk.Button):
+    """Button that will emit a keyboard event to the notes window.
+    """
     def __init__(self, frm, label, event, **kwargs):
         self.event = event
         super().__init__(frm, text=label, command=self.click, **kwargs)
@@ -961,7 +988,7 @@ class Preset():
 
         self.button = Button(frame, text=label, command=self.click)
         self.button.grid(row=row, column=column)
-        ToolTip(self.button, lambda: f'Switch to preset {self.label!r}', delay=TOOLTIP_DELAY)
+        ToolTip(self.button, lambda: f'Switch to preset {self.label!r}\n(Internal name: {self.name})', delay=TOOLTIP_DELAY)
 
         # Scene choices
         self.sbox_value = StringVar()
