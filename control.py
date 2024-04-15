@@ -45,7 +45,7 @@ parser.add_argument('--test', action='store_true', help="Don't connect to OBS, j
 parser.add_argument('--scene-hook', action=DictAction, nargs=1,
                     help="Local command line hooks for switching to each scene, format SCENENAME=command")
 parser.add_argument('--resolution-command',
-                    help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers")
+                    help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers.  Example: \"xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;\" (mind the nested quotes)")
 parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
 parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer.  Enable extra broadcaster functionality like unmuting and controlling Zoom.")
 parser.add_argument('--verbose', '-v', action='count', default=0)
