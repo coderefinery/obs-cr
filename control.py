@@ -88,6 +88,7 @@ SCENES_SAFE = ['Title', NOTES, 'Empty'] # scenes suitable for breaks
 SCENE_SIZES = [
    "840x1080",
    "1920x1080",
+   "1920x1200",
    "1680x1080",
    "3840x1080",
    ]
