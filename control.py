@@ -1029,13 +1029,14 @@ class Preset():
         scene_name = label_to_scene(self.sbox_value.get())
         resolution = self.rbox_value.get()
         print(f'Setting to preset {self.label!r} ({scene_name!r} at {resolution!r})')
-        obs.scene = scene_name
-        obs.ss_resolution = resolution
         w, h = resolution.split('x')
         if w.isdigit and h.isdigit():
             w = int(w)
             h = int(h)
             set_resolution(w, h)
+            time.sleep(0.2)
+        obs.scene = scene_name
+        obs.ss_resolution = resolution
         SceneButton.switch(scene_name)
 
     def click_sbox(self, name):
