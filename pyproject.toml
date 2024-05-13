@@ -1,0 +1,46 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.module]
+name = "obs_cr"
+
+[project]
+name = "obs-cr"
+authors = [{name = "Richard Darst"}]  # FIXME
+readme = "README.md"
+license = {file = "LICENSE"}
+# https://pypi.org/classifiers/
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    ]
+#keywords = ["sphinx-extension"]
+requires-python = ">=3.0"
+dynamic = ["version", "description"]
+dependencies = [
+    "obsws-python",
+    "pillow",
+    "tkinter-tooltip",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+
+[project.scripts]
+    obs-cr-control = "obs_cr.control:main"
+    obs-cr-preview = "obs_cr.preview:main"
+
+[project.urls]
+Repository = "https://github.com/coderefinery/obs-coderefinery-control/"
+#Documentation = "https://example.com/"
+
+
+# https://flit.pypa.io/en/latest/upload.html
+# flit build
+# You need to configure a .pypirc file for test upload, or use environment variables:
+# https://flit.pypa.io/en/latest/upload.html#using-pypirc
+# flit publish --repository testpypi
+# or:   FLIT_INDEX_URL=https://test.pypi.org/legacy/ FLIT_USERNAME=xxx and FLIT_PASSWORD=xxx flit publish
+# flit publish
