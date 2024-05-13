@@ -12,9 +12,30 @@ on any operating system (if not, that's a bug).
 
 ## Installation
 
-Install the requirements.txt dependencies in a virtual environment (or
-similar).  The package isn't currently installable.  Note that
-obsws-python unfortunately requires Python 3.9+.
+### zipapp
+
+Zipapp bundles dependencies, and hopefully works on any recent version
+of python3 (>3.9+ because of obsws-python).  `preview` requires
+`pillow` (PyPI package `pillow`, Debian package `python3-pil`) since
+zipapps can't contain binary modules.
+
+```console
+$ wget http://coderefinery.github.io/obs-cr/obs-cr.pyz
+
+# usage:
+python3 obs-cr.pyz control [args from below]
+python3 obs-cr.pyz preview [args from below]
+```
+
+
+### Local install
+
+Create a virtual environment.  Note that obsws-python unfortunately
+requires Python 3.9+.
+
+```
+$ pip install https://github.com/coderefinery/obs-cr/archive/master.zip
+```
 
 
 
@@ -27,20 +48,20 @@ There is `control.py` to make a control panel, and `preview.py` to
 give a preview.
 
 ```
-python3 control.py HOSTNAME:PORT PASSWORD
-python3 preview.py HOSTNAME:PORT PASSWORD [--delay S]
+obs-cr-control HOSTNAME:PORT PASSWORD
+obs-cr-preview HOSTNAME:PORT PASSWORD [--delay S]
 ```
 
-* `control.py --small` starts a small panel, designed for the most
+* `obs-cr-control --small` starts a small panel, designed for the most
   critical indicators and buttons on a crowded teacher's screen.  It
   doesn't replace or have everything of the full panel (you need the
   full panel open somewhere else, or a separate director).
-* `control.py --test` will run without connecting to OBS.  Not
+* `obs-cr-control --test` will run without connecting to OBS.  Not
   everything works and there might be visible tracebacks,  but you can
   test the general things out.
 
 
-### control.py
+### obs-cr-control
 
 This is a streaming control panel.  There are tooltips that explain
 most things, but just open it up and see.
@@ -51,7 +72,7 @@ live.  "Indicators" are synced lights: click a light on any control
 panel, and it's synced across all of them.
 
 
-### preview.py
+### obs-cr-preview
 
 This shows a live preview with less latency than the stream shows.
 Use `--delay S` to set the delay to S seconds, the default is 1 which
@@ -64,7 +85,7 @@ probably fine, even 0.1.
 
 Commands for copying and pasting
 
-* Linux, Firefox: `python control.py HOSTNAME:PORT TOKEN --notes-window='^Collaborative document.*Private' --scene-hook=Screenshare="xdotool search --onlyvisible --name '^Zoom$' windowsize 840, 1080;" --scene-hook=ScreenshareCrop="xdotool search --onlyvisible --name '^Zoom$' windowsize 1920, 1080;" --scene-hook=ScreenshareLandscape="xdotool search --onlyvisible --name '^Zoom$' windowsize 1920, 1080;"`
+* Linux, Firefox: `obs-cr-control localhost:4445 TOKEN --notes-window='^TTT4HPC 07/05/2024.*Privat()e' --resolution-command="xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;" --broadcaster`
 
 
 ## Status
