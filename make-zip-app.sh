@@ -2,7 +2,7 @@ set -e
 
 BASE=$(python3 -c 'import obsws_python; from os.path import dirname; print(dirname(dirname(obsws_python.__file__)))')
 
-rm -r zipapp
+rm -rf zipapp
 mkdir zipapp
 rsync -a ${BASE}/obsws_python/ zipapp/obsws_python/
 rsync -a ${BASE}/tktooltip/ zipapp/tktooltip/
