@@ -32,35 +32,12 @@ class DictAction(argparse.Action):
         for x in values:
             if '=' not in x: raise argparse.ArgumentError(x, f'Argument missing "=": "{x}"')
             settings[x.split('=', 1)[0]] = x.split('=', 1)[1]
-parser = argparse.ArgumentParser()
-parser.add_argument('hostname_port',
-                    help="HOSTNAME:PORT of the OBS to connect to")
-parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
-                  help='Websocket password, or pass "-" and set env var OBS_PASSWORD')
-parser.add_argument('--notes-window',
-                    help="window name regex for notes document (for scrolling), get via xwininfo -tree -root | less.  Example: '^Collaborative document.*Privat()e' (the parentheses prevent the regex from matching itself in the process listing)")
-parser.add_argument('--small', action='store_true',
-                    help="Start a smaller, more limited, control panel for instructors.")
-parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel in a test mode.  Some things may not work.")
-parser.add_argument('--scene-hook', action=DictAction, nargs=1,
-                    help="Local command line hooks for switching to each scene, format SCENENAME=command")
-parser.add_argument('--resolution-command',
-                    help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers.  Example: \"xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;\" (mind the nested quotes)")
-parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
-parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer.  Enable extra broadcaster functionality like unmuting and controlling Zoom.")
-parser.add_argument('--verbose', '-v', action='count', default=0)
-args = cli_args = parser.parse_args()
-LOG = logging.getLogger(__name__)
-if args.verbose >= 3:
-    logging.basicConfig(level=9)
-elif args.verbose >= 2:
-    logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger('obsws_python').setLevel(logging.INFO)
-elif args.verbose >= 1:
-    logging.basicConfig(level=logging.INFO)
-    logging.getLogger('obsws_python').setLevel(logging.INFO)
-LOG.debug("Arguments: %s", cli_args)
 
+
+class IfBroadcaster:
+    def __bool__(self):
+        return cli_args.broadcaster
+IfBroadcaster = IfBroadcaster()
 
 #
 # Definitions
@@ -77,7 +54,7 @@ SCENE_NAMES = {
     'Screenshare': ('SS Portrait', 'Screenshare, normal portrait mode.\nUsed when the instructor can share a portion of the screen with the right 840x1080 aspect ratio.', True),
     'ScreenshareCrop': ('SS Crop', 'Screenshare, landscape share but crop portrait out of the left 840 pixels.\nUsed when instructors can\'t share a portion of the screen, but share a full screen and we pull an 840x1080 aspect ratio chuck out of the left side of it.', True),
     'ScreenshareLandscape': ('SS Landscape', 'Screenshare, actual full landscape mode shrunk into portrait mode.\nUsed when an instructor actually is sharing landscape and you want black bars at the top/bottom to make it fit.', True),
-    'Broadcaster-Screen': ('BrdScr', 'Broadcaster local screen (only broadcaster may select)', args.broadcaster),
+    'Broadcaster-Screen': ('BrdScr', 'Broadcaster local screen (only broadcaster may select)', IfBroadcaster),
     NOTES: ('Notes', 'Notes, from the broadcaster computer', True),
     'Empty': ('Empty', 'Empty black screen', True),
     }
@@ -85,6 +62,7 @@ SCENE_NAMES_REVERSE = { v[0]: n for n,v in SCENE_NAMES.items() }
 SCENES_WITH_PIP = ['Screenshare', 'ScreenshareCrop', 'ScreenshareLandscape', 'Broadcaster-Screen', NOTES]
 SCENES_WITH_GALLERY = SCENES_WITH_PIP + ['Gallery']
 SCENES_SAFE = ['Title', NOTES, 'Empty'] # scenes suitable for breaks
+SCENES_REMOTE = {'Screenshare', 'ScreenshareCrop', 'ScreenshareCrop'}
 SCENE_SIZES = [
    "840x1080",
    "1920x1080",
@@ -110,6 +88,9 @@ PIP_CROP_FACTORS = {
     3:    {'top':  4, 'bottom':  0, 'left': 60, 'right': 60, },  # checked
     5:    {'top': 50, 'bottom':  0, 'left': 11, 'right': 11, },  # checked
     }
+
+LOG = logging.getLogger(__name__)
+
 
 
 class ObsState:
@@ -168,7 +149,7 @@ class ObsState:
         self._LOG.debug('obs.setattr %r=%r', name, value)
         self._req.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', name, value)
         self._req.broadcast_custom_event({'eventData': {name: value}})
-        if args.test:
+        if cli_args.test:
             self.on_custom_event(type('dummy', (), {name: value, 'attrs': lambda: [name]}))
     __setitem__ = __setattr__
 
@@ -212,7 +193,7 @@ class ObsState:
     def scene(self, value):
         self._LOG.debug('obs.scene set scene=%r', value)
         self._req.set_current_program_scene(value)
-        if args.test:
+        if cli_args.test:
             self.on_current_program_scene_changed(type('dummy', (), {'scene_name': value}))
     def on_current_program_scene_changed(self, data):
         for func in self._watchers['scene']:
@@ -225,7 +206,7 @@ class ObsState:
     @muted.setter
     def muted(self, value):
         self._req.set_input_mute(AUDIO_INPUT, value)
-        if args.test:
+        if cli_args.test:
             self.on_input_mute_state_changed(type('dummy', (), {'input_muted': value}))
     @property
     def muted_brcd(self):
@@ -233,7 +214,7 @@ class ObsState:
     @muted_brcd.setter
     def muted_brcd(self, value):
         self._req.set_input_mute(AUDIO_INPUT, value)
-        if args.test:
+        if cli_args.test:
             self.on_input_mute_state_changed(type('dummy', (), {'input_muted': value}))
     def on_input_mute_state_changed(self, data):
         print(f"Mute {data.input_name!r} to {data.input_muted!r}")
@@ -246,27 +227,6 @@ class ObsState:
                     func(data.input_muted)
 
 
-# OBS websocket
-if not args.test:
-    hostname = args.hostname_port.split(':')[0]
-    port = args.hostname_port.split(':')[1]
-    password = args.password
-
-    import obsws_python
-    obsreq = obsws_python.ReqClient(host=hostname, port=port, password=password, timeout=3)
-    cl = obsws_python.EventClient(host=hostname, port=port, password=password, timeout=3)
-    obssubscribe = cl.callback.register
-else:
-    class Request():
-        def __call(self, _method, *args, **kwargs):
-            print(f'[test] OBS request: {_method}({args}, {kwargs})')
-        def __getattr__(self, name):
-            return partial(self.__call, name)
-    obsreq = Request()
-    obssubscribe = getattr(obsreq, 'callback.register')
-    cl = type('null', (), {'callback':type('null', (), {'register': lambda *args, **kwargs: None})})
-
-obs = ObsState(obsreq, cl)
 
 
 class Helper:
@@ -347,12 +307,12 @@ def label_to_scene(name):
     return SCENE_NAMES_REVERSE.get(name, name)
 
 def set_resolution(w, h):
-    if not args.broadcaster:
+    if not cli_args.broadcaster:
         return
-    if not args.resolution_command:
+    if not cli_args.resolution_command:
         LOG.error("No resolution command to set %d, %d", w, h)
         return
-    cmd = args.resolution_command
+    cmd = cli_args.resolution_command
     w = int(w)
     h = int(h)
     if not  200 < w < 5000:
@@ -381,12 +341,12 @@ def switch(name):
 def notes_scroll(value):
     """Scroll notes up/down"""
     # xdotool search --onlyvisible --name '^Collaborative document.*Private' windowfocus key Down windowfocus $(xdotool getwindowfocus)
-    if not args.broadcaster:
+    if not cli_args.broadcaster:
         return
-    if not args.notes_window:
+    if not cli_args.notes_window:
         LOG.error(f"No notes_window defined for scrolling {value!r}")
         return
-    cmd = ['xdotool', 'search', '--name', args.notes_window,
+    cmd = ['xdotool', 'search', '--name', cli_args.notes_window,
            'windowfocus',
            'key', 'KEY',
            'windowfocus', subprocess.getoutput('xdotool getwindowfocus')
@@ -396,10 +356,6 @@ def notes_scroll(value):
         LOG.info('Scrolling notes: %r', value)
         subprocess.call(cmd)
 
-if args.notes_window:
-    obs._watch('notes_scroll', notes_scroll)
-
-
 
 
 
@@ -407,29 +363,6 @@ if args.notes_window:
 # GUI setup
 #
 root = Tk()
-root.title("OBS CodeRefinery control")
-frm = ttk.Frame(root)
-frm.columnconfigure(tuple(range(10)), weight=1)
-frm.rowconfigure(tuple(range(10)), weight=1)
-frm.grid()
-frm.pack()
-#ttk.Label(frm, text="Hello World!").grid(column=0, row=0)
-class Time(Helper, ttk.Label):
-    grid_pos = grid_s_pos = g(0, 7)
-    tooltip = "Current time"
-    def __init__(self, frame):
-        super().__init__(frm, text=time.strftime('%H:%M:%S'))
-        self.after(1000, self.update_)
-    def update_(self):
-        self.config(text=time.strftime('%H:%M:%S'))
-        self.after(1000, self.update_)
-class Quit(Helper, ttk.Button):
-    tooltip = "Quit the control panel (does not affect the stream)"
-    #grid_pos = g(0, 8)
-    def __init__(self, frame):
-        super().__init__(frame, text='Quit', command=root.destroy)
-time_l = Time(frm)
-quit_b = Quit(frm)
 
 default_color = root.cget("background")
 default_activecolor = default_color
@@ -495,29 +428,6 @@ class IndicatorMasterLive(Helper, Button):
         return '\n'.join([self.tt_default] + [f'RED: {k!r} ({v!r})' for k,v in self.state.items() if v])
     def on_custom_event(self, event):
         pass
-il = Label(frm, text="Indicator:")
-il.grid(row=0, column=0)
-ToolTip(il, "Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.")
-#il = Label2(frm, text="Indicator:", grid=g(0,0), tooltip="Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.")
-indicator_frame = ttk.Frame(frm)
-indicator_frame.grid(row=0, column=1, columnspan=6, sticky=W)
-indicator_frame.columnconfigure(tuple(range(10)), weight=1)
-indicators = { }
-indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="Live", color='red', grid=g(0,0), grid_s=g(0,0), tooltip="Master live warning.  RED if anything is live on stream (tooltip will indicate what is on).")
-for i, (name, label, color, tt, kwargs) in enumerate([
-    ('warning',  'Warn',     'red',    'Master warning: some urgent issue, please check.', {'blink': 500}),
-    ('caution',  'Caution',  'yellow', 'Master caution: some issue, please check.', {}),
-    ('time',     'Time',     'yellow', 'General "check time" indicator.', {}),
-    ('notes',    'Notes',    'cyan',   'General "check shared notes" indicator.', {}),
-    ('question', 'Question', 'cyan',   'Important question, check chat or notes', {}),
-    ('chat',     'Chat',     'cyan',   'Check chat indicator', {}),
-    ('slower',     '<',      'yellow', 'Slower', {}),
-    ('faster',     '>',      'yellow', 'Faster', {}),
-    ]):
-    indicators[name] = IndicatorLight(indicator_frame, 'indicator-'+name, label, color=color,
-                                      grid  =g(row=0, column=i+1),
-                                      grid_s=g(row=0, column=i+1),
-                                      tooltip=tt, **kwargs)
 
 
 
@@ -548,31 +458,6 @@ class QuickBack(Helper, ttk.Button):
             quick_jingle.state(('!selected',))
         switch(self.scene)
         pip_size.restore_last()
-if not args.small:
-    qa_label = ttk.Label(frm, text="QuickAct:")
-    qa_label.grid(row=1, column=0)
-    ToolTip(qa_label, "Quick actions.  Clicking quickly cuts you away from / back to the program.", delay=TOOLTIP_DELAY)
-#l2 = Label2(frm, text="Presets:", grid=g(1, 0))
-QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes',
-           grid=g(1,1), grid_s=g(1,1))
-
-quick_jingle = SyncedCheckbutton(frm, grid=g(row=1, column=7), name='quick_jingle', text="Jingle?", onvalue=True, offvalue=False)
-quick_jingle.state(('!alternate',))
-quick_brcd = SyncedCheckbutton(frm, grid=g(row=1, column=6), name='quick_brcd', text="Brcd Audio?", onvalue=True, offvalue=False, tooltip="If checked, also unmute the broadcaster's microphone when returning.")
-quick_brcd.grid(row=1, column=6)
-quick_brcd.state(('!alternate', 'disabled' if not args.broadcaster else ''))
-ToolTip(quick_jingle,
-        "Play short sound when coming back from break?\n"
-        "If yes, then unmute, play jingle for 3s, then switch scene and increase PIP size.\n"
-        "if no, immediately restore the settings.", delay=TOOLTIP_DELAY)
-
-
-if not args.small:
-    #QuickBack(frm, 'Screenshare',         'BACK(SS-P) ',  grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings')
-    #QuickBack(frm, 'ScreenshareCrop',     'BACK(SS-C)', grid=g(1,3), tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings')
-    #QuickBack(frm, 'ScreenshareLandscape','BACK(SS-LS)',grid=g(1,4), tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings')
-    #QuickBack(frm, NOTES,                 'BACK(n)',    grid=g(1,6), tooltip='Back from break\nSwitch to Notes,\ntry to restore settings')
-    pass
 
 
 # Scenes
@@ -585,7 +470,7 @@ class SceneButton(Helper, Button):
                          state='normal' if selectable else 'disabled',
                          **kwargs)
         self._instances.append(self)
-        if not args.test:
+        if not cli_args.test:
             current_scene = obs.scene
             if current_scene == scene_name:
                 self.update_(True)
@@ -646,20 +531,6 @@ class SceneLabel(SyncedLabel):
             color = ACTIVE
         self.configure(background=color, activebackground=color)
 
-if not args.small:
-    scene_label = ttk.Label(frm, text='Scene:')
-    scene_label.grid(row=2, column=0)
-    ToolTip(scene_label, "Raw scene selection")
-
-scene_frame = ttk.Frame(frm)
-if not args.small:
-    scene_frame.grid(row=2, column=1, columnspan=7)
-for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
-    b = SceneButton(scene_frame, scene_name=scene, label=label, selectable=selectable,
-                    tooltip=tooltip+f'\n(OBS scene name: {scene})',
-                    grid=g(2, i))
-if args.small:
-    SceneLabel(frm, grid_s=g(1,0))
 
 # Audio
 class Mute(Helper, Button):
@@ -667,7 +538,7 @@ class Mute(Helper, Button):
         self.state = None  # True = Muted, False = unmuted (LIVE)
         self.input = input_
         super().__init__(frm, text=text, command=self.click, state='normal' if enabled else 'disabled', **kwargs)
-        if not args.test:
+        if not cli_args.test:
             self.obs_update(obsreq.get_input_mute(input_).input_muted)
         obssubscribe(self.on_input_mute_state_changed)
     def click(self, state=None):
@@ -700,7 +571,7 @@ class Volume(Helper, ttk.Frame):
         self.label.grid(row=0, column=5)
         self.columnconfigure(tuple(range(6)), weight=1)
         # Initial update
-        if not args.test:
+        if not cli_args.test:
             dB = obsreq.get_input_volume(input_).input_volume_db
             LOG.info("OBS: %r %r (volume_state)", input_, dB)
             self.obs_update(dB)
@@ -730,14 +601,6 @@ class Volume(Helper, ttk.Frame):
             #print(f"OBS: Volume {data.input_name!r} to {data.input_volume_db!r}")
             self.obs_update(data.input_volume_db)
 
-if not args.small:
-    audio_l = ttk.Label(frm, text="Audio:")
-    audio_l.grid(row=6, column=0)
-    ToolTip(audio_l, "Audio controls (mute/unmute/level)", delay=TOOLTIP_DELAY)
-mute = { }
-mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", grid=g(6, 1), tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=args.broadcaster)
-mute[AUDIO_INPUT]      = Mute(frm, AUDIO_INPUT,     "Instr", grid=g(6, 2), tooltip="Mute/unmute instructor capture, red=ON", )
-volume = Volume(frm, AUDIO_INPUT, grid=g(row=6, column=3, columnspan=4, sticky=E+W))
 
 
 # PIP
@@ -753,7 +616,7 @@ class PipSize(Helper, ttk.Frame):
         self.label.grid(row=0, column=5)
         self.columnconfigure(tuple(range(6)), weight=1)
         # update polling
-        if not args.test:
+        if not cli_args.test:
             self.pip_id = obsreq.get_scene_item_id(NOTES, PIP).scene_item_id
             obssubscribe(self.on_custom_event)
             if not cli_args.no_pip_poll:
@@ -801,11 +664,6 @@ class PipSize(Helper, ttk.Frame):
         self.obs_update(obsreq.get_scene_item_transform(NOTES, self.pip_id).scene_item_transform['scaleX'])
         self.after(1000, self.update_pip_size)
 
-if not args.small:
-    b_pip = ttk.Label(frm, text="PIP size:")
-    b_pip.grid(row=7, column=0)
-    ToolTip(b_pip, "Change size of instuctor picture-in-picture.", delay=TOOLTIP_DELAY)
-pip_size = PipSize(frm, grid=g(row=7, column=1, columnspan=6, sticky=E+W))
 # PIP crop selection
 def pip_crop(n):
     print(f"PIP crop → {n} people")
@@ -818,21 +676,6 @@ def pip_crop(n):
             transform['crop'+k.title()] = v
         #print('====new:', transform)
         obsreq.set_scene_item_transform(scene, id_, transform)
-if not args.small:
-    b_cropbuttons = ttk.Label(frm, text="PIP crop:")
-    b_cropbuttons.grid(row=8, column=0)
-    ToolTip(b_cropbuttons,
-        "PIP insert can be cropped to suit different numbers of people (this comes from "
-        "how Zoom lays it out for different numbers of people.  Click a button if "
-        "it doesn't fit right into the corner.", delay=TOOLTIP_DELAY)
-crop_buttons = ttk.Frame(frm)
-crop_buttons.columnconfigure(tuple(range(5)), weight=1)
-crop_buttons.grid(row=8, column=1, columnspan=5)
-for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
-    b = ttk.Button(crop_buttons, text=label, command=partial(pip_crop, n))
-    if not args.small:
-        b.grid(row=0, column=i)
-    ToolTip(b, 'Set PIP to be cropped for this many people.  None=no crop', delay=TOOLTIP_DELAY)
 
 # Playback
 class PlaybackTimer(Helper, ttk.Label):
@@ -879,15 +722,6 @@ class PlayStop(Helper, ttk.Button):
     def stop(self):
         print("stopping playback")
         obsreq.trigger_media_input_action(PLAYBACK_INPUT, 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP')
-if not args.small:
-    playback_label = ttk.Label(frm, text="Jingle:")
-    playback_label.grid(row=9, column=0)
-    ToolTip(playback_label, "Row deals with playing transition sounds", delay=TOOLTIP_DELAY)
-playback = PlaybackTimer(frm, PLAYBACK_INPUT, grid=g(9, 1), grid_s=g(1, 3), tooltip="Countdown time for current file playing")
-playback_buttons = { }
-for i, file_ in enumerate(PLAYBACK_FILES, start=2):
-    pf = playback_buttons[file_['label']] = PlayFile(frm, **file_, grid=g(9, i))
-ps = PlayStop(frm, grid=g(9, 2+len(PLAYBACK_FILES)), tooltip="Stop all playbacks")
 
 
 
@@ -928,22 +762,6 @@ class ScrollNotesAuto(SyncedCheckbutton):
         self.after(self.delay, self.do_scroll, scroll_id)
 
 
-sn_frame= ttk.Frame(frm)
-sn_frame.columnconfigure(tuple(range(3)), weight=1)
-if args.small:
-    sn_frame.grid(row=1, column=4, columnspan=7)
-else:
-    sn_frame.grid(row=11, column=0, columnspan=6)
-
-sn_label = Label(sn_frame, text="Notes scroll:")
-sn_label.grid(row=0, column=0)
-ToolTip(sn_label, "Tools for scrolling notes up and down (on the broadcaster computer), in the Notes view.", delay=TOOLTIP_DELAY)
-b = ScrollNotes(sn_frame, "Up",   event='Up',   grid=g(0,1), grid_s=g(0,1), tooltip="Scroll notes up")
-b = ScrollNotes(sn_frame, "Down", event='Down', grid=g(0,2), grid_s=g(0,2), tooltip="Scroll notes down")
-b = ScrollNotes(sn_frame, "PgUp", event='Prior',grid=g(0,3),                tooltip="Scroll notes PgUp")
-b = ScrollNotes(sn_frame, "PgDn", event='Next', grid=g(0,4),                tooltip="Scroll notes PgDn")
-b = ScrollNotes(sn_frame, "End",  event='End',  grid=g(0,5),                tooltip="Scroll notes End key")
-b = ScrollNotesAuto(sn_frame, grid=g(0,6))
 
 
 
@@ -1026,6 +844,7 @@ class Preset():
         """Button is clicked.  Switch to this preset"""
         switch(self.label)
     def _switch_to(self):
+        old_scene_name = obs.scene
         scene_name = label_to_scene(self.sbox_value.get())
         resolution = self.rbox_value.get()
         print(f'Setting to preset {self.label!r} ({scene_name!r} at {resolution!r})')
@@ -1034,9 +853,16 @@ class Preset():
             w = int(w)
             h = int(h)
             set_resolution(w, h)
-            time.sleep(0.2)
+            obs.ss_resolution = resolution
+            if old_scene_name not in SCENES_REMOTE and scene_name in SCENES_REMOTE:
+                # We can't wait in this thread since the resolution callback
+                # needs to run in the meantime while waiting.
+                self.button.after(int(0.1*1000), self._switch_to_callback, scene_name)
+                return
+        self._switch_to_callback(scene_name)
+    def _switch_to_callback(self, scene_name):
+        """Callback of _switch_to, see comment there for why this is needed"""
         obs.scene = scene_name
-        obs.ss_resolution = resolution
         SceneButton.switch(scene_name)
 
     def click_sbox(self, name):
@@ -1109,23 +935,6 @@ class Preset():
 
 
 
-l_presets = SyncedLabel(frm, key=None, text="Scene presets:", grid=g(row=3, column=0),
-                        tooltip="Scene presets.  You can configure various presets and quickly jump to them.  Presets consist of a name, which scene, and resolution of the Zoom window.")
-l_presets_size = SyncedLabel(frm, 'ss_resolution', grid=g(row=4, column=0), tooltip="Last set Zoom resolution")
-
-f_presets = ttk.Frame(frm)
-if not args.small:
-    f_presets.grid(row=3, column=1, rowspan=3, columnspan=8, sticky=NSEW)
-ttk.Separator(f_presets, orient=VERTICAL).grid(column=4, row=0, rowspan=3, sticky=NS)
-f_presets.columnconfigure((0,1,2,5,6,7), weight=15)
-f_presets.columnconfigure((3,8), weight=5)
-f_presets.columnconfigure((4), minsize=20)
-preset_a = Preset(f_presets, 'preset-a', "A", row=0, column=0)
-preset_b = Preset(f_presets, 'preset-b', "B", row=0, column=5)
-preset_c = Preset(f_presets, 'preset-c', "C", row=1, column=0)
-preset_d = Preset(f_presets, 'preset-d', "D", row=1, column=5)
-preset_e = Preset(f_presets, 'preset-e', "E", row=2, column=0)
-preset_f = Preset(f_presets, 'preset-f', "F", row=2, column=5)
 
 #
 # Quick actions
@@ -1197,12 +1006,270 @@ class QuickBackGo(Helper, ttk.Button):
         pip_size.restore_last()
 
 
-qbs = QuickBackSelect(frm, name='quickback-a', grid=g(row=1, column=4))
-qbg = QuickBackGo(frm, qbs, grid=g(row=1, column=3), grid_s=g(row=1, column=2))
 
 
 
-#import IPython ; IPython.embed()
+def main():
+    # pylint: disable=unused-variable
+    global cli_args
 
-print('starting...')
-root.mainloop()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('hostname_port',
+                        help="HOSTNAME:PORT of the OBS to connect to")
+    parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
+                      help='Websocket password, or pass "-" and set env var OBS_PASSWORD')
+    parser.add_argument('--notes-window',
+                        help="window name regex for notes document (for scrolling), get via xwininfo -tree -root | less.  Example: '^Collaborative document.*Privat()e' (the parentheses prevent the regex from matching itself in the process listing)")
+    parser.add_argument('--small', action='store_true',
+                        help="Start a smaller, more limited, control panel for instructors.")
+    parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel in a test mode.  Some things may not work.")
+    parser.add_argument('--scene-hook', action=DictAction, nargs=1,
+                        help="Local command line hooks for switching to each scene, format SCENENAME=command")
+    parser.add_argument('--resolution-command',
+                        help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers.  Example: \"xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;\" (mind the nested quotes)")
+    parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
+    parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer.  Enable extra broadcaster functionality like unmuting and controlling Zoom.")
+    parser.add_argument('--verbose', '-v', action='count', default=0)
+    args = cli_args = parser.parse_args()
+    if args.verbose >= 3:
+        logging.basicConfig(level=9)
+    elif args.verbose >= 2:
+        logging.basicConfig(level=logging.DEBUG)
+        logging.getLogger('obsws_python').setLevel(logging.INFO)
+    elif args.verbose >= 1:
+        logging.basicConfig(level=logging.INFO)
+        logging.getLogger('obsws_python').setLevel(logging.INFO)
+    LOG.debug("Arguments: %s", cli_args)
+
+
+    # OBS websocket
+    global obs
+    global obsreq
+    global obssubscribe
+    if not cli_args.test:
+        hostname = cli_args.hostname_port.split(':')[0]
+        port = cli_args.hostname_port.split(':')[1]
+        password = cli_args.password
+
+        import obsws_python
+        obsreq = obsws_python.ReqClient(host=hostname, port=port, password=password, timeout=3)
+        cl = obsws_python.EventClient(host=hostname, port=port, password=password, timeout=3)
+        obssubscribe = cl.callback.register
+    else:
+        class Request():
+            def __call(self, _method, *args, **kwargs):
+                print(f'[test] OBS request: {_method}({args}, {kwargs})')
+            def __getattr__(self, name):
+                return partial(self.__call, name)
+        obsreq = Request()
+        obssubscribe = getattr(obsreq, 'callback.register')
+        cl = type('null', (), {'callback':type('null', (), {'register': lambda *args, **kwargs: None})})
+
+    obs = ObsState(obsreq, cl)
+
+
+    #
+    # GUI setup
+    #
+    #root = Tk()
+    root.title("OBS CodeRefinery control")
+    frm = ttk.Frame(root)
+    frm.columnconfigure(tuple(range(10)), weight=1)
+    frm.rowconfigure(tuple(range(10)), weight=1)
+    frm.grid()
+    frm.pack()
+    #ttk.Label(frm, text="Hello World!").grid(column=0, row=0)
+    class Time(Helper, ttk.Label):
+        grid_pos = grid_s_pos = g(0, 7)
+        tooltip = "Current time"
+        def __init__(self, frame):
+            super().__init__(frm, text=time.strftime('%H:%M:%S'))
+            self.after(1000, self.update_)
+        def update_(self):
+            self.config(text=time.strftime('%H:%M:%S'))
+            self.after(1000, self.update_)
+    class Quit(Helper, ttk.Button):
+        tooltip = "Quit the control panel (does not affect the stream)"
+        #grid_pos = g(0, 8)
+        def __init__(self, frame):
+            super().__init__(frame, text='Quit', command=root.destroy)
+    time_l = Time(frm)
+    quit_b = Quit(frm)
+    #default_color = root.cget("background")
+    #default_activecolor = default_color
+    #color_default = {'background': default_color, 'activebackground': default_color}
+
+
+    # Indicator lights
+    global indicators
+    il = Label(frm, text="Indicator:")
+    il.grid(row=0, column=0)
+    ToolTip(il, "Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.")
+    #il = Label2(frm, text="Indicator:", grid=g(0,0), tooltip="Synced indicator lights.  Pushing a button illuminates it on all other panels, but has no other effect.")
+    indicator_frame = ttk.Frame(frm)
+    indicator_frame.grid(row=0, column=1, columnspan=6, sticky=W)
+    indicator_frame.columnconfigure(tuple(range(10)), weight=1)
+    indicators = { }
+    indicators['live'] = IndicatorMasterLive(indicator_frame, 'indicator-live', label="Live", color='red', grid=g(0,0), grid_s=g(0,0), tooltip="Master live warning.  RED if anything is live on stream (tooltip will indicate what is on).")
+    for i, (name, label, color, tt, kwargs) in enumerate([
+        ('warning',  'Warn',     'red',    'Master warning: some urgent issue, please check.', {'blink': 500}),
+        ('caution',  'Caution',  'yellow', 'Master caution: some issue, please check.', {}),
+        ('time',     'Time',     'yellow', 'General "check time" indicator.', {}),
+        ('notes',    'Notes',    'cyan',   'General "check shared notes" indicator.', {}),
+        ('question', 'Question', 'cyan',   'Important question, check chat or notes', {}),
+        ('chat',     'Chat',     'cyan',   'Check chat indicator', {}),
+        ('slower',     '<',      'yellow', 'Slower', {}),
+        ('faster',     '>',      'yellow', 'Faster', {}),
+        ]):
+        indicators[name] = IndicatorLight(indicator_frame, 'indicator-'+name, label, color=color,
+                                          grid  =g(row=0, column=i+1),
+                                          grid_s=g(row=0, column=i+1),
+                                          tooltip=tt, **kwargs)
+
+
+    # Quick actions
+    global quick_jingle
+    global quick_brcd
+    if not cli_args.small:
+        qa_label = ttk.Label(frm, text="QuickAct:")
+        qa_label.grid(row=1, column=0)
+        ToolTip(qa_label, "Quick actions.  Clicking quickly cuts you away from / back to the program.", delay=TOOLTIP_DELAY)
+    #l2 = Label2(frm, text="Presets:", grid=g(1, 0))
+    QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes',
+               grid=g(1,1), grid_s=g(1,1))
+    quick_jingle = SyncedCheckbutton(frm, grid=g(row=1, column=7), name='quick_jingle', text="Jingle?", onvalue=True, offvalue=False)
+    quick_jingle.state(('!alternate',))
+    quick_brcd = SyncedCheckbutton(frm, grid=g(row=1, column=6), name='quick_brcd', text="Brcd Audio?", onvalue=True, offvalue=False, tooltip="If checked, also unmute the broadcaster's microphone when returning.")
+    quick_brcd.grid(row=1, column=6)
+    quick_brcd.state(('!alternate', 'disabled' if not cli_args.broadcaster else ''))
+    ToolTip(quick_jingle,
+            "Play short sound when coming back from break?\n"
+            "If yes, then unmute, play jingle for 3s, then switch scene and increase PIP size.\n"
+            "if no, immediately restore the settings.", delay=TOOLTIP_DELAY)
+    if not cli_args.small:
+        #QuickBack(frm, 'Screenshare',         'BACK(SS-P) ',  grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings')
+        #QuickBack(frm, 'ScreenshareCrop',     'BACK(SS-C)', grid=g(1,3), tooltip='Back from break\nSwitch to Screenshare, cropped landscape mode, \ntry to restore settings')
+        #QuickBack(frm, 'ScreenshareLandscape','BACK(SS-LS)',grid=g(1,4), tooltip='Back from break\nSwitch to Screenshare-Landscape\nNotes, \ntry to restore settings')
+        #QuickBack(frm, NOTES,                 'BACK(n)',    grid=g(1,6), tooltip='Back from break\nSwitch to Notes,\ntry to restore settings')
+        pass
+
+
+    # Scene selection
+    if not cli_args.small:
+        scene_label = ttk.Label(frm, text='Scene:')
+        scene_label.grid(row=2, column=0)
+        ToolTip(scene_label, "Raw scene selection")
+    scene_frame = ttk.Frame(frm)
+    if not cli_args.small:
+        scene_frame.grid(row=2, column=1, columnspan=7)
+    for i, (scene, (label, tooltip, selectable)) in enumerate(SCENE_NAMES.items()):
+        b = SceneButton(scene_frame, scene_name=scene, label=label, selectable=selectable,
+                        tooltip=tooltip+f'\n(OBS scene name: {scene})',
+                        grid=g(2, i))
+    if cli_args.small:
+        SceneLabel(frm, grid_s=g(1,0))
+
+    # Audio
+    global mute
+    if not cli_args.small:
+        audio_l = ttk.Label(frm, text="Audio:")
+        audio_l.grid(row=6, column=0)
+        ToolTip(audio_l, "Audio controls (mute/unmute/level)", delay=TOOLTIP_DELAY)
+    mute = { }
+    mute[AUDIO_INPUT_BRCD] = Mute(frm, AUDIO_INPUT_BRCD, "Brcd", grid=g(6, 1), tooltip="Broadcaster microphone, red=ON.  Only broadcaster can control", enabled=cli_args.broadcaster)
+    mute[AUDIO_INPUT]      = Mute(frm, AUDIO_INPUT,     "Instr", grid=g(6, 2), tooltip="Mute/unmute instructor capture, red=ON", )
+    volume = Volume(frm, AUDIO_INPUT, grid=g(row=6, column=3, columnspan=4, sticky=E+W))
+
+
+    # PIP size
+    global pip_size
+    if not cli_args.small:
+        b_pip = ttk.Label(frm, text="PIP size:")
+        b_pip.grid(row=7, column=0)
+        ToolTip(b_pip, "Change size of instuctor picture-in-picture.", delay=TOOLTIP_DELAY)
+    pip_size = PipSize(frm, grid=g(row=7, column=1, columnspan=6, sticky=E+W))
+    if not cli_args.small:
+        b_cropbuttons = ttk.Label(frm, text="PIP crop:")
+        b_cropbuttons.grid(row=8, column=0)
+        ToolTip(b_cropbuttons,
+            "PIP insert can be cropped to suit different numbers of people (this comes from "
+            "how Zoom lays it out for different numbers of people.  Click a button if "
+            "it doesn't fit right into the corner.", delay=TOOLTIP_DELAY)
+    crop_buttons = ttk.Frame(frm)
+    crop_buttons.columnconfigure(tuple(range(5)), weight=1)
+    crop_buttons.grid(row=8, column=1, columnspan=5)
+    for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
+        b = ttk.Button(crop_buttons, text=label, command=partial(pip_crop, n))
+        if not cli_args.small:
+            b.grid(row=0, column=i)
+        ToolTip(b, 'Set PIP to be cropped for this many people.  None=no crop', delay=TOOLTIP_DELAY)
+
+
+    # Audo jingle playback
+    global playback_buttons
+    if not cli_args.small:
+        playback_label = ttk.Label(frm, text="Jingle:")
+        playback_label.grid(row=9, column=0)
+        ToolTip(playback_label, "Row deals with playing transition sounds", delay=TOOLTIP_DELAY)
+    playback = PlaybackTimer(frm, PLAYBACK_INPUT, grid=g(9, 1), grid_s=g(1, 3), tooltip="Countdown time for current file playing")
+    playback_buttons = { }
+    for i, file_ in enumerate(PLAYBACK_FILES, start=2):
+        pf = playback_buttons[file_['label']] = PlayFile(frm, **file_, grid=g(9, i))
+    ps = PlayStop(frm, grid=g(9, 2+len(PLAYBACK_FILES)), tooltip="Stop all playbacks")
+
+
+    # Scroll notes
+    sn_frame= ttk.Frame(frm)
+    sn_frame.columnconfigure(tuple(range(3)), weight=1)
+    if cli_args.small:
+        sn_frame.grid(row=1, column=4, columnspan=7)
+    else:
+        sn_frame.grid(row=11, column=0, columnspan=6)
+    sn_label = Label(sn_frame, text="Notes scroll:")
+    sn_label.grid(row=0, column=0)
+    ToolTip(sn_label, "Tools for scrolling notes up and down (on the broadcaster computer), in the Notes view.", delay=TOOLTIP_DELAY)
+    b = ScrollNotes(sn_frame, "Up",   event='Up',   grid=g(0,1), grid_s=g(0,1), tooltip="Scroll notes up")
+    b = ScrollNotes(sn_frame, "Down", event='Down', grid=g(0,2), grid_s=g(0,2), tooltip="Scroll notes down")
+    b = ScrollNotes(sn_frame, "PgUp", event='Prior',grid=g(0,3),                tooltip="Scroll notes PgUp")
+    b = ScrollNotes(sn_frame, "PgDn", event='Next', grid=g(0,4),                tooltip="Scroll notes PgDn")
+    b = ScrollNotes(sn_frame, "End",  event='End',  grid=g(0,5),                tooltip="Scroll notes End key")
+    b = ScrollNotesAuto(sn_frame, grid=g(0,6))
+
+
+
+    # Presets
+    l_presets = SyncedLabel(frm, key=None, text="Scene presets:", grid=g(row=3, column=0),
+                            tooltip="Scene presets.  You can configure various presets and quickly jump to them.  Presets consist of a name, which scene, and resolution of the Zoom window.")
+    l_presets_size = SyncedLabel(frm, 'ss_resolution', grid=g(row=4, column=0), tooltip="Last set Zoom resolution")
+    f_presets = ttk.Frame(frm)
+    if not cli_args.small:
+        f_presets.grid(row=3, column=1, rowspan=3, columnspan=8, sticky=NSEW)
+    ttk.Separator(f_presets, orient=VERTICAL).grid(column=4, row=0, rowspan=3, sticky=NS)
+    f_presets.columnconfigure((0,1,2,5,6,7), weight=15)
+    f_presets.columnconfigure((3,8), weight=5)
+    f_presets.columnconfigure((4), minsize=20)
+    preset_a = Preset(f_presets, 'preset-a', "A", row=0, column=0)
+    preset_b = Preset(f_presets, 'preset-b', "B", row=0, column=5)
+    preset_c = Preset(f_presets, 'preset-c', "C", row=1, column=0)
+    preset_d = Preset(f_presets, 'preset-d', "D", row=1, column=5)
+    preset_e = Preset(f_presets, 'preset-e', "E", row=2, column=0)
+    preset_f = Preset(f_presets, 'preset-f', "F", row=2, column=5)
+
+    qbs = QuickBackSelect(frm, name='quickback-a', grid=g(row=1, column=4))
+    qbg = QuickBackGo(frm, qbs, grid=g(row=1, column=3), grid_s=g(row=1, column=2))
+
+
+
+    # Other watchers (not displayed on the control panel)
+    if cli_args.notes_window:
+        obs._watch('notes_scroll', notes_scroll)
+
+
+    # begin
+    print('starting...')
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
+
