@@ -6,7 +6,7 @@ rm -rf zipapp
 mkdir zipapp
 rsync -a ${BASE}/obsws_python                    zipapp/
 rsync -a ${BASE}/obsws_python-1.7.0.dist-info    zipapp/
-rsync -a ${BASE}/tktooltip                       zipapp/tktooltip/
+rsync -a ${BASE}/tktooltip                       zipapp/
 rsync -a ${BASE}/tkinter_tooltip-3.1.0.dist-info zipapp/
 rsync -a obs_cr                                  zipapp/
 
