@@ -59,8 +59,8 @@ SCENE_NAMES = {
     'Empty': ('Empty', 'Empty black screen', True),
     }
 SCENE_NAMES_REVERSELOOKUP = { v[0]: n for n,v in SCENE_NAMES.items() }
-SCENES_WITH_PIP = ['Screenshare', 'ScreenshareCrop', 'ScreenshareLandscape', 'Broadcaster-Screen', NOTES]
-SCENES_WITH_GALLERY = SCENES_WITH_PIP + ['Gallery']
+SCENES_WITH_RESIZEABLE_GALLERY = ['Screenshare', 'ScreenshareCrop', 'ScreenshareLandscape', 'BroadcasterScreen', NOTES]
+SCENES_WITH_GALLERY = SCENES_WITH_RESIZEABLE_GALLERY + ['Gallery']
 SCENES_SAFE = ['Title', NOTES, 'Empty'] # scenes suitable for breaks
 SCENES_REMOTE = {'Screenshare', 'ScreenshareCrop', 'ScreenshareCrop'}
 # Possible screen sizes that someone might share (used for fitting them to the view)
@@ -71,7 +71,7 @@ SCREENSHARE_SIZES = [
    "1680x1080",
    "3840x1080",
    ]
-PIP = '_GalleryCapture[hidden]'
+GALLERY = 'ZoomGalleryCapture'
 PLAYBACK_INPUT = 'CRaudio'  # for playing transitions sounds, etc.
 TOOLTIP_DELAY = 0.5
 PLAYBACK_FILES = [
@@ -82,7 +82,7 @@ PLAYBACK_FILES = [
      'label': 'long',
      'tooltip': 'Long theme song for starting/ending day, 1:23 duration'},
     ]
-PIP_CROP_FACTORS = {
+GALLERY_CROP_FACTORS = {
     None: {'top':  0, 'bottom':  0, 'left':  0, 'right':  0, },
     1:    {'top':  0, 'bottom':  0, 'left': 59, 'right':  59, },
     2:    {'top': 90, 'bottom':  0, 'left': 12, 'right': 12, },  # checked
@@ -442,8 +442,8 @@ class QuickBreak(Helper, ttk.Button):
         mute[AUDIO_INPUT].click(True)
         mute[AUDIO_INPUT_BRCD].click(True)
         switch(NOTES)
-        pip_size.save_last()
-        pip_size.update(0)
+        gallery_size.save_last()
+        gallery_size.update(0)
 class QuickBack(Helper, ttk.Button):
     def __init__(self, frm, scene, text, **kwargs):
         self.scene = scene
@@ -458,7 +458,7 @@ class QuickBack(Helper, ttk.Button):
             time.sleep(3)
             quick_jingle.state(('!selected',))
         switch(self.scene)
-        pip_size.restore_last()
+        gallery_size.restore_last()
 
 
 # Scenes
@@ -604,8 +604,8 @@ class Volume(Helper, ttk.Frame):
 
 
 
-# PIP
-class PipSize(Helper, ttk.Frame):
+# Gallery
+class GallerySize(Helper, ttk.Frame):
     def __init__(self, frame, **kwargs):
         self.last_state = 0.25
         super().__init__(frame, **kwargs)
@@ -618,33 +618,33 @@ class PipSize(Helper, ttk.Frame):
         self.columnconfigure(tuple(range(6)), weight=1)
         # update polling
         if not cli_args.test:
-            self.pip_id = obsreq.get_scene_item_id(NOTES, PIP).scene_item_id
+            self.gallery_id = obsreq.get_scene_item_id(NOTES, GALLERY).scene_item_id
             obssubscribe(self.on_custom_event)
-            if not cli_args.no_pip_poll:
-                self.update_pip_size()
+            if not cli_args.no_gallery_poll:
+                self.update_gallery_size()
     def update(self, state):
         """Update callback of slider"""
         state = float(state)
         self.label.configure(text=f"{state:0.2f}")
         if state == 0:   color = default_color
         else:            color = ACTIVE
-        indicators['live'].update_('pip-size', 'visible' if state != 0 else None)
+        indicators['live'].update_('gallery-size', 'visible' if state != 0 else None)
 
         self.scale.configure(background=color, activebackground=color)
-        for scene in SCENES_WITH_PIP:
-            id_ = obsreq.get_scene_item_id(scene, PIP).scene_item_id
+        for scene in SCENES_WITH_RESIZEABLE_GALLERY:
+            id_ = obsreq.get_scene_item_id(scene, GALLERY).scene_item_id
             transform = obsreq.get_scene_item_transform(scene, id_).scene_item_transform
             transform['scaleX'] = state
             transform['scaleY'] = state
             obsreq.set_scene_item_transform(scene, id_, transform)
     def save_last(self):
-        """Save pip size for future restoring"""
+        """Save gallery size for future restoring"""
         self.last_state = self.value.get()
         # The custom event doesn't seem to work - somehow
-        obsreq.broadcast_custom_event({'eventData': {'pip_last_state': self.last_state}})
-        obsreq.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', 'pip_last_state', self.last_state)
+        obsreq.broadcast_custom_event({'eventData': {'gallery_last_state': self.last_state}})
+        obsreq.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', 'gallery_last_state', self.last_state)
     def restore_last(self):
-        """Restore last pip size"""
+        """Restore last gallery size"""
         self.update(self.last_state)
     def obs_update(self, state):
         """"Callabck for scale update from OBS"""
@@ -653,27 +653,27 @@ class PipSize(Helper, ttk.Frame):
         if state == 0:   color = default_color
         else:            color = ACTIVE
         self.scale.configure(background=color, activebackground=color)
-        indicators['live'].update_('pip-size', 'visible' if state != 0 else None)
+        indicators['live'].update_('gallery-size', 'visible' if state != 0 else None)
     def on_custom_event(self, data):
         """Custom event listener callback from OBS."""
         #print(f'OBS custom event: {vars(data)!r}')
-        if hasattr(data, 'pip_last_state'):
-            self.last_state = data.pip_last_state
-            print(f"Saving last pip size: {self.last_state!r}")
-    def update_pip_size(self):
+        if hasattr(data, 'gallery_last_state'):
+            self.last_state = data.gallery_last_state
+            print(f"Saving last gallery size: {self.last_state!r}")
+    def update_gallery_size(self):
         """The on_scene_item_transform_changed doesn't seem to work, so we have to poll here... unfortunately."""
-        self.obs_update(obsreq.get_scene_item_transform(NOTES, self.pip_id).scene_item_transform['scaleX'])
-        self.after(1000, self.update_pip_size)
+        self.obs_update(obsreq.get_scene_item_transform(NOTES, self.gallery_id).scene_item_transform['scaleX'])
+        self.after(1000, self.update_gallery_size)
 
-# PIP crop selection
-def pip_crop(n):
-    print(f"PIP crop → {n} people")
+# Gallery crop selection
+def gallery_crop(n):
+    print(f"GALLERY crop → {n} people")
 
-    for scene in SCENES_WITH_PIP:  # TODO: with gallery
-        id_ = obsreq.get_scene_item_id(scene, PIP).scene_item_id
+    for scene in SCENES_WITH_GALLERY:  # TODO: with gallery
+        id_ = obsreq.get_scene_item_id(scene, GALLERY).scene_item_id
         transform = obsreq.get_scene_item_transform(scene, id_).scene_item_transform
         #print('====old', transform)
-        for (k,v) in PIP_CROP_FACTORS[n].items():
+        for (k,v) in GALLERY_CROP_FACTORS[n].items():
             transform['crop'+k.title()] = v
         #print('====new:', transform)
         obsreq.set_scene_item_transform(scene, id_, transform)
@@ -1004,7 +1004,7 @@ class QuickBackGo(Helper, ttk.Button):
         quick_jingle.click(False)
         quick_brcd.click(False)
         switch(scene)
-        pip_size.restore_last()
+        gallery_size.restore_last()
 
 
 
@@ -1028,7 +1028,7 @@ def main():
                         help="Local command line hooks for switching to each scene, format SCENENAME=command")
     parser.add_argument('--resolution-command',
                         help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers.  Example: \"xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;\" (mind the nested quotes)")
-    parser.add_argument('--no-pip-poll', action='store_true', help="Don't poll for pip size (for less verbosity when testing)")
+    parser.add_argument('--no-gallery-poll', action='store_true', help="Don't poll for gallery size (for less verbosity when testing)")
     parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer.  Enable extra broadcaster functionality like unmuting and controlling Zoom.")
     parser.add_argument('--verbose', '-v', action='count', default=0)
     args = cli_args = parser.parse_args()
@@ -1136,7 +1136,7 @@ def main():
         qa_label.grid(row=1, column=0)
         ToolTip(qa_label, "Quick actions.  Clicking quickly cuts you away from / back to the program.", delay=TOOLTIP_DELAY)
     #l2 = Label2(frm, text="Presets:", grid=g(1, 0))
-    QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide PIP, and swich to Notes',
+    QuickBreak(frm, 'BREAK', tooltip='Go to break.\nMute audio, hide GALLERY, and swich to Notes',
                grid=g(1,1), grid_s=g(1,1))
     quick_jingle = SyncedCheckbutton(frm, grid=g(row=1, column=7), name='quick_jingle', text="Jingle?", onvalue=True, offvalue=False)
     quick_jingle.state(('!alternate',))
@@ -1145,7 +1145,7 @@ def main():
     quick_brcd.state(('!alternate', 'disabled' if not cli_args.broadcaster else ''))
     ToolTip(quick_jingle,
             "Play short sound when coming back from break?\n"
-            "If yes, then unmute, play jingle for 3s, then switch scene and increase PIP size.\n"
+            "If yes, then unmute, play jingle for 3s, then switch scene and increase gallery size.\n"
             "if no, immediately restore the settings.", delay=TOOLTIP_DELAY)
     if not cli_args.small:
         #QuickBack(frm, 'Screenshare',         'BACK(SS-P) ',  grid=g(1,2), tooltip='Back from break\nSwitch to Screenshare, \ntry to restore settings')
@@ -1182,28 +1182,28 @@ def main():
     volume = Volume(frm, AUDIO_INPUT, grid=g(row=6, column=3, columnspan=4, sticky=E+W))
 
 
-    # PIP size
-    global pip_size
+    # gallery size
+    global gallery_size
     if not cli_args.small:
-        b_pip = ttk.Label(frm, text="PIP size:")
-        b_pip.grid(row=7, column=0)
-        ToolTip(b_pip, "Change size of instuctor picture-in-picture.", delay=TOOLTIP_DELAY)
-    pip_size = PipSize(frm, grid=g(row=7, column=1, columnspan=6, sticky=E+W))
+        b_gallery = ttk.Label(frm, text="Gallery size:")
+        b_gallery.grid(row=7, column=0)
+        ToolTip(b_gallery, "Change size of instuctor picture-in-picture.", delay=TOOLTIP_DELAY)
+    gallery_size = GallerySize(frm, grid=g(row=7, column=1, columnspan=6, sticky=E+W))
     if not cli_args.small:
-        b_cropbuttons = ttk.Label(frm, text="PIP crop:")
+        b_cropbuttons = ttk.Label(frm, text="Gallery crop:")
         b_cropbuttons.grid(row=8, column=0)
         ToolTip(b_cropbuttons,
-            "PIP insert can be cropped to suit different numbers of people (this comes from "
+            "Gallery insert can be cropped to suit different numbers of people (this comes from "
             "how Zoom lays it out for different numbers of people.  Click a button if "
             "it doesn't fit right into the corner.", delay=TOOLTIP_DELAY)
     crop_buttons = ttk.Frame(frm)
     crop_buttons.columnconfigure(tuple(range(5)), weight=1)
     crop_buttons.grid(row=8, column=1, columnspan=5)
     for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
-        b = ttk.Button(crop_buttons, text=label, command=partial(pip_crop, n))
+        b = ttk.Button(crop_buttons, text=label, command=partial(gallery_crop, n))
         if not cli_args.small:
             b.grid(row=0, column=i)
-        ToolTip(b, 'Set PIP to be cropped for this many people.  None=no crop', delay=TOOLTIP_DELAY)
+        ToolTip(b, 'Set Gallery to be cropped for this many people.  None=no crop', delay=TOOLTIP_DELAY)
 
 
     # Audo jingle playback
