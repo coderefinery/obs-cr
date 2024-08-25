@@ -54,16 +54,17 @@ SCENE_NAMES = {
     'Screenshare': ('SS Portrait', 'Screenshare, normal portrait mode.\nUsed when the instructor can share a portion of the screen with the right 840x1080 aspect ratio.', True),
     'ScreenshareCrop': ('SS Crop', 'Screenshare, landscape share but crop portrait out of the left 840 pixels.\nUsed when instructors can\'t share a portion of the screen, but share a full screen and we pull an 840x1080 aspect ratio chuck out of the left side of it.', True),
     'ScreenshareLandscape': ('SS Landscape', 'Screenshare, actual full landscape mode shrunk into portrait mode.\nUsed when an instructor actually is sharing landscape and you want black bars at the top/bottom to make it fit.', True),
-    'Broadcaster-Screen': ('BrdScr', 'Broadcaster local screen (only broadcaster may select)', IfBroadcaster),
+    'BroadcasterScreen': ('BrdScr', 'Broadcaster local screen (only broadcaster may select)', IfBroadcaster),
     NOTES: ('Notes', 'Notes, from the broadcaster computer', True),
     'Empty': ('Empty', 'Empty black screen', True),
     }
-SCENE_NAMES_REVERSE = { v[0]: n for n,v in SCENE_NAMES.items() }
+SCENE_NAMES_REVERSELOOKUP = { v[0]: n for n,v in SCENE_NAMES.items() }
 SCENES_WITH_PIP = ['Screenshare', 'ScreenshareCrop', 'ScreenshareLandscape', 'Broadcaster-Screen', NOTES]
 SCENES_WITH_GALLERY = SCENES_WITH_PIP + ['Gallery']
 SCENES_SAFE = ['Title', NOTES, 'Empty'] # scenes suitable for breaks
 SCENES_REMOTE = {'Screenshare', 'ScreenshareCrop', 'ScreenshareCrop'}
-SCENE_SIZES = [
+# Possible screen sizes that someone might share (used for fitting them to the view)
+SCREENSHARE_SIZES = [
    "840x1080",
    "1920x1080",
    "1920x1200",
@@ -304,7 +305,7 @@ def scene_to_label(name):
     return SCENE_NAMES.get(name, [('-')])[0]
 
 def label_to_scene(name):
-    return SCENE_NAMES_REVERSE.get(name, name)
+    return SCENE_NAMES_REVERSELOOKUP.get(name, name)
 
 def set_resolution(w, h):
     if not cli_args.broadcaster:
@@ -819,7 +820,7 @@ class Preset():
 
         # Resolution choices
         self.rbox_value = StringVar()
-        self.rbox = OptionMenu(frame, self.rbox_value, '-', *SCENE_SIZES,
+        self.rbox = OptionMenu(frame, self.rbox_value, '-', *SCREENSHARE_SIZES,
                                command=self.click_rbox)
         self.rbox.grid(row=row, column=column+2)
         ToolTip(self.rbox, lambda: f'Zoom capture resolution for preset {self.label!r}', delay=TOOLTIP_DELAY)
