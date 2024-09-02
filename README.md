@@ -71,6 +71,16 @@ itself, which is cool).  Anything RED indicates something may be
 live.  "Indicators" are synced lights: click a light on any control
 panel, and it's synced across all of them.
 
+* `--small` shows a smaller window, suitable for instructors who don't
+  want to do a lot of control.
+* `--broadcaster` enables extra options that only make sense on the
+  broadcaster's computer (like sharing the broadcaster's screen)
+* `--resolution-command` is a command that resizes the Zoom
+  screenshare window.  `WIDTH` and `HEIGHT` get replaced by the
+  desired window size.
+* `--notes-window` is a regex which matches a window title.  This is
+  taken to be the "notes window" and enables the buttons that scroll
+  the notes up/down.  Linux only for now.
 
 ### obs-cr-preview
 
