@@ -31,7 +31,9 @@ python3 obs-cr.pyz preview [args from below]
 ### Local install
 
 Create a virtual environment.  Note that obsws-python unfortunately
-requires Python 3.9+.
+requires Python 3.9+.  On Linux with pip, sound output requires a
+compiler, libasound2-dev, and python3-dev (on other platforms, a
+pre-built package has what you need).
 
 ```
 $ pip install https://github.com/coderefinery/obs-cr/archive/master.zip
