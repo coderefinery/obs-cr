@@ -18,6 +18,7 @@ classifiers = [
 requires-python = ">=3.0"
 dynamic = ["version", "description"]
 dependencies = [
+    "simpleaudio"
     "obsws-python",
     "pillow",
     "tkinter-tooltip",

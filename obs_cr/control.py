@@ -6,6 +6,7 @@ from functools import partial
 import inspect
 import logging
 import math
+import pathlib
 import random
 import subprocess
 import textwrap
@@ -89,6 +90,11 @@ GALLERY_CROP_FACTORS = {
     3:    {'top':  4, 'bottom':  0, 'left': 60, 'right': 60, },  # checked
     5:    {'top': 50, 'bottom':  0, 'left': 11, 'right': 11, },  # checked
     }
+import simpleaudio
+SOUNDS = { name: simpleaudio.WaveObject.from_wave_file(str(pathlib.Path(__file__).parent/f'sound/{name}.wav'))
+          for name in ['311', '349', '261', '440', '622']
+    }
+
 
 LOG = logging.getLogger(__name__)
 
@@ -358,6 +364,19 @@ def notes_scroll(value):
         subprocess.call(cmd)
 
 
+def play(name):
+    """Play sound.  There is an OBS listener to trigger this an the right times"""
+    print(f"Play {name}")
+    #snd = simpleaudio.WaveObject.from_wave_file(str(path))
+    if name not in SOUNDS:
+        LOG.warning("Sound %s not found", name)
+        return
+    if SOUNDS is None:
+        LOG.warning("Sounds are not loaded")
+        return
+    SOUNDS[name].play()
+
+
 
 
 #
@@ -398,6 +417,9 @@ class IndicatorLight(Helper, Button):
             if self.blink:
                 blink_id = self.blink_id = random.randint(0, 2**64-1)
                 self.after(self.blink, self.do_blink, blink_id, False)
+            if self.color == 'red':    play('622')
+            if self.color == 'yellow': play('440')
+            if self.color == 'cyan':   play('261')
         else:
             self.configure(background=default_color, activebackground=default_color)
     def do_blink(self, blink_id, next_state):
@@ -441,9 +463,16 @@ class QuickBreak(Helper, ttk.Button):
     def click(self):
         mute[AUDIO_INPUT].click(True)
         mute[AUDIO_INPUT_BRCD].click(True)
+        self.after(0, self.beep)
         switch(NOTES)
         gallery_size.save_last()
         gallery_size.update(0)
+    def beep(self, phase=1):
+        if phase == 1:
+            obs['playsound'] = '349'
+            return self.after(250, self.beep, 2)
+        obs['playsound'] = '311'
+
 class QuickBack(Helper, ttk.Button):
     def __init__(self, frm, scene, text, **kwargs):
         self.scene = scene
@@ -979,33 +1008,47 @@ class QuickBackGo(Helper, ttk.Button):
         ToolTip(self, self._tooltip, delay=TOOLTIP_DELAY)
     def _tooltip(self):
         return textwrap.dedent(f"""\
-        Go back to the program.
+        Go back to the program, after a three second countdown (3...2...1...0).
         Switch to {self.menu.value.get()}
         Play jingle = {quick_jingle.instate(('selected', ))}
         Unmute broadcaster audio = {quick_brcd.instate(('selected', ))}\
         """)
     i = 0
+    def beep(self, counter):
+        """Callback for beeping.  Trigger a counter-second countdown
+
+        Final beep on 0.  For example beep(3) triggers: 'b ... b ... b ... B'  Each interval is 3 s for a total of 3s.  ."""
+        LOG.debug('beeping for back, counter={counter}')
+        if counter <= 0:
+            obs['playsound'] = '349'
+            return
+        self.after(1000, self.beep, counter-1)
+        obs['playsound'] = '311'
+
+
     def click(self, phase=1):
         scene = self.menu.value.get()
         if scene == '-' or not scene:
             LOG.warning("QuickBack with scene %r, doing nothing", scene)
             return
         if phase == 1:
+            # Do this when the button is first clicked
             LOG.info("QuickBack phase 1: %r", scene)
-            mute[AUDIO_INPUT].click(False)
-            if quick_brcd.instate(('selected', )):
-                mute[AUDIO_INPUT_BRCD].click(False)
-
+            self.beep(3)
             if quick_jingle.instate(('selected', )):
                 playback_buttons['short'].play()
-                return self.after(3000, partial(self.click, phase=2))
+            return self.after(3000, partial(self.click, phase=2))
         # Only go directly here if no jingle.  If jingle, go here on callback.
         LOG.info("QuickBack phase 2: %r", scene)
+        # Unmute the audio
+        mute[AUDIO_INPUT].click(False)
+        if quick_brcd.instate(('selected', )):
+            mute[AUDIO_INPUT_BRCD].click(False)
+        # Reset check boxes to default
         quick_jingle.click(False)
         quick_brcd.click(False)
         switch(scene)
         gallery_size.restore_last()
-
 
 
 
@@ -1264,7 +1307,7 @@ def main():
     # Other watchers (not displayed on the control panel)
     if cli_args.notes_window:
         obs._watch('notes_scroll', notes_scroll)
-
+    obs._watch('playsound', play)
 
     # begin
     print('starting...')
