@@ -91,8 +91,17 @@ GALLERY_CROP_FACTORS = {
     5:    {'top': 50, 'bottom':  0, 'left': 11, 'right': 11, },  # checked
     }
 import simpleaudio
-SOUNDS = { name: simpleaudio.WaveObject.from_wave_file(str(pathlib.Path(__file__).parent/f'sound/{name}.wav'))
-          for name in ['311', '349', '261', '440', '622']
+# Mapping of sound event names to the sound files.
+SOUNDS = {
+    'low': '311.wav',    # low-high for going live, high-low for going off-live
+    'high': '349.wav',
+    'alert-high': '622.wav',    # high-priority indicator alert (master warning light)
+    'alert-medium': '440.wav',  # medium-priority indicator alert (master caution, time, faster/slower, etc)
+    'alert-low': '261.wav',     # low-priority indicator alert (notes, question, etc)
+    }
+# Pre-cache sound files in memory
+SOUNDFILES = { name: simpleaudio.WaveObject.from_wave_file(str(pathlib.Path(__file__).parent/f'sound'/name))
+          for name in SOUNDS.values()
     }
 
 
@@ -367,14 +376,15 @@ def notes_scroll(value):
 def play(name):
     """Play sound.  There is an OBS listener to trigger this an the right times"""
     print(f"Play {name}")
-    #snd = simpleaudio.WaveObject.from_wave_file(str(path))
-    if name not in SOUNDS:
-        LOG.warning("Sound %s not found", name)
-        return
     if SOUNDS is None:
         LOG.warning("Sounds are not loaded")
         return
-    SOUNDS[name].play()
+    if name not in SOUNDS:
+        LOG.warning("Sound effect mapping %s not found", name)
+        return
+    soundfile = SOUNDS[name]
+    #snd = simpleaudio.WaveObject.from_wave_file(str(path))
+    SOUNDFILES[soundfile].play()
 
 
 
@@ -417,9 +427,9 @@ class IndicatorLight(Helper, Button):
             if self.blink:
                 blink_id = self.blink_id = random.randint(0, 2**64-1)
                 self.after(self.blink, self.do_blink, blink_id, False)
-            if self.color == 'red':    play('622')
-            if self.color == 'yellow': play('440')
-            if self.color == 'cyan':   play('261')
+            if self.color == 'red':    play('alert-high')
+            if self.color == 'yellow': play('alert-medium')
+            if self.color == 'cyan':   play('alert-low')
         else:
             self.configure(background=default_color, activebackground=default_color)
     def do_blink(self, blink_id, next_state):
@@ -469,9 +479,9 @@ class QuickBreak(Helper, ttk.Button):
         gallery_size.update(0)
     def beep(self, phase=1):
         if phase == 1:
-            obs['playsound'] = '349'
+            obs['playsound'] = 'high'
             return self.after(250, self.beep, 2)
-        obs['playsound'] = '311'
+        obs['playsound'] = 'low'
 
 class QuickBack(Helper, ttk.Button):
     def __init__(self, frm, scene, text, **kwargs):
@@ -1020,10 +1030,10 @@ class QuickBackGo(Helper, ttk.Button):
         Final beep on 0.  For example beep(3) triggers: 'b ... b ... b ... B'  Each interval is 3 s for a total of 3s.  ."""
         LOG.debug('beeping for back, counter={counter}')
         if counter <= 0:
-            obs['playsound'] = '349'
+            obs['playsound'] = 'high'
             return
         self.after(1000, self.beep, counter-1)
-        obs['playsound'] = '311'
+        obs['playsound'] = 'low'
 
 
     def click(self, phase=1):
