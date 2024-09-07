@@ -8,11 +8,17 @@
   </head>
   <body>
 
-    <div id="ssl-warning" style="display:none">You are currently using
+    <div id="ssl-warning" style="display:none; color: maroon">You are currently using
     HTTPS.  Unfortunately OBS probably isn't using SSL and thus your
     web browser won't connect.  Please disable SSL for this page and
     try again.</div>
     <div id="status">Status is updated here</div>
+
+    <div id="audio-warning" style="display:none; color: maroon">Audio
+    playback has failed.  Do you need to allow it on this page?
+    Reload the page when done.</div>
+    <div id="status">Status is updated here</div>
+
 
     <table border="1">
       <tr><td class="indicator-warning">Warn</td></tr>
@@ -77,7 +83,11 @@
               const audio = new Audio(`./obs_cr/sound/${filename}`);
 	      //console.log(audio);
 	      SOUNDFILES[filename] = audio;
-	      audio.play();
+	      audio.play().catch((error) => {
+                // Handle the error
+                console.error('Error playing audio:', error);
+                document.getElementById('audio-warning').style.display = 'block';
+            });
 	  }
 
       }
