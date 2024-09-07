@@ -75,15 +75,14 @@
       }
 
       const params = getFragmentParams();
-      const host = params.host || 'localhost';
-      const port = params.port || 4455;
+      const url = params.url || 'localhost:4455';
       const password = params.password || '';
 
       // Create a new OBS WebSocket instance
       const obs = new OBSWebSocket();
 
-      console.log("Trying to connect to", `ws://${host}:${port} pass ${password}`)
-      obs.connect(`ws://${host}:${port}`, password)
+      console.log("Trying to connect to", `ws://${url} pass ${password}`)
+      obs.connect(`ws://${url}`, password)
         .then(() => {
             document.getElementById('status').innerText = 'Connected to OBS WebSocket!';
 
