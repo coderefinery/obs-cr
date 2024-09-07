@@ -8,6 +8,10 @@
   </head>
   <body>
 
+    <div id="ssl-warning" style="display:none">You are currently using
+    HTTPS.  Unfortunately OBS probably isn't using SSL and thus your
+    web browser won't connect.  Please disable SSL for this page and
+    try again.</div>
     <div id="status">Status is updated here</div>
 
     <table border="1">
@@ -41,6 +45,10 @@
 	  'indicator-faster': 'yellow',
       }
 
+      // If this is SSL, show the warning
+      if (window.location.protocol === 'https:') {
+	  document.getElementById('ssl-warning').style.display = 'block';
+      }
 
       // Convert key=value&key2=value2 in URL fragment to dict
       function getFragmentParams() {
