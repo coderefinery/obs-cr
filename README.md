@@ -14,18 +14,8 @@ on any operating system (if not, that's a bug).
 
 ### zipapp
 
-Zipapp bundles dependencies, and hopefully works on any recent version
-of python3 (>3.9+ because of obsws-python).  `preview` requires
-`pillow` (PyPI package `pillow`, Debian package `python3-pil`) since
-zipapps can't contain binary modules.
-
-```console
-$ wget http://coderefinery.github.io/obs-cr/obs-cr.pyz
-
-# usage:
-python3 obs-cr.pyz control [args from below]
-python3 obs-cr.pyz preview [args from below]
-```
+This doesn't work anymore since there are compiled modules needed to
+play sound.
 
 
 ### Local install
