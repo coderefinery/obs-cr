@@ -1,4 +1,4 @@
-<html>
+<!DOCTYPE html>
   <head>
     <title>OBS CR control</title>
 
@@ -10,8 +10,38 @@
 
     <div id="status">Status is updated here</div>
 
+    <table border="1">
+      <tr><td class="indicator-warning">Warn</td></tr>
+      <tr><td class="indicator-caution">Caution</td></tr>
+      <tr><td class="indicator-time">Time</td></tr>
+      <tr><td class="indicator-notes">Notes</td></tr>
+      <tr><td class="indicator-question">Question</td></tr>
+      <tr><td class="indicator-chat">Chat</td></tr>
+      <tr><td class="indicator-slower">Slower</td></tr>
+      <tr><td class="indicator-faster">Faster</td></tr>
+    </table>
 
     <script>
+      SOUNDS = {
+	  'low': '311.wav',
+	  'high': '349.wav',
+	  'alert-high': '622.wav',
+	  'alert-medium': '440.wav',
+	  'alert-low': '261.wav',
+      }
+      SOUNDFILES = { }
+      INDICATORS = {
+	  'indicator-warning': 'red',
+	  'indicator-caution': 'yellow',
+	  'indicator-time': 'yellow',
+	  'indicator-notes': 'cyan',
+	  'indicator-question': 'cyan',
+	  'indicator-chat': 'cyan',
+	  'indicator-slower': 'yellow',
+	  'indicator-faster': 'yellow',
+      }
+
+
       // Convert key=value&key2=value2 in URL fragment to dict
       function getFragmentParams() {
           const params = {};
@@ -44,16 +74,6 @@
 
       }
 
-      SOUNDS = {
-	  'low': '311.wav',
-	  'high': '349.wav',
-	  'alert-high': '622.wav',
-	  'alert-medium': '440.wav',
-	  'alert-low': '261.wav',
-      }
-
-      SOUNDFILES = { }
-
       const params = getFragmentParams();
       const host = params.host || 'localhost';
       const port = params.port || 4455;
@@ -72,6 +92,17 @@
 		console.log(data);
 		if ('playsound' in data) {
 		    soundEvent(data.playsound);
+		}
+
+		for (indicator in INDICATORS) {
+		    if (indicator in data) {
+			state = data[indicator];
+			console.log(indicator, state);
+			cells = document.getElementsByClassName(indicator);
+			for (c of cells) {
+			    c.style.backgroundColor = state ? INDICATORS[indicator] : '';
+			}
+		    }
 		}
             })
         })
