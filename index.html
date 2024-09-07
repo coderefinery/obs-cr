@@ -1,0 +1,87 @@
+<html>
+  <head>
+    <title>OBS CR control</title>
+
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js"></script>
+
+  </head>
+  <body>
+
+    <div id="status">Status is updated here</div>
+
+
+    <script>
+      // Convert key=value&key2=value2 in URL fragment to dict
+      function getFragmentParams() {
+          const params = {};
+          const fragment = window.location.hash.substring(1);
+          const pairs = fragment.split('&');
+          pairs.forEach(pair => {
+              const [key, value] = pair.split('=');
+              if (key) {
+                  params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+              }
+          });
+          return params;
+      }
+
+      function soundEvent(value) {
+	  //console.log(`sound event: ${value}`);
+          document.getElementById('status').innerText = `Sound event: ${value}`;
+	  filename = SOUNDS[value];
+
+	  if (value in SOUNDFILES) {
+	      SOUNDFILES[filename].play();
+	  }
+	  else {
+	      console.log(`Loading ./obs_cr/sound/${filename}`)
+              const audio = new Audio(`./obs_cr/sound/${filename}`);
+	      //console.log(audio);
+	      SOUNDFILES[filename] = audio;
+	      audio.play();
+	  }
+
+      }
+
+      SOUNDS = {
+	  'low': '311.wav',
+	  'high': '349.wav',
+	  'alert-high': '622.wav',
+	  'alert-medium': '440.wav',
+	  'alert-low': '261.wav',
+      }
+
+      SOUNDFILES = { }
+
+      const params = getFragmentParams();
+      const host = params.host || 'localhost';
+      const port = params.port || 4455;
+      const password = params.password || '';
+
+      // Create a new OBS WebSocket instance
+      const obs = new OBSWebSocket();
+
+      console.log("Trying to connect to", `ws://${host}:${port} pass ${password}`)
+      obs.connect(`ws://${host}:${port}`, password)
+        .then(() => {
+            document.getElementById('status').innerText = 'Connected to OBS WebSocket!';
+
+	    // Listen for custom events
+            obs.on('CustomEvent', (data) => {
+		console.log(data);
+		if ('playsound' in data) {
+		    soundEvent(data.playsound);
+		}
+            })
+        })
+    .catch(err => {
+        document.getElementById('status').innerText = `Connection failed: ${err.message}`;
+    });
+
+
+
+    </script>
+
+  <body>
+  </html>

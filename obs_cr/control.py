@@ -420,6 +420,10 @@ class IndicatorLight(Helper, Button):
         self.state = not self.state
         print(f"Indicator {self.label!r} -> {self.state}")
         setattr(obs, self.event_name, self.state)
+        if self.state:
+            if self.color == 'red':    obs['playsound'] = 'alert-high'
+            if self.color == 'yellow': obs['playsound'] = 'alert-medium'
+            if self.color == 'cyan':   obs['playsound'] = 'alert-low'
     def update_(self, state):
         """Callback anytime state is updated."""
         self.state = state
@@ -429,9 +433,6 @@ class IndicatorLight(Helper, Button):
             if self.blink:
                 blink_id = self.blink_id = random.randint(0, 2**64-1)
                 self.after(self.blink, self.do_blink, blink_id, False)
-            if self.color == 'red':    play('alert-high')
-            if self.color == 'yellow': play('alert-medium')
-            if self.color == 'cyan':   play('alert-low')
         else:
             self.configure(background=default_color, activebackground=default_color)
     def do_blink(self, blink_id, next_state):
