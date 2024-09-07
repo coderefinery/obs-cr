@@ -1,11 +1,13 @@
 
 # pylint: disable=too-many-ancestors
 
+import argparse
 import collections
 from functools import partial
 import inspect
 import logging
 import math
+import os
 import pathlib
 import random
 import subprocess
@@ -21,8 +23,6 @@ from tktooltip import ToolTip
 #
 # Application setup
 #
-import argparse
-import os
 class DictAction(argparse.Action):
     """Argparse action that collects x=y values into a dict."""
     def __init__(self, *args, default=None, **kwargs):
@@ -375,7 +375,8 @@ def notes_scroll(value):
 
 def play(name):
     """Play sound.  There is an OBS listener to trigger this an the right times"""
-    print(f"Play {name}")
+    muted = cli_args.no_sound
+    print(f"Play {name} {'(muted)' if muted else ''}")
     if SOUNDS is None:
         LOG.warning("Sounds are not loaded")
         return
@@ -384,7 +385,8 @@ def play(name):
         return
     soundfile = SOUNDS[name]
     #snd = simpleaudio.WaveObject.from_wave_file(str(path))
-    SOUNDFILES[soundfile].play()
+    if not muted:
+        SOUNDFILES[soundfile].play()
 
 
 
@@ -1077,6 +1079,7 @@ def main():
     parser.add_argument('--small', action='store_true',
                         help="Start a smaller, more limited, control panel for instructors.")
     parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel in a test mode.  Some things may not work.")
+    parser.add_argument('--no-sound', action='store_true', help="Don't play the sound effects that come with certain actions.")
     parser.add_argument('--scene-hook', action=DictAction, nargs=1,
                         help="Local command line hooks for switching to each scene, format SCENENAME=command")
     parser.add_argument('--resolution-command',
