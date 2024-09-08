@@ -20,14 +20,14 @@
     <div id="status">Status is updated here</div>
 
     <table border="1">
-      <tr><td class="indicator-warning">Warn</td></tr>
-      <tr><td class="indicator-caution">Caution</td></tr>
-      <tr><td class="indicator-time">Time</td></tr>
-      <tr><td class="indicator-notes">Notes</td></tr>
-      <tr><td class="indicator-question">Question</td></tr>
-      <tr><td class="indicator-chat">Chat</td></tr>
-      <tr><td class="indicator-slower">Slower</td></tr>
-      <tr><td class="indicator-faster">Faster</td></tr>
+      <tr><td class="indicator indicator-warning">Warn</td>
+          <td class="indicator indicator-caution">Caution</td></tr>
+      <tr><td class="indicator indicator-time">Time</td>
+          <td class="indicator indicator-notes">Notes</td></tr>
+      <tr><td class="indicator indicator-question">Question</td>
+          <td class="indicator indicator-chat">Chat</td></tr>
+      <tr><td class="indicator indicator-slower">Slower</td>
+          <td class="indicator indicator-faster">Faster</td></tr>
     </table>
 
     <script>
@@ -112,12 +112,11 @@
 
 		for (indicator in INDICATORS) {
 		    if (indicator in data) {
-			state = data[indicator];
-			console.log(indicator, state);
-			cells = document.getElementsByClassName(indicator);
-			for (c of cells) {
-			    c.style.backgroundColor = state ? INDICATORS[indicator] : '';
-			}
+                state = data[indicator];
+                cells = document.getElementsByClassName(indicator);
+                for (c of cells) {
+                    c.style.backgroundColor = state ? INDICATORS[indicator] : '';
+                }
 		    }
 		}
             })
@@ -126,6 +125,26 @@
         document.getElementById('status').innerText = `Connection failed: ${err.message}`;
     });
 
+
+	function indicatorClick(event) {
+        cell = event.target;
+        class_ = cell.classList[cell.classList.length-1];
+        console.log('a', "Click on", cell, cell.style.backgroundColor, cell.classList);
+        if (cell.style.backgroundColor) {
+            // disable
+            console.log('disabling');
+            obs.call('BroadcastCustomEvent', {eventData: {[class_]: false}})
+        } else {
+            // enable
+            console.log('enabling');
+            obs.call('BroadcastCustomEvent', {eventData: {[class_]: true}})
+        }
+	}
+
+	cells = document.querySelectorAll('.indicator');
+        cells.forEach(cell => {
+        cell.addEventListener('click', indicatorClick);
+    });
 
 
     </script>
