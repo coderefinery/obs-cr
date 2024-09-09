@@ -162,13 +162,12 @@
       };
 
 
-      console.log("Trying to connect to", `ws://${url} pass ${password}`)
+      update_status("Trying to connect to", `ws://${url}`)
       obs.connect(`ws://${url}`, password)
         .then(() => {
-            update_status('Connected to OBS WebSocket!');
+            update_status(`Connected to OBS at ws://${url}.`);
             obs.on('CustomEvent', _obs_on_custom_event);
 
-            // Updadeta nd watch the state buttons.
             document.querySelectorAll('.indicator').forEach(cell => {
                 let class_ = cell.classList[cell.classList.length-1];
                 obs_get(class_).then(state => { indicatorUpdate(class_, state)});
