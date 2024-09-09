@@ -458,8 +458,10 @@ class IndicatorMasterLive(Helper, Button):
         self.state[name] = value
         if any(self.state.values()):
             self.configure(background=self.color, activebackground=self.color)
+            obs['mirror-live'] = self.state
         else:
             self.configure(background=default_color, activebackground=default_color)
+            obs['mirror-live'] = False
     def tt_msg(self):
         return '\n'.join([self.tt_default] + [f'RED: {k!r} ({v!r})' for k,v in self.state.items() if v])
     def on_custom_event(self, event):
@@ -690,12 +692,13 @@ class GallerySize(Helper, ttk.Frame):
         self.update(self.last_state)
     def obs_update(self, state):
         """"Callabck for scale update from OBS"""
+        if not math.isclose(self.value.get(), state, rel_tol=1e-5):
+            indicators['live'].update_('gallery-size', 'visible' if state != 0 else None)
         self.value.set(state)
         self.label.configure(text=f"{state:0.2f}")
         if state == 0:   color = default_color
         else:            color = ACTIVE
         self.scale.configure(background=color, activebackground=color)
-        indicators['live'].update_('gallery-size', 'visible' if state != 0 else None)
     def on_custom_event(self, data):
         """Custom event listener callback from OBS."""
         #print(f'OBS custom event: {vars(data)!r}')
