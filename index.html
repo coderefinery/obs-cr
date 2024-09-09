@@ -28,8 +28,13 @@
     <div id="status">Status is updated here</div>
 
     <table border="1">
-      <tr><td class="indicator indicator-warning">Warn</td>
-          <td class="indicator indicator-caution">Caution</td></tr>
+        <tr><td class="live" title="When red, may be visible">Live</td>
+            <!--<td class="live-mic">Caution</td>--></tr>
+      </table>
+
+    <table border="1">
+      <tr><td class="indicator indicator-warning" title="Generalized 'something urgent has come up'">Warn</td>
+          <td class="indicator indicator-caution" title="Generalized 'something to look at' has come up">Caution</td></tr>
       <tr><td class="indicator indicator-time">Time</td>
           <td class="indicator indicator-notes">Notes</td></tr>
       <tr><td class="indicator indicator-question">Question</td>
@@ -127,12 +132,21 @@
         return(x.slotValue);
       };
       WATCHERS = { };
+      // Run the callback each time 'name' gets an update
       function obs_watch(name, callback) {
         if (WATCHERS[name] === undefined) {
             WATCHERS[name] = [];
         }
         WATCHERS[name].push(callback);
       };
+      // Run the callback each time 'name' gets an update, in addition to the
+      // once when it is set
+
+      async function obs_watch_init(name, callback) {
+        obs_watch(name, callback);
+        await callback(await obs_get(name));
+      }
+      // Handler for watching things.
       function _obs_on_custom_event (data) {
         //console.log('a');
         for (name in data) {
@@ -140,7 +154,7 @@
             if (WATCHERS[name] !== undefined) {
                 //console.log('c', name, data[name]);
                 for (func of WATCHERS[name].values()) {
-                    console.log('d', name, data[name], func);
+                    //console.log('d', name, data[name], func);
                     func(data[name]);
                 }
             }
@@ -153,14 +167,35 @@
         .then(() => {
             update_status('Connected to OBS WebSocket!');
             obs.on('CustomEvent', _obs_on_custom_event);
+
+            // Updadeta nd watch the state buttons.
+            document.querySelectorAll('.indicator').forEach(cell => {
+                let class_ = cell.classList[cell.classList.length-1];
+                obs_get(class_).then(state => { indicatorUpdate(class_, state)});
+            });
+
+            // Update and watch the "live" button
+            document.querySelectorAll('.live').forEach(cell => {
+                obs_watch_init('mirror-live', state => {
+                    cell.style.backgroundColor = state?"red":"";
+                    cell.title = state?JSON.stringify(state):"You are probably not visible on stream"
+                })
+            })
+
+            // Poll to keep the connection alive
+            setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
+                        60000);
+
+            obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected!: ${e}`); } )
+            obs.on('ConnectionError', e => { update_status(`OBS Disconnected!: ${e}`); } )
+
         })
-    .catch(err => {
-        update_status(`Connection failed: ${err.message}`);
-    });
+        .catch(err => {
+            update_status(`Connection failed: ${err.message}`);
+      });
 
 
     function indicatorUpdate(name, state) {
-        console.log('aaaa', name, state);
         cells = document.getElementsByClassName(name);
         for (c of cells) {
             c.style.backgroundColor = state ? INDICATORS[name] : '';
@@ -182,12 +217,12 @@
 
 	cells = document.querySelectorAll('.indicator');
     cells.forEach(cell => {
-        class_ = cell.classList[cell.classList.length-1];
-        console.log(class_);
+        let class_ = cell.classList[cell.classList.length-1];
         cell.addEventListener('click', indicatorClick);
         obs_watch(class_, function(state) {indicatorUpdate(class_, state);});
-    }
+        }
     );
+
 
     obs_watch('playsound', soundEvent);
 
