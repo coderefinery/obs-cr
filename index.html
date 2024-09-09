@@ -5,6 +5,12 @@
     <meta charset="UTF-8">
     <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js"></script>
 
+    <style>
+        .indicator {
+            user-select: none
+        }
+    </style>
+
   </head>
   <body>
 
@@ -71,26 +77,30 @@
           return params;
       }
 
-      function soundEvent(value) {
-	  //console.log(`sound event: ${value}`);
-          document.getElementById('status').innerText = `Sound event: ${value}`;
-	  filename = SOUNDS[value];
+      function update_status(text) {
+        document.getElementById('status').innerText = text;
 
-	  if (value in SOUNDFILES) {
-	      SOUNDFILES[filename].play();
-	  }
-	  else {
-	      console.log(`Loading ./obs_cr/sound/${filename}`)
-              const audio = new Audio(`./obs_cr/sound/${filename}`);
-	      //console.log(audio);
-	      SOUNDFILES[filename] = audio;
-	      audio.play().catch((error) => {
+      }
+
+      function soundEvent(value) {
+        //console.log(`sound event: ${value}`);
+            update_status(`Sound event: ${value}`);
+        filename = SOUNDS[value];
+
+        if (value in SOUNDFILES) {
+            SOUNDFILES[filename].play();
+        }
+        else {
+            console.log(`Loading ./obs_cr/sound/${filename}`)
+                const audio = new Audio(`./obs_cr/sound/${filename}`);
+            //console.log(audio);
+            SOUNDFILES[filename] = audio;
+            audio.play().catch((error) => {
                 // Handle the error
                 console.error('Error playing audio:', error);
                 document.getElementById('audio-warning').style.display = 'block';
             });
-	  }
-
+        }
       }
 
       const params = getFragmentParams();
@@ -100,54 +110,86 @@
       // Create a new OBS WebSocket instance
       const obs = new OBSWebSocket();
 
+
+      // Set a value (and broadcast an event that represents it)
+      async function obs_set(name, value) {
+        x = await obs.call("SetPersistentData", {
+                                realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
+                                slotName: name,
+                                slotValue: value});
+        await obs.call('BroadcastCustomEvent', {eventData: {[name]: value}});
+      };
+      // Get a value
+      async function obs_get(name) {
+        x = await obs.call("GetPersistentData", {
+                                realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
+                                slotName: name});
+        return(x.slotValue);
+      };
+      WATCHERS = { };
+      function obs_watch(name, callback) {
+        if (WATCHERS[name] === undefined) {
+            WATCHERS[name] = [];
+        }
+        WATCHERS[name].push(callback);
+      };
+      function _obs_on_custom_event (data) {
+        //console.log('a');
+        for (name in data) {
+            //console.log('b', name);
+            if (WATCHERS[name] !== undefined) {
+                //console.log('c', name, data[name]);
+                for (func of WATCHERS[name].values()) {
+                    console.log('d', name, data[name], func);
+                    func(data[name]);
+                }
+            }
+        }
+      };
+
+
       console.log("Trying to connect to", `ws://${url} pass ${password}`)
       obs.connect(`ws://${url}`, password)
         .then(() => {
-            document.getElementById('status').innerText = 'Connected to OBS WebSocket!';
-
-	    // Listen for custom events
-            obs.on('CustomEvent', (data) => {
-		console.log(data);
-		if ('playsound' in data) {
-		    soundEvent(data.playsound);
-		}
-
-		for (indicator in INDICATORS) {
-		    if (indicator in data) {
-                state = data[indicator];
-                cells = document.getElementsByClassName(indicator);
-                for (c of cells) {
-                    c.style.backgroundColor = state ? INDICATORS[indicator] : '';
-                }
-		    }
-		}
-            })
+            update_status('Connected to OBS WebSocket!');
+            obs.on('CustomEvent', _obs_on_custom_event);
         })
     .catch(err => {
-        document.getElementById('status').innerText = `Connection failed: ${err.message}`;
+        update_status(`Connection failed: ${err.message}`);
     });
 
+
+    function indicatorUpdate(name, state) {
+        console.log('aaaa', name, state);
+        cells = document.getElementsByClassName(name);
+        for (c of cells) {
+            c.style.backgroundColor = state ? INDICATORS[name] : '';
+        }
+    }
 
 	function indicatorClick(event) {
         cell = event.target;
         class_ = cell.classList[cell.classList.length-1];
-        console.log('a', "Click on", cell, cell.style.backgroundColor, cell.classList);
-        if (cell.style.backgroundColor) {
-            // disable
-            console.log('disabling');
-            obs.call('BroadcastCustomEvent', {eventData: {[class_]: false}})
-        } else {
-            // enable
-            console.log('enabling');
-            obs.call('BroadcastCustomEvent', {eventData: {[class_]: true}})
+        console.log('a', "Click on", cell, class_, "newstate=", !cell.style.backgroundColor);
+        new_state = !cell.style.backgroundColor
+        obs_set(class_, new_state);
+        if (new_state) {
+            if (INDICATORS[class_] === 'red')    {obs_set('playsound', 'alert-high')};
+            if (INDICATORS[class_] === 'yellow') {obs_set('playsound', 'alert-medium')};
+            if (INDICATORS[class_] === 'cyan')   {obs_set('playsound', 'alert-low')};
         }
 	}
 
 	cells = document.querySelectorAll('.indicator');
-        cells.forEach(cell => {
+    cells.forEach(cell => {
+        class_ = cell.classList[cell.classList.length-1];
+        console.log(class_);
         cell.addEventListener('click', indicatorClick);
-    });
+        obs_watch(class_, function(state) {indicatorUpdate(class_, state);});
+    }
+    );
 
+    obs_watch('playsound', soundEvent);
 
     </script>
 
