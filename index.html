@@ -9,9 +9,11 @@
   <body>
 
     <div id="ssl-warning" style="display:none; color: maroon">You are currently using
-    HTTPS.  Unfortunately OBS probably isn't using SSL and thus your
-    web browser won't connect.  Please disable SSL for this page and
-    try again.</div>
+    HTTPS.  Unfortunately OBS probably isn't using SSL and browsers
+    only allow SSL websocket connections from SSL pages, so you need
+    to turn SSL off.  Please try changing the URL to 'http' instead of
+    'https' which might require telling your browser to not force SSL for this
+    page (firefox: click around the page icon).</div>
 
     <div id="audio-warning" style="display:none; color: maroon">Audio
     playback has failed.  Do you need to allow it on this page?
