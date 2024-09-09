@@ -485,7 +485,7 @@ class QuickBreak(Helper, ttk.Button):
     def beep(self, phase=1):
         if phase == 1:
             obs['playsound'] = 'high'
-            return self.after(250, self.beep, 2)
+            return self.after(200, self.beep, 2)
         obs['playsound'] = 'low'
 
 class QuickBack(Helper, ttk.Button):
@@ -1035,10 +1035,13 @@ class QuickBackGo(Helper, ttk.Button):
 
         Final beep on 0.  For example beep(3) triggers: 'b ... b ... b ... B'  Each interval is 3 s for a total of 3s.  ."""
         LOG.debug('beeping for back, counter={counter}')
-        if counter <= 0:
+        if counter < 0:
             obs['playsound'] = 'high'
             return
-        self.after(1000, self.beep, counter-1)
+        if counter == 0:
+            self.after(200, self.beep, counter-1)
+        else:
+            self.after(1000, self.beep, counter-1)
         obs['playsound'] = 'low'
 
 
@@ -1053,7 +1056,7 @@ class QuickBackGo(Helper, ttk.Button):
             self.beep(3)
             if quick_jingle.instate(('selected', )):
                 playback_buttons['short'].play()
-            return self.after(3000, partial(self.click, phase=2))
+            return self.after(3500, partial(self.click, phase=2))
         # Only go directly here if no jingle.  If jingle, go here on callback.
         LOG.info("QuickBack phase 2: %r", scene)
         # Unmute the audio
