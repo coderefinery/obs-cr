@@ -43,6 +43,8 @@
           <td class="indicator indicator-faster">Faster</td></tr>
     </table>
 
+    <a id="preview-href" herf="">Real-time scene preview</a>
+
     <script>
       SOUNDS = {
 	  'low': '311.wav',
@@ -68,6 +70,10 @@
 	  document.getElementById('ssl-warning').style.display = 'block';
       }
 
+      purl = new URL(window.location.href);
+      purl.pathname = '/preview.html';
+      document.getElementById('preview-href').href = purl.toString();
+
       // Convert key=value&key2=value2 in URL fragment to dict
       function getFragmentParams() {
           const params = {};
@@ -84,7 +90,6 @@
 
       function update_status(text) {
         document.getElementById('status').innerText = text;
-
       }
 
       function soundEvent(value) {
