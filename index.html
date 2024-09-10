@@ -124,6 +124,10 @@
                                 slotValue: value});
         await obs.call('BroadcastCustomEvent', {eventData: {[name]: value}});
       };
+      // Broadcast a value (like obs_set, but doesn't permanently store it)
+      async function obs_broadcast(name, value) {
+        await obs.call('BroadcastCustomEvent', {eventData: {[name]: value}});
+      };
       // Get a value
       async function obs_get(name) {
         x = await obs.call("GetPersistentData", {
@@ -208,9 +212,9 @@
         new_state = !cell.style.backgroundColor
         obs_set(class_, new_state);
         if (new_state) {
-            if (INDICATORS[class_] === 'red')    {obs_set('playsound', 'alert-high')};
-            if (INDICATORS[class_] === 'yellow') {obs_set('playsound', 'alert-medium')};
-            if (INDICATORS[class_] === 'cyan')   {obs_set('playsound', 'alert-low')};
+            if (INDICATORS[class_] === 'red')    {obs_broadcast('playsound', 'alert-high')};
+            if (INDICATORS[class_] === 'yellow') {obs_broadcast('playsound', 'alert-medium')};
+            if (INDICATORS[class_] === 'cyan')   {obs_broadcast('playsound', 'alert-low')};
         }
 	}
 

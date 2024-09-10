@@ -169,6 +169,13 @@ class ObsState:
             self.on_custom_event(type('dummy', (), {name: value, 'attrs': lambda: [name]}))
     __setitem__ = __setattr__
 
+    def broadcast(self, name, value):
+        """Like __setattr__, but only broadcasts, doesn't save persistent data"""
+        self._LOG.debug('obs.broadcast %r=%r', name, value)
+        self._req.broadcast_custom_event({'eventData': {name: value}})
+        if cli_args.test:
+            self.on_custom_event(type('dummy', (), {name: value, 'attrs': lambda: [name]}))
+
     def __hasattr__(self, name):
         self._LOG.debug('obs.hasattr %r', name)
         if name.startswith('_'):
@@ -421,9 +428,9 @@ class IndicatorLight(Helper, Button):
         print(f"Indicator {self.label!r} -> {self.state}")
         setattr(obs, self.event_name, self.state)
         if self.state:
-            if self.color == 'red':    obs['playsound'] = 'alert-high'
-            if self.color == 'yellow': obs['playsound'] = 'alert-medium'
-            if self.color == 'cyan':   obs['playsound'] = 'alert-low'
+            if self.color == 'red':    obs.broadcast('playsound', 'alert-high')
+            if self.color == 'yellow': obs.broadcast('playsound', 'alert-medium')
+            if self.color == 'cyan':   obs.broadcast('playsound', 'alert-low')
     def update_(self, state):
         """Callback anytime state is updated."""
         self.state = state
@@ -484,9 +491,9 @@ class QuickBreak(Helper, ttk.Button):
         gallery_size.update(0)
     def beep(self, phase=1):
         if phase == 1:
-            obs['playsound'] = 'high'
+            obs.broadcast('playsound', 'high')
             return self.after(200, self.beep, 2)
-        obs['playsound'] = 'low'
+        obs.broadcast('playsound', 'low')
 
 class QuickBack(Helper, ttk.Button):
     def __init__(self, frm, scene, text, **kwargs):
@@ -1036,13 +1043,13 @@ class QuickBackGo(Helper, ttk.Button):
         Final beep on 0.  For example beep(3) triggers: 'b ... b ... b ... B'  Each interval is 3 s for a total of 3s.  ."""
         LOG.debug('beeping for back, counter={counter}')
         if counter < 0:
-            obs['playsound'] = 'high'
+            obs.broadcast('playsound', 'high')
             return
         if counter == 0:
             self.after(200, self.beep, counter-1)
         else:
             self.after(1000, self.beep, counter-1)
-        obs['playsound'] = 'low'
+        obs.broadcast('playsound', 'low')
 
 
     def click(self, phase=1):
