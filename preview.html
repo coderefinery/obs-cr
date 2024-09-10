@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+  <head>
+    <title>OBS preview</title>
+
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js"></script>
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            /*overflow: hidden;*/
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .preview-container {
+            background-color: gray;
+            flex: 1;
+            align-content: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        #preview {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+        }
+    </style>
+
+  </head>
+  <body>
+
+    <div id="ssl-warning" style="display:none; color: maroon">You are currently using
+    HTTPS.  Unfortunately OBS probably isn't using SSL and browsers
+    only allow SSL websocket connections from SSL pages, so you need
+    to turn SSL off.  Please try changing the URL to 'http' instead of
+    'https' which might require telling your browser to not force SSL for this
+    page (firefox: click around the page icon).</div>
+
+    <div id="status">Status is updated here</div>
+
+    <div class="preview-container">
+        <img id="preview" alt="Screenshot will appear here"/>
+    </div>
+
+    <script>
+
+      // If this is SSL, show the warning
+      if (window.location.protocol === 'https:') {
+	  document.getElementById('ssl-warning').style.display = 'block';
+      }
+
+      // Convert key=value&key2=value2 in URL fragment to dict
+      function getFragmentParams() {
+          const params = {};
+          const fragment = window.location.hash.substring(1);
+          const pairs = fragment.split('&');
+          pairs.forEach(pair => {
+              const [key, value] = pair.split('=');
+              if (key) {
+                  params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+              }
+          });
+          return params;
+      }
+
+      function update_status(text) {
+        document.getElementById('status').innerText = text;
+      }
+
+      const params = getFragmentParams();
+      const url = params.url || 'localhost:4455';
+      const password = params.password || '';
+      const UPDATE_INTERVAL = Math.max(200, parseFloat(params.delay)*1000 || 1000);
+
+      // Create a new OBS WebSocket instance
+      const obs = new OBSWebSocket();
+
+      // Set a value (and broadcast an event that represents it)
+      async function obs_set(name, value) {
+        x = await obs.call("SetPersistentData", {
+                                realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
+                                slotName: name,
+                                slotValue: value});
+        await obs.call('BroadcastCustomEvent', {eventData: {[name]: value}});
+      };
+      // Broadcast a value (like obs_set, but doesn't permanently store it)
+      async function obs_broadcast(name, value) {
+        await obs.call('BroadcastCustomEvent', {eventData: {[name]: value}});
+      };
+      // Get a value
+      async function obs_get(name) {
+        x = await obs.call("GetPersistentData", {
+                                realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
+                                slotName: name});
+        return(x.slotValue);
+      };
+      WATCHERS = { };
+      // Run the callback each time 'name' gets an update
+      function obs_watch(name, callback) {
+        if (WATCHERS[name] === undefined) {
+            WATCHERS[name] = [];
+        }
+        WATCHERS[name].push(callback);
+      };
+      // Run the callback each time 'name' gets an update, in addition to the
+      // once when it is set
+
+      async function obs_watch_init(name, callback) {
+        obs_watch(name, callback);
+        await callback(await obs_get(name));
+      }
+      // Handler for watching things.
+      function _obs_on_custom_event (data) {
+        //console.log('a');
+        for (name in data) {
+            //console.log('b', name);
+            if (WATCHERS[name] !== undefined) {
+                //console.log('c', name, data[name]);
+                for (func of WATCHERS[name].values()) {
+                    //console.log('d', name, data[name], func);
+                    func(data[name]);
+                }
+            }
+        }
+      };
+
+
+      async function update_preview () {
+        res = await obs.call('GetCurrentProgramScene',);
+        sceneName = res.currentProgramSceneName;
+        update_status(`Scene: ${sceneName}`);
+        obs.call('GetSourceScreenshot',
+                     {sourceName: sceneName,
+                      imageFormat: "png",
+                      }).then(res => {
+                        img = res.imageData;
+                        document.getElementById("preview").src = `data:img/png;base64=${img}`
+                      });
+
+
+      }
+
+
+      update_status("Trying to connect to", `ws://${url}`)
+      obs.connect(`ws://${url}`, password)
+        .then(() => {
+            update_status(`Connected to OBS at ws://${url}.`);
+ 
+            // Poll to keep the connection alive
+            setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
+                        60000);
+            obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected!: ${e}`); } )
+            obs.on('ConnectionError', e => { update_status(`OBS Disconnected!: ${e}`); } )
+
+            update_preview();
+            setInterval(update_preview, UPDATE_INTERVAL);
+        })
+        .catch(err => {
+            update_status(`Connection failed: ${err.message}`);
+      });
+
+    
+
+    </script>
+
+  <body>
+  </html>
