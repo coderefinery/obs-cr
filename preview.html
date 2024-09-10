@@ -72,7 +72,8 @@
       const params = getFragmentParams();
       const url = params.url || 'localhost:4455';
       const password = params.password || '';
-      const UPDATE_INTERVAL = Math.max(200, parseFloat(params.delay)*1000 || 1000);
+      // Update interval in milliseconds.
+      const UPDATE_INTERVAL = parseFloat(params.delay)*1000 || 250;
 
       // Create a new OBS WebSocket instance
       const obs = new OBSWebSocket();
@@ -127,18 +128,27 @@
       };
 
 
+      let UPDATE_RUNNING = false;
       async function update_preview () {
-        res = await obs.call('GetCurrentProgramScene',);
-        sceneName = res.currentProgramSceneName;
-        update_status(`Scene: ${sceneName}`);
-        obs.call('GetSourceScreenshot',
-                     {sourceName: sceneName,
-                      imageFormat: "png",
-                      }).then(res => {
-                        img = res.imageData;
-                        document.getElementById("preview").src = `data:img/png;base64=${img}`
-                      });
-
+        if (UPDATE_RUNNING) {
+            console.log('aborting, already running');
+            return;
+        }
+        try {
+            UPDATE_RUNNING = true;
+            res = await obs.call('GetCurrentProgramScene',);
+            sceneName = res.currentProgramSceneName;
+            update_status(`Scene: ${sceneName}`);
+            obs.call('GetSourceScreenshot',
+                        {sourceName: sceneName,
+                        imageFormat: "png",
+                        }).then(res => {
+                            img = res.imageData;
+                            document.getElementById("preview").src = `data:img/png;base64=${img}`
+                        });
+        } finally {
+            UPDATE_RUNNING = false;
+        }
 
       }
 
