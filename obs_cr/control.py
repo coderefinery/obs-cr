@@ -466,7 +466,7 @@ class IndicatorMasterLive(Helper, Button):
         if any(self.state.values()):
             self.configure(background=self.color, activebackground=self.color)
             if cli_args.broadcaster:
-                obs['mirror-live'] = self.state
+                self.after(150, obs.__setattr__, 'mirror-live', self.state)
         else:
             self.configure(background=default_color, activebackground=default_color)
             if cli_args.broadcaster:
