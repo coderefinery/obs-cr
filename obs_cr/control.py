@@ -465,10 +465,12 @@ class IndicatorMasterLive(Helper, Button):
         self.state[name] = value
         if any(self.state.values()):
             self.configure(background=self.color, activebackground=self.color)
-            obs['mirror-live'] = self.state
+            if cli_args.broadcaster:
+                obs['mirror-live'] = self.state
         else:
             self.configure(background=default_color, activebackground=default_color)
-            obs['mirror-live'] = False
+            if cli_args.broadcaster:
+                obs['mirror-live'] = False
     def tt_msg(self):
         return '\n'.join([self.tt_default] + [f'RED: {k!r} ({v!r})' for k,v in self.state.items() if v])
     def on_custom_event(self, event):
