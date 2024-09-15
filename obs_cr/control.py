@@ -77,10 +77,10 @@ GALLERY = 'ZoomGalleryCapture'
 PLAYBACK_INPUT = 'CRaudio'  # for playing transitions sounds, etc.
 TOOLTIP_DELAY = 0.5
 PLAYBACK_FILES = [
-    {'filename': '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_sound_short.mp3',
+    {'filename': os.path.expanduser('~/git/coderefinery-artwork/audiologo/CR_LOGO_sound_short.mp3'),
      'label': 'short',
      'tooltip': 'Short audio for coming back from breaks, 0:03 duration'},
-    {'filename': '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_Jingle_long.mp3',
+    {'filename': os.path.expanduser('~/git/coderefinery-artwork/audiologo/CR_LOGO_Jingle_long.mp3'),
      'label': 'long',
      'tooltip': 'Long theme song for starting/ending day, 1:23 duration'},
     ]
