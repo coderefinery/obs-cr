@@ -101,8 +101,8 @@
             SOUNDFILES[filename].play();
         }
         else {
-            console.log(`Loading ./obs_cr/sound/${filename}`)
-                const audio = new Audio(`./obs_cr/sound/${filename}`);
+            console.log(`Loading ./sound/${filename}`)
+                const audio = new Audio(`./sound/${filename}`);
             //console.log(audio);
             SOUNDFILES[filename] = audio;
             audio.play().catch((error) => {

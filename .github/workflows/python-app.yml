@@ -36,7 +36,7 @@ jobs:
         bash make-zip-app.sh
         mkdir _site/
         rsync -a obs-cr.pyz _site/
-        rsync -a . CNAME index.html preview.html favicon.ico obs_cr/ _site/
+        rsync -a --copy-unsafe-links CNAME web/ _site/
     - uses: actions/upload-pages-artifact@main
       with:
           path: _site/
