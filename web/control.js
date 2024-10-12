@@ -1,5 +1,38 @@
 // Functions for control panel.
 
+//
+// Live indicator
+//
+LIVE_STATUS = { }
+// Call this function each time there is some update that might possibly affect
+// if the instructors are live.  This combines current + past info and
+// updates the "live" indicator accordingly.
+function liveUpdate(name, value) {
+    // name: persistent key for the value (examples: gallerysize, instructormute, etc)
+    // value: truthy if people are visible
+    LIVE_STATUS[name] = value;
+    anyTrue = false;
+    for (v in LIVE_STATUS) {
+        if (LIVE_STATUS[v]) {
+            anyTrue = true
+        }
+    }
+    forEach('.live', cell => {
+        if (anyTrue) {
+            cell.style.backgroundColor = 'red'
+            cell.title = "Some sound or video is probably visible on stream now\n" + JSON.stringify(LIVE_STATUS)
+        } else {
+            cell.style.backgroundColor = ''
+            cell.title = "You are probably not visible on stream"
+        }
+    })
+}
+function init_live(obs) {
+    // No action currently needed: each live thing should call
+    // liveUpdate itself when it initializes.
+}
+
+
 
 //
 // Indicators
@@ -34,19 +67,6 @@ function init_indicators(obs) {
 }
 
 //
-// Live indicator
-//
-function init_live(obs) {
-    // Update and watch the "live" button
-    document.querySelectorAll('.live').forEach(cell => {
-        obs_watch_init('mirror-live', state => {
-            cell.style.backgroundColor = state?"red":"";
-            cell.title = state?JSON.stringify(state):"You are probably not visible on stream"
-        })
-    })
-}
-
-//
 // Scene button
 //
 function sceneUpdate(name) {
@@ -57,6 +77,7 @@ function sceneUpdate(name) {
     document.querySelectorAll(`.scene#${name}`).forEach(x => {
         x.style.backgroundColor = x.getAttribute('livecolor') || 'red'
     })
+    liveUpdate('scene', SCENES_SAFE.includes(name) ? false : name)
 }
 function sceneClick(event) {
     cell = event.target;
@@ -79,6 +100,7 @@ function muteUpdate(name, state) {
     document.querySelectorAll(`.mute#${name}`).forEach(x => {
         x.style.backgroundColor = state ? '' : 'red';
     })
+    liveUpdate('mute-'+name, !state)
 }
 function muteClick(event) {
     //console.log('muteClick', event, event.target.style.backgroundColor)
@@ -137,6 +159,7 @@ function init_gallery(obs) {
         forEach('.gallerysize', x => {
             x.value = state;
             x.parentElement.style.backgroundColor = (state > 0) ? "red" : "";
+            liveUpdate('gallery-size', state)
         })
         forEach('.gallerysize-state', x => {
                 x.textContent = `${state.toFixed(2)}`;
