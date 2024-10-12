@@ -1,3 +1,4 @@
+OBS_DEBUG = true;
 
 // If this is SSL, show the warning
 if (window.location.protocol === 'https:') {
@@ -74,11 +75,13 @@ function forEach(querySelector, func) {
 // Set a value (and broadcast an event that represents it)
 async function obs_set(name, value) {
     if (window["obs_set_"+name]) {
+        if (OBS_DEBUG) {console.debug("obs_set", name, value)}
         return await(window["obs_set_"+name](name, value));
     }
     await _obs_set(name, value);
 };
 async function _obs_set(name, value) {
+    if (OBS_DEBUG) {console.debug("_obs_set      ", name, value)}
     x = await obs.call("SetPersistentData", {
         realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
         slotName: name,
@@ -88,17 +91,20 @@ async function _obs_set(name, value) {
 
 // Broadcast a value (like obs_set, but doesn't permanently store it)
 async function obs_broadcast(name, value) {
+    if (OBS_DEBUG) {console.debug("obs_broadcast", name, value)}
     await obs.call('BroadcastCustomEvent', {eventData: {[name]: value}});
 };
 
 // Get a value
 async function obs_get(name) {
     if (window["obs_get_"+name]) {
+        if (OBS_DEBUG) {console.debug("obs_get       ", name)}
         return await(window["obs_get_"+name](name));
     }
     return await _obs_get(name)
 }
 async function _obs_get(name) {
+    if (OBS_DEBUG) {console.debug("_obs_get      ", name)}
     x = await obs.call("GetPersistentData", {
         realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
         slotName: name});
@@ -109,6 +115,7 @@ async function _obs_get(name) {
 // once when it is set
         
 async function obs_watch_init(name, callback) {
+    if (OBS_DEBUG) {console.debug("obs_watch_init", name, callback)}
     obs_watch(name, callback);
     await callback(await obs_get(name));
 }
@@ -182,6 +189,7 @@ async function obs_set_gallerycrop(_, state) {
 WATCHERS = { };
 // Run the callback each time 'name' gets an update
 function obs_watch(name, callback) {
+    if (OBS_DEBUG) {console.debug("obs_watch     ", name, callback)}
     if (WATCHERS[name] === undefined) {
         WATCHERS[name] = [];
     }
