@@ -113,6 +113,16 @@ async function obs_set_scene(_, value) {
 }
 
 
+// Audio and volume
+async function obs_set_mute(name, state) {
+    await obs.call("SetInputMute", {inputName: name, inputMuted: Boolean(state)})
+}
+async function obs_get_mute(name) {
+    ret = await obs.call("GetInputMute", {inputName: name});
+    console.log(name, ret.inputMuted);
+    return ret.inputMuted;
+}
+
 
 WATCHERS = { };
 // Run the callback each time 'name' gets an update
@@ -133,7 +143,7 @@ function _obs_trigger(name, value) {
 }
 function _obs_on_custom_event (data) {
     for (name in data) {
-        console.log("C", name, data[name])
+        //console.log("C", name, data[name])
         _obs_trigger(name, data[name])
     }
 };
@@ -141,5 +151,6 @@ function _obs_on_custom_event (data) {
 // Initialize all the different watchers
 function _obs_init_watchers(obs) {
     obs.on('CustomEvent', _obs_on_custom_event);
-    obs.on('CurrentProgramSceneChanged', event => {_obs_trigger('scene', event.sceneName)})
+    obs.on('CurrentProgramSceneChanged', event => {_obs_trigger('scene', event.sceneName)});
+    obs.on('InputMuteStateChanged', event =>{_obs_trigger('mute-'+event.inputName, event.inputMuted)});
 }

@@ -70,3 +70,32 @@ function init_scene(obs) {
         x.addEventListener('click', sceneClick);
     })
 }
+
+
+//
+// Audio stuff
+//
+function muteUpdate(name, state) {
+    document.querySelectorAll(`#${name}`).forEach(x => {
+        x.style.backgroundColor = state ? '' : 'red';
+    })
+}
+function muteClick(event) {
+    console.log('muteClick', event, event.target.style.backgroundColor)
+    obs_set_mute(event.target.id, event.target.style.backgroundColor);
+}
+function init_mute(obs) {
+    allAudioDevs = new Set;
+    document.querySelectorAll('.mute').forEach(x => allAudioDevs.add(x.id));
+    console.log(allAudioDevs);
+
+    allAudioDevs.forEach(x => {
+        obs_get_mute(x).then( state => {console.log("D", state); muteUpdate(x, state)});
+        obs_watch('mute-'+x, state => {muteUpdate(x, state)});
+    })
+
+    document.querySelectorAll('.mute').forEach(cell => {
+        console.log('k', cell);
+        cell.addEventListener('click', muteClick);
+    })
+}

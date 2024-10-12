@@ -7,9 +7,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <script src="util.js"></script>
     <script src="control.js"></script>
-    <script type="module">
+    <!-- <script type="module">
         let CONFIG = jsyaml.load(await ( await(fetch("config.yaml"))).text());
-    </script>
+    </script> -->
 
     <style>
         .scene, .indicator {
@@ -56,6 +56,14 @@
             <td class="scene" id="Screenshare">SS Portrait</td>
         </tr>
     </table>
+
+    <table border="1">
+        <tr>
+            <td class="mute" id="BroadcasterMic">Brcd</td>
+            <td class="mute" id="Instructors">Instr</td>
+        </tr>
+    </table>
+
 
     <a id="preview-href" herf="">Real-time scene preview</a>
 
@@ -122,6 +130,7 @@
             init_indicators(obs)
             init_live(obs)
             init_scene(obs)
+            init_mute(obs)
 
             // Poll to keep the connection alive
             setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
