@@ -70,12 +70,15 @@ async function obs_set(name, value) {
     if (window["obs_set_"+name]) {
         return await(window["obs_set_"+name](name, value));
     }
+    await _obs_set(name, value);
+};
+async function _obs_set(name, value) {
     x = await obs.call("SetPersistentData", {
         realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
         slotName: name,
         slotValue: value});
-        await obs.call('BroadcastCustomEvent', {eventData: {[name]: value}});
-    };
+    await obs.call('BroadcastCustomEvent', {eventData: {[name]: value}});
+}
 
 // Broadcast a value (like obs_set, but doesn't permanently store it)
 async function obs_broadcast(name, value) {
@@ -87,6 +90,9 @@ async function obs_get(name) {
     if (window["obs_get_"+name]) {
         return await(window["obs_get_"+name](name));
     }
+    return await _obs_get(name)
+}
+async function _obs_get(name) {
     x = await obs.call("GetPersistentData", {
         realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
         slotName: name});
@@ -130,6 +136,42 @@ async function obs_get_volume(name) {
     //console.log(name, ret.inputVolumeDb);
     return ret.inputVolumeDb;
 }
+
+// Gallery size
+async function obs_set_gallerysize(_, state) {
+    for (scene of SCENES_WITH_RESIZEABLE_GALLERY) {
+        ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: GALLERY});
+        sid = ret.sceneItemId;
+        ret = await obs.call("GetSceneItemTransform", {sceneName: scene, sceneItemId: sid})
+        transform = ret.sceneItemTransform
+        transform.scaleX = state;
+        transform.scaleY = state;
+        console.log(transform)
+        await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
+    }
+    _obs_set("gallerysize", state)
+}
+async function obs_get_gallerysize(_) {
+    ret = await obs.call("GetSceneItemId", {sceneName: NOTES, sourceName: GALLERY});
+    sid = ret.sceneItemId;
+    ret = await obs.call("GetSceneItemTransform", {sceneName: NOTES, sceneItemId: sid})
+    transform = ret.sceneItemTransform
+    return transform.scaleX;
+}
+async function obs_set_gallerycrop(_, state) {
+    for (scene of SCENES_WITH_RESIZEABLE_GALLERY) {
+        ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: GALLERY});
+        sid = ret.sceneItemId;
+        ret = await obs.call("GetSceneItemTransform", {sceneName: scene, sceneItemId: sid})
+        transform = ret.sceneItemTransform
+        transform = { ...transform, ...CONFIG.GALLERY_CROP_FACTORS[state]}
+        console.log(transform)
+        await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
+    }
+    _obs_set("gallerycrop", state)
+}
+
+
 
 WATCHERS = { };
 // Run the callback each time 'name' gets an update

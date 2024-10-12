@@ -1,0 +1,7 @@
+GALLERY_CROP_FACTORS:
+    0:    {'cropTop':  0, 'cropBottom':  0, 'cropLeft':  0, 'cropRight':  0, }
+    1:    {'cropTop':  0, 'cropBottom':  0, 'cropLeft': 59, 'cropRight': 59, }
+    2:    {'cropTop': 90, 'cropBottom':  0, 'cropLeft': 12, 'cropRight': 12, }  # checked
+    3:    {'cropTop':  4, 'cropBottom':  0, 'cropLeft': 60, 'cropRight': 60, }  # checked
+    5:    {'cropTop': 50, 'cropBottom':  0, 'cropLeft': 11, 'cropRight': 11, }  # checked
+

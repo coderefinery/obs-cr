@@ -678,6 +678,7 @@ class GallerySize(Helper, ttk.Frame):
     def update(self, state):
         """Update callback of slider"""
         state = float(state)
+        obs['gallerysize'] = state
         self.label.configure(text=f"{state:0.2f}")
         if state == 0:   color = default_color
         else:            color = ACTIVE

@@ -127,3 +127,30 @@ function init_volume(obs) {
         cell.addEventListener('input', volumeClick);
     })
 }
+
+
+//
+// Gallery crop
+//
+function init_gallery(obs) {
+    obs_watch_init("gallerysize", state => {
+        document.querySelectorAll('.gallerysize').forEach(x => {
+            x.value = state;
+        })
+        document.querySelectorAll('.gallerysize-state').forEach(x => {
+                x.textContent = `${state.toFixed(2)}`;
+        })
+    })
+    document.querySelectorAll('.gallerysize').forEach(slider => {
+        slider.addEventListener('input', event => {
+            obs_set("gallerysize", Number(event.target.value))
+        })
+    })
+
+    document.querySelectorAll('.gallerycrop').forEach(cell => {
+        cell.addEventListener('click', event => {
+            id = event.target.id
+            obs_set('gallerycrop', Number(id))
+        })
+    })
+}
