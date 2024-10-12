@@ -64,6 +64,12 @@ function update_status(text) {
     document.getElementById('status').innerText = text;
 }
 
+function forEach(querySelector, func) {
+    return document.querySelectorAll(querySelector).forEach(x => {
+        func(x);
+    })
+}
+
 
 // Set a value (and broadcast an event that represents it)
 async function obs_set(name, value) {

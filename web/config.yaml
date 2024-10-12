@@ -5,3 +5,9 @@ GALLERY_CROP_FACTORS:
     3:    {'cropTop':  4, 'cropBottom':  0, 'cropLeft': 60, 'cropRight': 60, }  # checked
     5:    {'cropTop': 50, 'cropBottom':  0, 'cropLeft': 11, 'cropRight': 11, }  # checked
 
+SCREENSHARE_SIZES:
+   - "840x1080"
+   - "1920x1080"
+   - "1920x1200"
+   - "1680x1080"
+   - "3840x1080"

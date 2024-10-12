@@ -50,7 +50,7 @@ function init_live(obs) {
 // Scene button
 //
 function sceneUpdate(name) {
-    console.log(name)
+    //console.log(name)
     document.querySelectorAll('.scene').forEach(x => {
         x.style.backgroundColor = ''
     })
@@ -153,4 +153,100 @@ function init_gallery(obs) {
             obs_set('gallerycrop', Number(id))
         })
     })
+}
+
+
+//
+// Scene presets
+//
+function presetClick(preset) {
+    scene = document.querySelector(`.preset-sbox#${preset}`).value
+    resolution = document.querySelector(`.preset-sbox#${preset}`).value
+    obs_set('scene', scene)
+    console.log("Click preset", preset, scene)
+}
+// Called each time anything changes that might possibly update the
+// current selected preset.  This updates the preset button color.
+async function presetUpdate(preset) {
+    scene = document.querySelector(`.preset-sbox#${preset}`).value
+    resolution = document.querySelector(`.preset-rbox#${preset}`).value
+    current_scene = await obs_get('scene')
+    current_resolution = await obs_get('ss_resolution')
+    state = (current_scene == scene &&
+             current_resolution == resolution)
+    console.log("Update preset state", preset, scene, state, "detected:", current_scene, current_resolution)
+
+    forEach(`.preset-label#${preset}`, label => {
+        color = SCENES_SAFE.includes(scene) ? 'orange' : 'red'
+        label.style.backgroundColor = state ? color : ''
+    })
+}
+
+function init_preset(obs) {
+    PRESETS = new Set;
+    forEach('.preset-label', x => PRESETS.add(x.id));
+    console.log(PRESETS)
+
+    // Preset labels updates
+    for (let preset of PRESETS) {
+        obs_watch_init(`preset-${preset}-label`, label => {
+            forEach(`.preset-label#${preset}`, button => {
+                button.textContent = label
+            })
+        })
+        // General watchers
+        obs_watch(`preset-label`, _ => {presetUpdate(preset)})
+        obs_watch_init(`scene`, _ => {presetUpdate(preset)})
+    }
+
+    // Preset label clicks
+    forEach('.preset-label', button => {
+        id = button.id
+        button.addEventListener('click', event => {
+            presetClick(event.target.id)
+        })
+    })
+
+    // Preset scene choices
+    forEach(`.preset-sbox`, select => {
+        // Set sbox choices
+        ["-", ...SCENES].forEach(scene => {
+            opt = document.createElement('option')
+            opt.text = scene
+            opt.value = scene
+            select.options.add(opt)
+        })
+        // Watch for sbox changes
+        obs_watch_init(`preset-${select.id}-sbox`, choice => {
+            select.value = choice
+        })
+        obs_watch_init(`preset-${select.id}-sbox`, _ => {presetUpdate(select.id)})
+        // Handle sbox clicks
+        select.addEventListener('input', event => {
+            obs_set(`preset-${select.id}-sbox`, event.target.value)
+            console.log(event, event.target.value);
+        })
+    })
+
+    // Preset resolution choices
+    forEach(`.preset-rbox`, select => {
+        // Set rbox choices
+        ["-", ...CONFIG.SCREENSHARE_SIZES].forEach(resolution => {
+            opt = document.createElement('option')
+            opt.text = resolution
+            opt.value = resolution
+            select.options.add(opt)
+        })
+        // Watch for rbox changes
+        obs_watch_init(`preset-${select.id}-rbox`, choice => {
+            select.value = choice
+        })
+        obs_watch_init(`preset-${select.id}-rbox`, _ => {presetUpdate(select.id)})
+        // Handle rbox clicks
+        select.addEventListener('input', event => {
+            obs_set(`preset-${select.id}-rbox`, event.target.value)
+            console.log(event, event.target.value);
+        })
+    })
+
 }

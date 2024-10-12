@@ -57,9 +57,24 @@
 
     <table border="1">
         <tr>
+            <th>Scene selection</th>
             <td class="scene" id="Title" livecolor="orange">Title</td>
             <td class="scene" id="Gallery">Gallery</td>
             <td class="scene" id="Screenshare">SS Portrait</td>
+            <td class="scene" id="ScreenshareCrop">SS Crop</td>
+            <td class="scene" id="ScreenshareLandscape">SS Landscape</td>
+            <td class="scene" id="BroadcasterScreen">BrdScr</td>
+            <td class="scene" id="Notes" livecolor="orange">Notes</td>
+            <td class="scene" id="Empty" livecolor="orange">Empty</td>
+        </tr>
+    </table>
+
+    <table border="1">
+        <tr>
+            <td><button class="preset-label"  id="preset-a"></button></td>
+            <td><select class="preset-sbox"   id="preset-a"></select></td>
+            <td><select class="preset-rbox"   id="preset-a"></select></td>
+            <td><button class="preset-rename" id="preset-a">r</button></td>
         </tr>
     </table>
 
@@ -94,6 +109,8 @@
       NOTES = "Notes"
       GALLERY = "ZoomGalleryCapture"
       SCENES_WITH_RESIZEABLE_GALLERY = ["Screenshare", "ScreenshareCrop", "ScreenshareLandscape", "BroadcasterScreen", "Notes"]
+      SCENES = ["Title", "Gallery", ...SCENES_WITH_RESIZEABLE_GALLERY, "Empty"]
+      SCENES_SAFE = ["Title", "Notes", "Empty"]
       SOUNDS = {
 	  'low': '311.wav',
 	  'high': '349.wav',
@@ -147,9 +164,17 @@
       const obs = new OBSWebSocket();
 
       update_status("Trying to connect to", `ws://${url}`)
-      obs.connect(`ws://${url}`, password)
-        .then(() => {
-            update_status(`Connected to OBS at ws://${url}.`);
+
+      function load_config () {
+      return fetch("config.yaml").then(response => {
+            response.text().then( text => {
+                globalThis.CONFIG = jsyaml.load(text)
+            })
+        })
+      }
+
+      function obs_init () {
+        update_status(`Connected to OBS at ws://${url}.`);
             _obs_init_watchers(obs)
             obs_watch('playsound', soundEvent);
 
@@ -159,6 +184,7 @@
             init_mute(obs)
             init_volume(obs)
             init_gallery(obs)
+            init_preset(obs)
 
             // Poll to keep the connection alive
             setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
@@ -166,11 +192,17 @@
 
             obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected (closed)!: ${e}`); } )
             obs.on('ConnectionError', e => { update_status(`OBS Disconnected (error)!: ${e}`); } )
+      }
 
+      load_config().then(() => {
+        obs.connect(`ws://${url}`, password)
+        .then(() => {
+            obs_init()
         })
         .catch(err => {
             update_status(`Connection failed: ${err.message}`);
-      });
+        });
+      })
 
 
     </script>
