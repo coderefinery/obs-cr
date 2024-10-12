@@ -1,3 +1,4 @@
 dist/
 *.pyz
 zipapp/
+/_site/

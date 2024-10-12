@@ -4,10 +4,15 @@
 
     <meta charset="UTF-8">
     <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js"></script>
-    <script src="util.js"> </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="util.js"></script>
+    <script src="control.js"></script>
+    <script type="module">
+        let CONFIG = jsyaml.load(await ( await(fetch("config.yaml"))).text());
+    </script>
 
     <style>
-        .indicator {
+        .scene, .indicator {
             user-select: none
         }
     </style>
@@ -42,6 +47,14 @@
           <td class="indicator indicator-chat">Chat</td></tr>
       <tr><td class="indicator indicator-slower">Slower</td>
           <td class="indicator indicator-faster">Faster</td></tr>
+    </table>
+
+    <table border="1">
+        <tr>
+            <td class="scene" id="Title" livecolor="orange">Title</td>
+            <td class="scene" id="Gallery">Gallery</td>
+            <td class="scene" id="Screenshare">SS Portrait</td>
+        </tr>
     </table>
 
     <a id="preview-href" herf="">Real-time scene preview</a>
@@ -103,64 +116,25 @@
       obs.connect(`ws://${url}`, password)
         .then(() => {
             update_status(`Connected to OBS at ws://${url}.`);
-            obs.on('CustomEvent', _obs_on_custom_event);
+            _obs_init_watchers(obs)
+            obs_watch('playsound', soundEvent);
 
-            document.querySelectorAll('.indicator').forEach(cell => {
-                let class_ = cell.classList[cell.classList.length-1];
-                obs_get(class_).then(state => { indicatorUpdate(class_, state)});
-            });
-
-            // Update and watch the "live" button
-            document.querySelectorAll('.live').forEach(cell => {
-                obs_watch_init('mirror-live', state => {
-                    cell.style.backgroundColor = state?"red":"";
-                    cell.title = state?JSON.stringify(state):"You are probably not visible on stream"
-                })
-            })
+            init_indicators(obs)
+            init_live(obs)
+            init_scene(obs)
 
             // Poll to keep the connection alive
             setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
                         60000);
 
-            obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected!: ${e}`); } )
-            obs.on('ConnectionError', e => { update_status(`OBS Disconnected!: ${e}`); } )
+            obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected (closed)!: ${e}`); } )
+            obs.on('ConnectionError', e => { update_status(`OBS Disconnected (error)!: ${e}`); } )
 
         })
         .catch(err => {
             update_status(`Connection failed: ${err.message}`);
       });
 
-
-    function indicatorUpdate(name, state) {
-        cells = document.getElementsByClassName(name);
-        for (c of cells) {
-            c.style.backgroundColor = state ? INDICATORS[name] : '';
-        }
-    }
-
-	function indicatorClick(event) {
-        cell = event.target;
-        class_ = cell.classList[cell.classList.length-1];
-        console.log('a', "Click on", cell, class_, "newstate=", !cell.style.backgroundColor);
-        new_state = !cell.style.backgroundColor
-        obs_set(class_, new_state);
-        if (new_state) {
-            if (INDICATORS[class_] === 'red')    {obs_broadcast('playsound', 'alert-high')};
-            if (INDICATORS[class_] === 'yellow') {obs_broadcast('playsound', 'alert-medium')};
-            if (INDICATORS[class_] === 'cyan')   {obs_broadcast('playsound', 'alert-low')};
-        }
-	}
-
-	cells = document.querySelectorAll('.indicator');
-    cells.forEach(cell => {
-        let class_ = cell.classList[cell.classList.length-1];
-        cell.addEventListener('click', indicatorClick);
-        obs_watch(class_, function(state) {indicatorUpdate(class_, state);});
-        }
-    );
-
-
-    obs_watch('playsound', soundEvent);
 
     </script>
 

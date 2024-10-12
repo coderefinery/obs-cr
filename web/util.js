@@ -59,6 +59,7 @@ async function checkSrv (domain, service="_obs", protocol="_tcp") {
 //     return params;
 // }
 
+
 function update_status(text) {
     document.getElementById('status').innerText = text;
 }
@@ -66,6 +67,9 @@ function update_status(text) {
 
 // Set a value (and broadcast an event that represents it)
 async function obs_set(name, value) {
+    if (window["obs_set_"+name]) {
+        return await(window["obs_set_"+name](name, value));
+    }
     x = await obs.call("SetPersistentData", {
         realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
         slotName: name,
@@ -80,11 +84,35 @@ async function obs_broadcast(name, value) {
 
 // Get a value
 async function obs_get(name) {
-x = await obs.call("GetPersistentData", {
-    realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
-    slotName: name});
-    return(x.slotValue);
+    if (window["obs_get_"+name]) {
+        return await(window["obs_get_"+name](name));
+    }
+    x = await obs.call("GetPersistentData", {
+        realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
+        slotName: name});
+        return(x.slotValue);
 };
+
+// Run the callback each time 'name' gets an update, in addition to the
+// once when it is set
+        
+async function obs_watch_init(name, callback) {
+    obs_watch(name, callback);
+    await callback(await obs_get(name));
+}
+
+
+
+// Scene setting
+async function obs_get_scene(_) {
+    ret = await obs.call("GetCurrentProgramScene", {})
+    return ret.sceneName || ret.currentProgramSceneName;
+}
+async function obs_set_scene(_, value) {
+    return await obs.call("SetCurrentProgramScene", {sceneName: value})
+}
+
+
 
 WATCHERS = { };
 // Run the callback each time 'name' gets an update
@@ -94,24 +122,24 @@ function obs_watch(name, callback) {
     }
     WATCHERS[name].push(callback);
 };
-// Run the callback each time 'name' gets an update, in addition to the
-// once when it is set
-        
-async function obs_watch_init(name, callback) {
-    obs_watch(name, callback);
-    await callback(await obs_get(name));
-}
+
+
+
 // Handler for watching things.
+function _obs_trigger(name, value) {
+    (WATCHERS[name] || []).forEach( x => {
+        x(value)
+    })
+}
 function _obs_on_custom_event (data) {
-    //console.log('a');
     for (name in data) {
-        //console.log('b', name);
-        if (WATCHERS[name] !== undefined) {
-            //console.log('c', name, data[name]);
-            for (func of WATCHERS[name].values()) {
-                //console.log('d', name, data[name], func);
-                func(data[name]);
-            }
-        }
+        console.log("C", name, data[name])
+        _obs_trigger(name, data[name])
     }
 };
+
+// Initialize all the different watchers
+function _obs_init_watchers(obs) {
+    obs.on('CustomEvent', _obs_on_custom_event);
+    obs.on('CurrentProgramSceneChanged', event => {_obs_trigger('scene', event.sceneName)})
+}
