@@ -54,7 +54,7 @@ function sceneUpdate(name) {
     document.querySelectorAll('.scene').forEach(x => {
         x.style.backgroundColor = ''
     })
-    document.querySelectorAll(`#${name}`).forEach(x => {
+    document.querySelectorAll(`.scene#${name}`).forEach(x => {
         x.style.backgroundColor = x.getAttribute('livecolor') || 'red'
     })
 }
@@ -64,7 +64,7 @@ function sceneClick(event) {
 
 }
 function init_scene(obs) {
-    console.log('init_scene')
+    //console.log('init_scene')
     obs_watch_init("scene", sceneUpdate)
     document.querySelectorAll('.scene').forEach(x => {
         x.addEventListener('click', sceneClick);
@@ -76,26 +76,54 @@ function init_scene(obs) {
 // Audio stuff
 //
 function muteUpdate(name, state) {
-    document.querySelectorAll(`#${name}`).forEach(x => {
+    document.querySelectorAll(`.mute#${name}`).forEach(x => {
         x.style.backgroundColor = state ? '' : 'red';
     })
 }
 function muteClick(event) {
-    console.log('muteClick', event, event.target.style.backgroundColor)
+    //console.log('muteClick', event, event.target.style.backgroundColor)
     obs_set_mute(event.target.id, event.target.style.backgroundColor);
 }
 function init_mute(obs) {
     allAudioDevs = new Set;
     document.querySelectorAll('.mute').forEach(x => allAudioDevs.add(x.id));
-    console.log(allAudioDevs);
 
     allAudioDevs.forEach(x => {
-        obs_get_mute(x).then( state => {console.log("D", state); muteUpdate(x, state)});
+        obs_get_mute(x).then( state => {muteUpdate(x, state)});
         obs_watch('mute-'+x, state => {muteUpdate(x, state)});
     })
 
     document.querySelectorAll('.mute').forEach(cell => {
-        console.log('k', cell);
         cell.addEventListener('click', muteClick);
+    })
+}
+function vol_to_dB(state) {
+    return - (10**(-state)) + 1;
+}
+function vol_to_state(dB) {
+    return -Math.log10(-(dB-1));
+}
+function volumeUpdate(name, dB) {
+    document.querySelectorAll(`.volume#${name}`).forEach(x => {
+        x.value = vol_to_state(dB);
+    })
+    document.querySelectorAll(`.volume-dB#${name}`).forEach(x => {
+        x.textContent = `${dB.toFixed(1)} dB`
+    })
+}
+function volumeClick(event) {
+    obs_set_volume(event.target.id, vol_to_dB(event.target.value))
+}
+function init_volume(obs) {
+    allAudioDevs = new Set;
+    document.querySelectorAll('.volume').forEach(x => allAudioDevs.add(x.id));
+
+    allAudioDevs.forEach(x => {
+        obs_get_volume(x).then( state => {volumeUpdate(x, state)});
+        obs_watch('volume-'+x, state => {volumeUpdate(x, state)});
+    })
+
+    document.querySelectorAll('.volume').forEach(cell => {
+        cell.addEventListener('input', volumeClick);
     })
 }

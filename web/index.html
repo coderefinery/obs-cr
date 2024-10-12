@@ -61,6 +61,8 @@
         <tr>
             <td class="mute" id="BroadcasterMic">Brcd</td>
             <td class="mute" id="Instructors">Instr</td>
+            <td><input type="range" min="-2" max="0" step="0.05" class="volume" id="Instructors"></td>
+            <td><span class="volume-dB" id="Instructors"></span></td>
         </tr>
     </table>
 
@@ -131,6 +133,7 @@
             init_live(obs)
             init_scene(obs)
             init_mute(obs)
+            init_volume(obs)
 
             // Poll to keep the connection alive
             setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
