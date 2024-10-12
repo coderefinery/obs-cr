@@ -151,7 +151,14 @@ async function obs_get_volume(name) {
 }
 
 // Gallery size
+GALLERYSIZE_LASTTRIGGER = [0];
 async function obs_set_gallerysize(_, state) {
+    // Try to prevent race conditions by allowing only one call at a time
+    // TODO: this doesn't work yet (but does make it better).
+    let calltime = GALLERYSIZE_LASTTRIGGER[0] + 1;
+    GALLERYSIZE_LASTTRIGGER[0] = calltime;
+    //console.log("Setting gallery size at", calltime)
+    //
     for (let scene of SCENES_WITH_RESIZEABLE_GALLERY) {
         let ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: GALLERY});
         let sid = ret.sceneItemId;
@@ -160,6 +167,11 @@ async function obs_set_gallerysize(_, state) {
         transform.scaleX = state;
         transform.scaleY = state;
         //console.log(transform)
+        //console.log(GALLERYSIZE_LASTTRIGGER[0], calltime, GALLERYSIZE_LASTTRIGGER[0] > calltime)
+        if (GALLERYSIZE_LASTTRIGGER[0] > calltime) {
+            console.log("Aborting gallery update, new one started")
+            return;
+        }
         await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
     }
     _obs_set("gallerysize", state)

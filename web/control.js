@@ -134,20 +134,22 @@ function init_volume(obs) {
 //
 function init_gallery(obs) {
     obs_watch_init("gallerysize", state => {
-        document.querySelectorAll('.gallerysize').forEach(x => {
+        forEach('.gallerysize', x => {
             x.value = state;
+            x.parentElement.style.backgroundColor = (state > 0) ? "red" : "";
         })
-        document.querySelectorAll('.gallerysize-state').forEach(x => {
+        forEach('.gallerysize-state', x => {
                 x.textContent = `${state.toFixed(2)}`;
         })
     })
-    document.querySelectorAll('.gallerysize').forEach(slider => {
+    forEach('.gallerysize', slider => {
         slider.addEventListener('input', event => {
+            console.log("E", event.target.value)
             obs_set("gallerysize", Number(event.target.value))
         })
     })
 
-    document.querySelectorAll('.gallerycrop').forEach(cell => {
+    forEach('.gallerycrop', cell => {
         cell.addEventListener('click', event => {
             let id = event.target.id
             obs_set('gallerycrop', Number(id))
