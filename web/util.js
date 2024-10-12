@@ -139,33 +139,33 @@ async function obs_get_volume(name) {
 
 // Gallery size
 async function obs_set_gallerysize(_, state) {
-    for (scene of SCENES_WITH_RESIZEABLE_GALLERY) {
-        ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: GALLERY});
-        sid = ret.sceneItemId;
+    for (let scene of SCENES_WITH_RESIZEABLE_GALLERY) {
+        let ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: GALLERY});
+        let sid = ret.sceneItemId;
         ret = await obs.call("GetSceneItemTransform", {sceneName: scene, sceneItemId: sid})
-        transform = ret.sceneItemTransform
+        let transform = ret.sceneItemTransform
         transform.scaleX = state;
         transform.scaleY = state;
-        console.log(transform)
+        //console.log(transform)
         await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
     }
     _obs_set("gallerysize", state)
 }
 async function obs_get_gallerysize(_) {
-    ret = await obs.call("GetSceneItemId", {sceneName: NOTES, sourceName: GALLERY});
-    sid = ret.sceneItemId;
+    let ret = await obs.call("GetSceneItemId", {sceneName: NOTES, sourceName: GALLERY});
+    let sid = ret.sceneItemId;
     ret = await obs.call("GetSceneItemTransform", {sceneName: NOTES, sceneItemId: sid})
-    transform = ret.sceneItemTransform
+    let transform = ret.sceneItemTransform
     return transform.scaleX;
 }
 async function obs_set_gallerycrop(_, state) {
-    for (scene of SCENES_WITH_RESIZEABLE_GALLERY) {
-        ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: GALLERY});
-        sid = ret.sceneItemId;
+    for (let scene of SCENES_WITH_RESIZEABLE_GALLERY) {
+        let ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: GALLERY});
+        let sid = ret.sceneItemId;
         ret = await obs.call("GetSceneItemTransform", {sceneName: scene, sceneItemId: sid})
-        transform = ret.sceneItemTransform
+        let transform = ret.sceneItemTransform
         transform = { ...transform, ...CONFIG.GALLERY_CROP_FACTORS[state]}
-        console.log(transform)
+        //console.log(transform)
         await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
     }
     _obs_set("gallerycrop", state)

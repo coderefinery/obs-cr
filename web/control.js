@@ -149,7 +149,7 @@ function init_gallery(obs) {
 
     document.querySelectorAll('.gallerycrop').forEach(cell => {
         cell.addEventListener('click', event => {
-            id = event.target.id
+            let id = event.target.id
             obs_set('gallerycrop', Number(id))
         })
     })
