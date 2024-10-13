@@ -78,6 +78,44 @@ function update_status(text) {
     forEach('.status', x => {x.innerText = text});
 }
 
+// Convert a stable ID to a human name for a scene/preset
+function scene_to_name(scene) {
+    if (scene == '-') return '-'
+    // Human names of named scenes
+    if (scene in CONFIG.SCENES) {
+        return CONFIG.SCENES[scene].name
+    }
+    // Human names of named presets
+    label = document.querySelector(`.preset-label#${scene}`)
+    if (label) {
+        return label.textContent
+    }
+    return scene
+}
+// Convert a scene's human name to its stable ID
+function name_to_scene(name) {
+    if (scene == '-') return '-'
+    if (name in CONFIG.SCENES_REVERSE) {
+        return CONFIG.SCENES_REVERSE[name]
+    }
+    for (label of document.querySelectorAll('.preset-label')) {
+        if (label.textContent == name) {
+            return label.id
+        }
+    }
+    return name
+}
+async function switch_to(scene) {
+    scene = name_to_scene(scene)
+    // It's a normal scene
+    if (scene in CONFIG.SCENES) {
+        await obs_set('scene', scene)
+        return
+    }
+    // It's a preset
+    await presetClick(scene)
+}
+
 
 
 //

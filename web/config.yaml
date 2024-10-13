@@ -1,3 +1,38 @@
+AUDIO_INPUT: Instructors
+AUDIO_INPUT_BRCD: BroadcasterMic
+PLAYBACK_INPUT:  CRaudio
+NOTES: Notes
+GALLERY: ZoomGalleryCapture
+
+
+
+SCENES:
+    Title:
+        name: Title
+        description: Title screen with logo
+    Gallery:
+        name: Gallery
+        description: All instructors gallery
+    Screenshare:
+        name: SS Portrait
+        description: Screenshare, normal portrait mode.\nUsed when the instructor can share a portion of the screen with the right 840x1080 aspect ratio.
+    ScreenshareCrop:
+        name: SS Crop
+        description: Screenshare, landscape share but crop portrait out of the left 840 pixels.\nUsed when instructors can\'t share a portion of the screen, but share a full screen and we pull an 840x1080 aspect ratio chuck out of the left side of it.
+    ScreenshareLandscape:
+        name: SS Landscape
+        description: Screenshare, actual full landscape mode shrunk into portrait mode.\nUsed when an instructor actually is sharing landscape and you want black bars at the top/bottom to make it fit.
+    BroadcasterScreen:
+        name: BcdScr
+        description: Broadcaster local screen (only broadcaster may select)
+    Notes:
+        name: Notes
+        description: Notes, as screenshared from the broadcaster computer
+    Empty:
+        name: Empty
+        description: Empty black screen
+
+
 GALLERY_CROP_FACTORS:
     0:    {'cropTop':  0, 'cropBottom':  0, 'cropLeft':  0, 'cropRight':  0, }
     1:    {'cropTop':  0, 'cropBottom':  0, 'cropLeft': 59, 'cropRight': 59, }

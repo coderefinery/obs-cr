@@ -10,11 +10,11 @@
     <script type="module">
         //Load global YAML config.  This is loaded too late to be
         // used to layout the HTML but can be used for other things.
-        fetch("config.yaml").then(response => {
-            response.text().then( text => {
-                globalThis.CONFIG = jsyaml.load(text)
-            })
-        })
+        //fetch("config.yaml").then(response => {
+        //    response.text().then( text => {
+        //        globalThis.CONFIG = jsyaml.load(text)
+        //    })
+        //})
     </script>
 
     <style>
@@ -54,6 +54,18 @@
           <td class="indicator indicator-chat">Chat</td>
           <td class="indicator indicator-slower">Slower</td>
           <td class="indicator indicator-faster">Faster</td></tr>
+    </table>
+
+    <table border="1">
+        <tr>
+            <th>Quick actions:</th>
+            <td><button class="quick-break">Break</button></td>
+            <td></td>
+            <td><button class="quick-back">Back to →</button></td>
+            <td><select class="quick-back-scene"   id="preset-e"></select></td>
+            <td><input class="quick-back-audio" type="checkbox">Brcd Audio?</input></td>
+            <td><input class="quick-back-jingle" type="checkbox" disabled="true">Jingle?</input></td>
+        </tr>
     </table>
 
     <table border="1">
@@ -196,9 +208,15 @@
       update_status(`Trying to connect to ws://${url}`)
 
       function load_config () {
-      return fetch("config.yaml").then(response => {
+        return fetch("config.yaml").then(response => {
             response.text().then( text => {
-                globalThis.CONFIG = jsyaml.load(text)
+                CONFIG = jsyaml.load(text)
+                globalThis.CONFIG = CONFIG
+                // Make mapping human name -> scene names
+                CONFIG.SCENES_REVERSE = { }
+                for (scene in CONFIG.SCENES) {
+                    CONFIG.SCENES_REVERSE[CONFIG.SCENES[scene].name]= scene
+                }
             })
         })
       }
@@ -215,6 +233,7 @@
             init_volume(obs)
             init_gallery(obs)
             init_preset(obs)
+            init_quick(obs)
 
             // Poll to keep the connection alive
             setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},

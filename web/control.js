@@ -82,13 +82,13 @@ function sceneUpdate(name) {
 function sceneClick(event) {
     cell = event.target;
     obs_set("scene", cell.id)
-
 }
 function init_scene(obs) {
     //console.log('init_scene')
     obs_watch_init("scene", sceneUpdate)
     document.querySelectorAll('.scene').forEach(x => {
         x.addEventListener('click', sceneClick);
+        x.switchto = () => {obs_set(x.id)}
     })
 }
 
@@ -184,10 +184,11 @@ function init_gallery(obs) {
 //
 // Scene presets
 //
-function presetClick(preset) {
+async function presetClick(preset) {
     scene = document.querySelector(`.preset-sbox#${preset}`).value
-    resolution = document.querySelector(`.preset-sbox#${preset}`).value
-    obs_set('scene', scene)
+    resolution = document.querySelector(`.preset-rbox#${preset}`).value
+    await obs_set('ss_resolution', resolution)
+    await obs_set('scene', scene)
     console.log("Click preset", preset, scene)
 }
 // Called each time anything changes that might possibly update the
@@ -219,9 +220,10 @@ function init_preset(obs) {
                 if (label)
                     button.textContent = label
             })
+            quickUpdate()
         })
         // General watchers
-        obs_watch(`preset-label`, _ => {presetUpdate(preset)})
+        //obs_watch(`preset-label`, _ => {presetUpdate(preset)})
         obs_watch_init(`scene`, _ => {presetUpdate(preset)})
     }
 
@@ -274,5 +276,107 @@ function init_preset(obs) {
             console.log(event, event.target.value);
         })
     })
+}
+
+
+//
+// Quick action functions
+//
+// Update current status of the quick back list
+function quickUpdate() {
+    ScenesAndPresets = new Set;
+    for (scene of ['-', ...SCENES]) {
+        console.log(scene)
+        ScenesAndPresets.add(scene)
+    }
+    // Note that preset-labels may not be defined yet.  This will
+    // be updated later once presets are loaded
+    forEach('.preset-label', x => {
+        ScenesAndPresets.add(x.textContent)
+    });
+    ScenesAndPresets = [...ScenesAndPresets]
+
+    options = ScenesAndPresets.map(scene => {
+        opt = document.createElement('option')
+        opt.text = scene
+        opt.value = scene
+        return opt
+    })
+
+    forEach('.quick-back-scene', select => {
+        // Remove all options
+        select.options.length = 0
+        for (scene of options) {
+            select.options.add(scene)
+        }
+    })
+}
+async function quickBreak(event) {
+    await switch_to(CONFIG.NOTES)
+    await obs_set('gallery_last_state', await obs_get('gallerysize'))
+    await obs_set('gallerysize', 0)
+    // mute brcd
+    // Beep for going offline
+    await obs_set_mute(CONFIG.AUDIO_INPUT, true)
+    await obs_set_mute(CONFIG.AUDIO_INPUT_BRCD, true)
+    await obs_broadcast('playsound', 'high')
+    setTimeout(obs_broadcast, 200, 'playsound', 'low')
+    // mute instr
+}
+async function quickBack(event, round=0) {
+    // TODO: play jingle if requested
+    // Count down to going online
+    if (round < 3) {
+        obs_broadcast('playsound', 'low')
+        setTimeout(quickBack, 1000, event, round+1)
+        return
+    }
+    if (round == 3) {
+        await obs_broadcast('playsound', 'low')
+        setTimeout(quickBack, 200, event, round+1)
+        return
+    }
+    // Unmute audios (instructor, and brcd if it's checked)
+    await obs_broadcast('playsound', 'high')
+    await obs_set_mute(CONFIG.AUDIO_INPUT, false)
+    if (document.querySelector('.quick-back-audio').checked) {
+        await obs_set_mute(CONFIG.AUDIO_INPUT_BRCD, false)
+        document.querySelector('.quick-back-audio').checked = false
+    }
+    // Find and change to our scene
+    to_scene = document.querySelector('.quick-back-scene').value
+    await switch_to(to_scene)
+    // Restore the gallery size
+    await obs_set('gallerysize', await obs_get('gallery_last_state'))
+}
+function init_quick(obs) {
+    // Quick break button clicking
+    forEach('.quick-break', button => {
+        button.addEventListener('click', quickBreak)
+    })
+    // Quick back button clicking
+    forEach('.quick-back', button => {
+        button.addEventListener('click', quickBack)
+    })
+    // Quick back scene selection syncing
+    forEach('.quick-back-scene', select => {
+        obs_watch_init('quickback-quickback-a-value', newvalue => {
+            select.value = newvalue
+        })
+        select.addEventListener('input', event => {
+            obs_set('quickback-quickback-a-value', event.target.value)
+        })
+    })
+    // Quick back broadcaster audio syncing
+    forEach('.quick-back-audio', checkbox => {
+        obs_watch_init('checkbutton-quick_brcd-value', newvalue => {
+            checkbox.checked = newvalue
+        })
+        checkbox.addEventListener('click', event => {
+            obs_set('checkbutton-quick_brcd-value', event.target.checked)
+        })
+
+    })
+    quickUpdate()
 
 }
