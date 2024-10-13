@@ -1,5 +1,9 @@
 OBS_DEBUG = true;
 
+//
+// Basic utility functions
+//
+
 // Shortcut to select all elements with a given selector, and run
 // the anonymous function on all of them.  Used for updating all
 // elements of a given class at the same time.
@@ -75,6 +79,11 @@ function update_status(text) {
 }
 
 
+
+//
+// Main OBS relay functions.
+//
+
 // Set a value (and broadcast an event that represents it)
 async function obs_set(name, value) {
     if (window["obs_set_"+name]) {
@@ -115,15 +124,50 @@ async function _obs_get(name) {
 };
 
 // Run the callback each time 'name' gets an update, in addition to the
-// once when it is set
-        
+// once when it is set.  This is obs_watch + calling it once with the
+// value from obs_init.
 async function obs_watch_init(name, callback) {
     if (OBS_DEBUG) {console.debug("obs_watch_init", name, callback)}
     obs_watch(name, callback);
     await callback(await obs_get(name));
 }
 
+WATCHERS = { };
+// Run the callback each time 'name' gets an update
+function obs_watch(name, callback) {
+    if (OBS_DEBUG) {console.debug("obs_watch     ", name, callback)}
+    if (WATCHERS[name] === undefined) {
+        WATCHERS[name] = [];
+    }
+    WATCHERS[name].push(callback);
+};
 
+// Handler for watching things.
+function _obs_trigger(name, value) {
+    (WATCHERS[name] || []).forEach( x => {
+        x(value)
+    })
+}
+function _obs_on_custom_event (data) {
+    for (name in data) {
+        //console.log("C", name, data[name])
+        _obs_trigger(name, data[name])
+    }
+};
+
+// Initialize all the different watchers
+function _obs_init_watchers(obs) {
+    obs.on('CustomEvent', _obs_on_custom_event);
+    obs.on('CurrentProgramSceneChanged', event => {_obs_trigger('scene', event.sceneName)});
+    obs.on('InputMuteStateChanged', event =>{_obs_trigger('mute-'+event.inputName, event.inputMuted)});
+    obs.on('InputVolumeChanged', event =>{_obs_trigger('volume-'+event.inputName, event.inputVolumeDb)});
+}
+
+
+
+//
+// Special-case OBS relay functions.
+//
 
 // Scene setting
 async function obs_get_scene(_) {
@@ -201,39 +245,4 @@ async function obs_set_gallerycrop(_, state) {
         await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
     }
     _obs_set("gallerycrop", state)
-}
-
-
-
-WATCHERS = { };
-// Run the callback each time 'name' gets an update
-function obs_watch(name, callback) {
-    if (OBS_DEBUG) {console.debug("obs_watch     ", name, callback)}
-    if (WATCHERS[name] === undefined) {
-        WATCHERS[name] = [];
-    }
-    WATCHERS[name].push(callback);
-};
-
-
-
-// Handler for watching things.
-function _obs_trigger(name, value) {
-    (WATCHERS[name] || []).forEach( x => {
-        x(value)
-    })
-}
-function _obs_on_custom_event (data) {
-    for (name in data) {
-        //console.log("C", name, data[name])
-        _obs_trigger(name, data[name])
-    }
-};
-
-// Initialize all the different watchers
-function _obs_init_watchers(obs) {
-    obs.on('CustomEvent', _obs_on_custom_event);
-    obs.on('CurrentProgramSceneChanged', event => {_obs_trigger('scene', event.sceneName)});
-    obs.on('InputMuteStateChanged', event =>{_obs_trigger('mute-'+event.inputName, event.inputMuted)});
-    obs.on('InputVolumeChanged', event =>{_obs_trigger('volume-'+event.inputName, event.inputVolumeDb)});
 }
