@@ -216,7 +216,8 @@ function init_preset(obs) {
     for (let preset of PRESETS) {
         obs_watch_init(`preset-${preset}-label`, label => {
             forEach(`.preset-label#${preset}`, button => {
-                button.textContent = label
+                if (label)
+                    button.textContent = label
             })
         })
         // General watchers
