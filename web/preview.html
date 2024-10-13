@@ -52,7 +52,7 @@
 
       // If this is SSL, show the warning
       if (window.location.protocol === 'https:') {
-	  document.getElementById('ssl-warning').style.display = 'block';
+	      forEach('.ssl-warning', x =>{x.style.display = 'block'});
       }
 
 
@@ -90,7 +90,7 @@
       }
 
 
-      update_status("Trying to connect to", `ws://${url}`)
+      update_status(`Trying to connect to ws://${url}`)
       obs.connect(`ws://${url}`, password)
         .then(() => {
             update_status(`Connected to OBS at ws://${url}.`);

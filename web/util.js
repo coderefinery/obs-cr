@@ -1,8 +1,17 @@
 OBS_DEBUG = true;
 
+// Shortcut to select all elements with a given selector, and run
+// the anonymous function on all of them.  Used for updating all
+// elements of a given class at the same time.
+function forEach(querySelector, func) {
+    return document.querySelectorAll(querySelector).forEach(x => {
+        func(x);
+    })
+}
+
 // If this is SSL, show the warning
 if (window.location.protocol === 'https:') {
-    document.getElementById('ssl-warning').style.display = 'block';
+    forEach('.ssl-warning', x => {x.style.display = 'block'});
 }
 
 // Convert key=value&key2=value2 in URL fragment to dict
@@ -62,13 +71,7 @@ async function checkSrv (domain, service="_obs", protocol="_tcp") {
 
 
 function update_status(text) {
-    document.getElementById('status').innerText = text;
-}
-
-function forEach(querySelector, func) {
-    return document.querySelectorAll(querySelector).forEach(x => {
-        func(x);
-    })
+    forEach('.status', x => {x.innerText = text});
 }
 
 
@@ -108,7 +111,7 @@ async function _obs_get(name) {
     x = await obs.call("GetPersistentData", {
         realm: "OBS_WEBSOCKET_DATA_REALM_PROFILE", 
         slotName: name});
-        return(x.slotValue);
+    return(x.slotValue);
 };
 
 // Run the callback each time 'name' gets an update, in addition to the
@@ -173,6 +176,10 @@ async function obs_set_gallerysize(_, state) {
             return;
         }
         await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
+    }
+    if (GALLERYSIZE_LASTTRIGGER[0] > calltime) {
+        console.log("Aborting gallery update, new one started")
+        return;
     }
     _obs_set("gallerysize", state)
 }

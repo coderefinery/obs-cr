@@ -26,18 +26,18 @@
   </head>
   <body>
 
-    <div id="ssl-warning" style="display:none; color: maroon">You are currently using
+    <div class="ssl-warning" style="display:none; color: maroon">You are currently using
     HTTPS.  Unfortunately OBS probably isn't using SSL and browsers
     only allow SSL websocket connections from SSL pages, so you need
     to turn SSL off.  Please try changing the URL to 'http' instead of
     'https' which might require telling your browser to not force SSL for this
     page (firefox: click around the page icon).</div>
 
-    <div id="audio-warning" style="display:none; color: maroon">Audio
+    <div class="audio-warning" style="display:none; color: maroon">Audio
     playback has failed.  Do you need to allow it on this page?
     Reload the page when done.</div>
 
-    <div id="status">Status is updated here</div>
+    <div class="status">Status is updated here</div>
 
     <table border="1">
         <tr><td class="live" title="When red, may be visible">Live</td>
@@ -133,7 +133,7 @@
     </table>
 
 
-    <a id="preview-href" herf="">Real-time scene preview</a>
+    <a class="preview-href" herf="">Real-time scene preview</a>
 
     <script>
       NOTES = "Notes"
@@ -162,7 +162,7 @@
 
       purl = new URL(window.location.href);
       purl.pathname = purl.pathname.replace(/\/[^\/]*?$/, '/preview.html')
-      document.getElementById('preview-href').href = purl.toString();
+      forEach('.preview-href', x => {x.href = purl.toString()});
 
 
       function soundEvent(value) {
@@ -181,7 +181,7 @@
             audio.play().catch((error) => {
                 // Handle the error
                 console.error('Error playing audio:', error);
-                document.getElementById('audio-warning').style.display = 'block';
+                forEach('.audio-warning', x => {x.style.display = 'block'});
             });
         }
       }
@@ -193,7 +193,7 @@
       // Create a new OBS WebSocket instance
       const obs = new OBSWebSocket();
 
-      update_status("Trying to connect to", `ws://${url}`)
+      update_status(`Trying to connect to ws://${url}`)
 
       function load_config () {
       return fetch("config.yaml").then(response => {
