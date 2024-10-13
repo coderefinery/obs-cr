@@ -45,13 +45,14 @@
       </table>
 
     <table border="1">
-      <tr><td class="indicator indicator-warning" title="Generalized 'something urgent has come up'">Warn</td>
-          <td class="indicator indicator-caution" title="Generalized 'something to look at' has come up">Caution</td></tr>
-      <tr><td class="indicator indicator-time">Time</td>
-          <td class="indicator indicator-notes">Notes</td></tr>
-      <tr><td class="indicator indicator-question">Question</td>
-          <td class="indicator indicator-chat">Chat</td></tr>
-      <tr><td class="indicator indicator-slower">Slower</td>
+      <tr><th>Indicators:</th>
+          <td class="indicator indicator-warning" title="Generalized 'something urgent has come up'">Warn</td>
+          <td class="indicator indicator-caution" title="Generalized 'something to look at' has come up">Caution</td>
+          <td class="indicator indicator-time">Time</td>
+          <td class="indicator indicator-notes">Notes</td>
+          <td class="indicator indicator-question">Question</td>
+          <td class="indicator indicator-chat">Chat</td>
+          <td class="indicator indicator-slower">Slower</td>
           <td class="indicator indicator-faster">Faster</td></tr>
     </table>
 
@@ -71,15 +72,44 @@
 
     <table border="1">
         <tr>
-            <td><button class="preset-label"  id="preset-a"></button></td>
+            <td rowspan="3">Scene presets:</td>
+            <td><button class="preset-label"  id="preset-a">A</button></td>
             <td><select class="preset-sbox"   id="preset-a"></select></td>
             <td><select class="preset-rbox"   id="preset-a"></select></td>
             <td><button class="preset-rename" id="preset-a">r</button></td>
+            <td></td>
+            <td><button class="preset-label"  id="preset-b">B</button></td>
+            <td><select class="preset-sbox"   id="preset-b"></select></td>
+            <td><select class="preset-rbox"   id="preset-b"></select></td>
+            <td><button class="preset-rename" id="preset-b">r</button></td>
+        </tr>
+        <tr>
+            <td><button class="preset-label"  id="preset-c">C</button></td>
+            <td><select class="preset-sbox"   id="preset-c"></select></td>
+            <td><select class="preset-rbox"   id="preset-c"></select></td>
+            <td><button class="preset-rename" id="preset-c">r</button></td>
+            <td></td>
+            <td><button class="preset-label"  id="preset-d">D</button></td>
+            <td><select class="preset-sbox"   id="preset-d"></select></td>
+            <td><select class="preset-rbox"   id="preset-d"></select></td>
+            <td><button class="preset-rename" id="preset-d">r</button></td>
+        </tr>
+        <tr>
+            <td><button class="preset-label"  id="preset-e">E</button></td>
+            <td><select class="preset-sbox"   id="preset-e"></select></td>
+            <td><select class="preset-rbox"   id="preset-e"></select></td>
+            <td><button class="preset-rename" id="preset-e">r</button></td>
+            <td></td>
+            <td><button class="preset-label"  id="preset-f">F</button></td>
+            <td><select class="preset-sbox"   id="preset-f"></select></td>
+            <td><select class="preset-rbox"   id="preset-f"></select></td>
+            <td><button class="preset-rename" id="preset-f">r</button></td>
         </tr>
     </table>
 
     <table border="1">
         <tr>
+            <th>Audio:</th>
             <td class="mute" id="BroadcasterMic">Brcd</td>
             <td class="mute" id="Instructors">Instr</td>
             <td><input class="volume" id="Instructors" type="range" min="-2" max="0" step="0.05"></td>
@@ -88,12 +118,12 @@
     </table>
     <table border="1">
         <tr>
-            <th>Gallery size</th>
+            <th>Gallery size:</th>
             <td colspan="4"><input class="gallerysize" type="range" min="0" max="1" step="0.01"></td>
             <td><span class="gallerysize-state"></span></td>
         </tr>
         <tr>
-            <th>Gallery crop</th>
+            <th>Gallery crop:</th>
             <td class="gallerycrop" id="0">None</td>
             <td class="gallerycrop" id="1">n=1</td>
             <td class="gallerycrop" id="2">n=2</td>
