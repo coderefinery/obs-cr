@@ -38,11 +38,13 @@
     Reload the page when done.</div>
 
     <div class="status">Status is updated here</div>
-
-    <table border="1">
+    <table border="1" style="display:inline-table">
         <tr><td class="live" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</td>
             <!--<td class="live-mic">Caution</td>--></tr>
-      </table>
+    </table>
+    <span class="synced" syncwith="scene">Scene</span>
+    <span class="synced" syncwith="ss_resolution">Resolution</span>
+
 
     <table border="1">
       <tr><th>Indicators:</th>
@@ -62,9 +64,9 @@
             <td><button class="quick-break">Break</button></td>
             <td></td>
             <td><button class="quick-back">Back to →</button></td>
-            <td><select class="quick-back-scene"   id="preset-e"></select></td>
-            <td><input class="quick-back-audio" type="checkbox">Brcd Audio?</input></td>
-            <td><input class="quick-back-jingle" type="checkbox" disabled="true">Jingle?</input></td>
+            <td><select class="quick-back-scene synced" syncwith="quickback-quickback-a-value"></select></td>
+            <td><input class="quick-back-audio-brcd synced" type="checkbox" syncwith="checkbutton-quick_brcd-value">Brcd Audio?</input></td>
+            <td><input class="quick-back-jingle synced" type="checkbox" disabled="true" syncwith="checkbutton-quick_jingle-value">Jingle?</input></td>
         </tr>
     </table>
 
@@ -85,10 +87,10 @@
     <table border="1">
         <tr>
             <td rowspan="3">Scene presets:</td>
-            <td><button class="preset-label"  id="preset-a">A</button></td>
-            <td><select class="preset-sbox"   id="preset-a"></select></td>
-            <td><select class="preset-rbox"   id="preset-a"></select></td>
-            <td><button class="preset-rename" id="preset-a">r</button></td>
+            <td><button class="preset-label synced" id="preset-a" syncwith="preset-preset-a-label">A</button></td>
+            <td><select class="preset-sbox synced"  id="preset-a" syncwith="preset-preset-a-sbox"></select></td>
+            <td><select class="preset-rbox synced"  id="preset-a" syncwith="preset-preset-a-rbox"></select></td>
+            <td><button class="preset-rename"       id="preset-a">r</button></td>
             <td></td>
             <td><button class="preset-label"  id="preset-b">B</button></td>
             <td><select class="preset-sbox"   id="preset-b"></select></td>
@@ -96,10 +98,10 @@
             <td><button class="preset-rename" id="preset-b">r</button></td>
         </tr>
         <tr>
-            <td><button class="preset-label"  id="preset-c">C</button></td>
-            <td><select class="preset-sbox"   id="preset-c"></select></td>
-            <td><select class="preset-rbox"   id="preset-c"></select></td>
-            <td><button class="preset-rename" id="preset-c">r</button></td>
+            <td><button class="preset-label synced" id="preset-c" syncwith="preset-preset-c-label">A</button></td>
+            <td><select class="preset-sbox synced"  id="preset-c" syncwith="preset-preset-c-sbox"></select></td>
+            <td><select class="preset-rbox synced"  id="preset-c" syncwith="preset-preset-c-rbox"></select></td>
+            <td><button class="preset-rename"       id="preset-c">r</button></td>
             <td></td>
             <td><button class="preset-label"  id="preset-d">D</button></td>
             <td><select class="preset-sbox"   id="preset-d"></select></td>
@@ -136,11 +138,11 @@
         </tr>
         <tr>
             <th>Gallery crop:</th>
-            <td class="gallerycrop" id="0">None</td>
-            <td class="gallerycrop" id="1">n=1</td>
-            <td class="gallerycrop" id="2">n=2</td>
-            <td class="gallerycrop" id="3">n=3-4</td>
-            <td class="gallerycrop" id="5">n=5-6</td>
+            <td class="gallerycrop" id="n0">None</td>
+            <td class="gallerycrop" id="n1">n=1</td>
+            <td class="gallerycrop" id="n2">n=2</td>
+            <td class="gallerycrop" id="n3">n=3-4</td>
+            <td class="gallerycrop" id="n5">n=5-6</td>
         </tr>
     </table>
 
@@ -221,11 +223,14 @@
         })
       }
 
-      function obs_init () {
+      async function obs_init () {
         update_status(`Connected to OBS at ws://${url}.`);
             _obs_init_watchers(obs)
             obs_watch('playsound', soundEvent);
 
+            await init_sync_checkboxes(obs)
+            await init_sync_selects(obs)
+            await init_sync_textcontent(obs)
             init_live(obs)
             init_indicators(obs)
             init_scene(obs)

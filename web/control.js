@@ -174,8 +174,19 @@ function init_gallery(obs) {
 
     forEach('.gallerycrop', cell => {
         cell.addEventListener('click', event => {
-            let id = event.target.id
+            // IDs are `n0` with 0 being the size.  0=set null crop.
+            // Integers aren't valid IDs thus the `n` prefix.
+            let id = event.target.id.slice(1)
             obs_set('gallerycrop', Number(id))
+        })
+    })
+    obs_watch_init('gallerycrop', crop => {
+        forEach(`.gallerycrop`, cell => {
+            cell.style.backgroundColor = ''
+        })
+        // Ids are `n0` and so on (see above)
+        forEach(`.gallerycrop#n${crop}`, cell => {
+            cell.style.backgroundColor = 'orange'
         })
     })
 }
@@ -184,54 +195,54 @@ function init_gallery(obs) {
 //
 // Scene presets
 //
-async function presetClick(preset) {
+async function presetSwitch(preset) {
     scene = document.querySelector(`.preset-sbox#${preset}`).value
     resolution = document.querySelector(`.preset-rbox#${preset}`).value
-    await obs_set('ss_resolution', resolution)
+    if (resolution != '-')
+       await obs_set('ss_resolution', resolution)
     await obs_set('scene', scene)
-    console.log("Click preset", preset, scene)
+    //console.log("Click preset", preset, scene)
 }
 // Called each time anything changes that might possibly update the
 // current selected preset.  This updates the preset button color.
-async function presetUpdate(preset) {
-    scene = document.querySelector(`.preset-sbox#${preset}`).value
-    resolution = document.querySelector(`.preset-rbox#${preset}`).value
+async function presetUpdate() {
+    //console.log('presetUpdate')
+    PRESETS = new Set;
+    forEach('.preset-label', x => PRESETS.add(x.id));
+    for (let preset of PRESETS) {
+        await presetUpdateOne(preset)
+    }
+}
+async function presetUpdateOne(preset) {
+    //console.log('presetUpdate', preset)
+    preset_scene = document.querySelector(`.preset-sbox#${preset}`).value
+    preset_resolution = document.querySelector(`.preset-rbox#${preset}`).value
     current_scene = await obs_get('scene')
     current_resolution = await obs_get('ss_resolution')
-    state = (current_scene == scene &&
-             current_resolution == resolution)
-    console.log("Update preset state", preset, scene, state, "detected:", current_scene, current_resolution)
+    state = (current_scene == preset_scene &&
+             current_resolution == preset_resolution)
+    //console.log("Update preset state", preset, preset_scene, preset_resolution, state, "detected:", current_scene, current_resolution)
 
     forEach(`.preset-label#${preset}`, label => {
-        color = SCENES_SAFE.includes(scene) ? 'orange' : 'red'
+        color = SCENES_SAFE.includes(preset_scene) ? 'orange' : 'red'
         label.style.backgroundColor = state ? color : ''
     })
 }
 
-function init_preset(obs) {
+async function init_preset(obs) {
     PRESETS = new Set;
     forEach('.preset-label', x => PRESETS.add(x.id));
-    console.log(PRESETS)
+    //console.log(PRESETS)
 
-    // Preset labels updates
+    // Preset labels updates (update the quick action list)
     for (let preset of PRESETS) {
-        obs_watch_init(`preset-${preset}-label`, label => {
-            forEach(`.preset-label#${preset}`, button => {
-                if (label)
-                    button.textContent = label
-            })
-            quickUpdate()
-        })
-        // General watchers
-        //obs_watch(`preset-label`, _ => {presetUpdate(preset)})
-        obs_watch_init(`scene`, _ => {presetUpdate(preset)})
+        obs_watch(`preset-${preset}-label`, quickUpdate)
     }
 
     // Preset label clicks
     forEach('.preset-label', button => {
-        id = button.id
         button.addEventListener('click', event => {
-            presetClick(event.target.id)
+            switch_to(event.target.id)
         })
     })
 
@@ -244,16 +255,7 @@ function init_preset(obs) {
             opt.value = scene
             select.options.add(opt)
         })
-        // Watch for sbox changes
-        obs_watch_init(`preset-${select.id}-sbox`, choice => {
-            select.value = choice
-        })
-        obs_watch_init(`preset-${select.id}-sbox`, _ => {presetUpdate(select.id)})
-        // Handle sbox clicks
-        select.addEventListener('input', event => {
-            obs_set(`preset-${select.id}-sbox`, event.target.value)
-            console.log(event, event.target.value);
-        })
+        obs_watch(`preset-${select.id}-sbox`, _ => {presetUpdate(select.id)})
     })
 
     // Preset resolution choices
@@ -265,17 +267,13 @@ function init_preset(obs) {
             opt.value = resolution
             select.options.add(opt)
         })
-        // Watch for rbox changes
-        obs_watch_init(`preset-${select.id}-rbox`, choice => {
-            select.value = choice
-        })
-        obs_watch_init(`preset-${select.id}-rbox`, _ => {presetUpdate(select.id)})
-        // Handle rbox clicks
-        select.addEventListener('input', event => {
-            obs_set(`preset-${select.id}-rbox`, event.target.value)
-            console.log(event, event.target.value);
-        })
+        obs_watch(`preset-${select.id}-rbox`, _ => {presetUpdate(select.id)})
     })
+
+    //General watchers
+    await obs_watch_init(`scene`, _ => {presetUpdate()})
+    quickUpdate()
+
 }
 
 
@@ -285,15 +283,18 @@ function init_preset(obs) {
 // Update current status of the quick back list
 function quickUpdate() {
     ScenesAndPresets = new Set;
-    for (scene of ['-', ...SCENES]) {
-        console.log(scene)
-        ScenesAndPresets.add(scene)
-    }
+    ScenesAndPresets.add('-')
+
     // Note that preset-labels may not be defined yet.  This will
     // be updated later once presets are loaded
     forEach('.preset-label', x => {
         ScenesAndPresets.add(x.textContent)
     });
+    // Regular scenes
+    for (scene of ['-', ...SCENES]) {
+        //console.log(scene)
+        ScenesAndPresets.add(scene)
+    }
     ScenesAndPresets = [...ScenesAndPresets]
 
     options = ScenesAndPresets.map(scene => {
@@ -311,6 +312,7 @@ function quickUpdate() {
         }
     })
 }
+// Go to a break
 async function quickBreak(event) {
     await switch_to(CONFIG.NOTES)
     await obs_set('gallery_last_state', await obs_get('gallerysize'))
@@ -323,6 +325,7 @@ async function quickBreak(event) {
     setTimeout(obs_broadcast, 200, 'playsound', 'low')
     // mute instr
 }
+// Come back from a break.  Countdown to 3 and resume.
 async function quickBack(event, round=0) {
     // TODO: play jingle if requested
     // Count down to going online
@@ -339,9 +342,9 @@ async function quickBack(event, round=0) {
     // Unmute audios (instructor, and brcd if it's checked)
     await obs_broadcast('playsound', 'high')
     await obs_set_mute(CONFIG.AUDIO_INPUT, false)
-    if (document.querySelector('.quick-back-audio').checked) {
+    if (document.querySelector('.quick-back-audio-brcd').checked) {
         await obs_set_mute(CONFIG.AUDIO_INPUT_BRCD, false)
-        document.querySelector('.quick-back-audio').checked = false
+        document.querySelector('.quick-back-audio-brcd').checked = false
     }
     // Find and change to our scene
     to_scene = document.querySelector('.quick-back-scene').value
@@ -357,25 +360,6 @@ function init_quick(obs) {
     // Quick back button clicking
     forEach('.quick-back', button => {
         button.addEventListener('click', quickBack)
-    })
-    // Quick back scene selection syncing
-    forEach('.quick-back-scene', select => {
-        obs_watch_init('quickback-quickback-a-value', newvalue => {
-            select.value = newvalue
-        })
-        select.addEventListener('input', event => {
-            obs_set('quickback-quickback-a-value', event.target.value)
-        })
-    })
-    // Quick back broadcaster audio syncing
-    forEach('.quick-back-audio', checkbox => {
-        obs_watch_init('checkbutton-quick_brcd-value', newvalue => {
-            checkbox.checked = newvalue
-        })
-        checkbox.addEventListener('click', event => {
-            obs_set('checkbutton-quick_brcd-value', event.target.checked)
-        })
-
     })
     quickUpdate()
 

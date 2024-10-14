@@ -1,4 +1,4 @@
-OBS_DEBUG = true;
+OBS_DEBUG = false;
 
 //
 // Basic utility functions
@@ -94,11 +94,12 @@ function scene_to_name(scene) {
 }
 // Convert a scene's human name to its stable ID
 function name_to_scene(name) {
-    if (scene == '-') return '-'
+    if (name == '-') return '-'
     if (name in CONFIG.SCENES_REVERSE) {
         return CONFIG.SCENES_REVERSE[name]
     }
     for (label of document.querySelectorAll('.preset-label')) {
+        console.log(label, label.textContent)
         if (label.textContent == name) {
             return label.id
         }
@@ -106,14 +107,54 @@ function name_to_scene(name) {
     return name
 }
 async function switch_to(scene) {
+    console.log("switch_to: (raw)", scene)
     scene = name_to_scene(scene)
+    console.log("switch_to:", scene)
     // It's a normal scene
     if (scene in CONFIG.SCENES) {
         await obs_set('scene', scene)
         return
     }
     // It's a preset
-    await presetClick(scene)
+    await presetSwitch(scene)
+}
+
+
+
+//
+// Synced Buttons
+//
+
+async function init_sync_checkboxes(obs) {
+    forEach('input[type="checkbox"].synced', async checkbox => {
+        await obs_watch_init(checkbox.attributes.syncwith.value, newvalue => {
+            checkbox.checked = newvalue
+        })
+        await checkbox.addEventListener('click', event => {
+            obs_set(checkbox.attributes.syncwith.value, event.target.checked)
+        })
+    })
+}
+
+async function init_sync_selects(obs) {
+    forEach('select.synced', async select => {
+        await obs_watch_init(select.attributes.syncwith.value, newvalue => {
+            select.value = newvalue
+        })
+        await select.addEventListener('input', event => {
+            obs_set(select.attributes.syncwith.value, event.target.value)
+        })
+    })
+}
+
+
+async function init_sync_textcontent(obs) {
+    forEach('span.synced, button.synced', async span => {
+        await obs_watch_init(span.attributes.syncwith.value, newvalue => {
+            span.textContent = newvalue
+        })
+    })
+
 }
 
 
