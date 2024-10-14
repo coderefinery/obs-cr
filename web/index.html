@@ -38,24 +38,21 @@
     Reload the page when done.</div>
 
     <div class="status">Status is updated here</div>
-    <table border="1" style="display:inline-table">
-        <tr><td class="live" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</td>
-            <!--<td class="live-mic">Caution</td>--></tr>
-    </table>
     <span class="synced" syncwith="scene">Scene</span>
     <span class="synced" syncwith="ss_resolution">Resolution</span>
 
 
     <table border="1">
       <tr><th>Indicators:</th>
-          <td class="indicator indicator-warning" title="Generalized 'something urgent has come up'">Warn</td>
-          <td class="indicator indicator-caution" title="Generalized 'something to look at' has come up">Caution</td>
-          <td class="indicator indicator-time" title="Take a look at the clock">Time</td>
-          <td class="indicator indicator-notes" title="Check the notes: something has come up">Notes</td>
-          <td class="indicator indicator-question" title="Your co-teacher has a question">Question</td>
-          <td class="indicator indicator-chat" title="Check the Zulip chat: something has come up">Chat</td>
-          <td class="indicator indicator-slower" title="Try to speak at a slower pace">Slower</td>
-          <td class="indicator indicator-faster" title="Try to speak at a faster pace">Faster</td></tr>
+          <td class="live" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</td>
+          <td><button class="indicator indicator-warning" title="Generalized 'something urgent has come up'">Warn</button></td>
+          <td><button class="indicator indicator-caution" title="Generalized 'something to look at' has come up">Caution</button></td>
+          <td><button class="indicator indicator-time" title="Take a look at the clock">Time</button></td>
+          <td><button class="indicator indicator-notes" title="Check the notes: something has come up">Notes</button></td>
+          <td><button class="indicator indicator-question" title="Your co-teacher has a question">Question</button></td>
+          <td><button class="indicator indicator-chat" title="Check the Zulip chat: something has come up">Chat</button></td>
+          <td><button class="indicator indicator-slower" title="Try to speak at a slower pace">Slower</button></td>
+          <td><button class="indicator indicator-faster" title="Try to speak at a faster pace">Faster</button></td></tr>
     </table>
 
     <table border="1">
@@ -73,14 +70,14 @@
     <table border="1">
         <tr>
             <th>Scene selection</th>
-            <td class="scene" id="Title" livecolor="orange">Title</td>
-            <td class="scene" id="Gallery">Gallery</td>
-            <td class="scene" id="Screenshare">SS Portrait</td>
-            <td class="scene" id="ScreenshareCrop">SS Crop</td>
-            <td class="scene" id="ScreenshareLandscape">SS Landscape</td>
-            <td class="scene" id="BroadcasterScreen">BrdScr</td>
-            <td class="scene" id="Notes" livecolor="orange">Notes</td>
-            <td class="scene" id="Empty" livecolor="orange">Empty</td>
+            <td><button class="scene" id="Title" livecolor="orange">Title</button></td>
+            <td><button class="scene" id="Gallery">Gallery</button></td>
+            <td><button class="scene" id="Screenshare">SS Portrait</button></td>
+            <td><button class="scene" id="ScreenshareCrop">SS Crop</button></td>
+            <td><button class="scene" id="ScreenshareLandscape">SS Landscape</button></td>
+            <td><button class="scene" id="BroadcasterScreen">BrdScr</button></td>
+            <td><button class="scene" id="Notes" livecolor="orange">Notes</button></td>
+            <td><button class="scene" id="Empty" livecolor="orange">Empty</button></td>
         </tr>
     </table>
 
@@ -126,8 +123,8 @@
     <table border="1">
         <tr>
             <th>Audio:</th>
-            <td class="mute" id="BroadcasterMic">Brcd</td>
-            <td class="mute" id="Instructors">Instr</td>
+            <td><button class="mute" id="BroadcasterMic">Brcd</button></td>
+            <td><button class="mute" id="Instructors">Instr</button></td>
             <td><input class="volume" id="Instructors" type="range" min="-2" max="0" step="0.05"></td>
             <td><span class="volume-dB" id="Instructors"></span></td>
         </tr>
@@ -140,11 +137,11 @@
         </tr>
         <tr>
             <th>Gallery crop:</th>
-            <td class="gallerycrop" id="n0">None</td>
-            <td class="gallerycrop" id="n1">n=1</td>
-            <td class="gallerycrop" id="n2">n=2</td>
-            <td class="gallerycrop" id="n3">n=3-4</td>
-            <td class="gallerycrop" id="n5">n=5-6</td>
+            <td><button class="gallerycrop" id="n0">None</button></td>
+            <td><button class="gallerycrop" id="n1">n=1</button></td>
+            <td><button class="gallerycrop" id="n2">n=2</button></td>
+            <td><button class="gallerycrop" id="n3">n=3-4</button></td>
+            <td><button class="gallerycrop" id="n5">n=5-6</button></td>
         </tr>
     </table>
 
