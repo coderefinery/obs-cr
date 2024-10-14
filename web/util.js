@@ -86,7 +86,7 @@ function scene_to_name(scene) {
         return CONFIG.SCENES[scene].name
     }
     // Human names of named presets
-    label = document.querySelector(`.preset-label#${scene}`)
+    label = document.querySelector(`.preset-label[id="${scene}"]`)
     if (label) {
         return label.textContent
     }
@@ -94,13 +94,13 @@ function scene_to_name(scene) {
 }
 // Convert a scene's human name to its stable ID
 function name_to_scene(name) {
-    if (name == '-') return '-'
+    if (name == '-' || !name) return '-'
     if (name in CONFIG.SCENES_REVERSE) {
         return CONFIG.SCENES_REVERSE[name]
     }
     for (label of document.querySelectorAll('.preset-label')) {
-        console.log(label, label.textContent)
-        if (label.textContent == name) {
+        //console.log(label.id, label.textContent)
+        if (label.value == name) {
             return label.id
         }
     }
@@ -128,9 +128,10 @@ async function switch_to(scene) {
 async function init_sync_checkboxes(obs) {
     forEach('input[type="checkbox"].synced', async checkbox => {
         await obs_watch_init(checkbox.attributes.syncwith.value, newvalue => {
-            checkbox.checked = newvalue
+            if (newvalue !== null)
+                checkbox.checked = newvalue
         })
-        await checkbox.addEventListener('click', event => {
+        checkbox.addEventListener('click', event => {
             obs_set(checkbox.attributes.syncwith.value, event.target.checked)
         })
     })
@@ -139,19 +140,31 @@ async function init_sync_checkboxes(obs) {
 async function init_sync_selects(obs) {
     forEach('select.synced', async select => {
         await obs_watch_init(select.attributes.syncwith.value, newvalue => {
-            select.value = newvalue
+            if (newvalue !== null)
+                select.value = newvalue
         })
-        await select.addEventListener('input', event => {
+        select.addEventListener('input', event => {
             obs_set(select.attributes.syncwith.value, event.target.value)
         })
     })
 }
 
-
 async function init_sync_textcontent(obs) {
     forEach('span.synced, button.synced', async span => {
         await obs_watch_init(span.attributes.syncwith.value, newvalue => {
-            span.textContent = newvalue
+            if (newvalue !== null)
+                span.textContent = newvalue
+        })
+    })
+}
+async function init_sync_input(obs) {
+    forEach('input.synced[type="text"]', async input => {
+        await obs_watch_init(input.attributes.syncwith.value, newvalue => {
+            if (newvalue !== null)
+                input.value = newvalue
+        })
+        input.addEventListener('change', event => {
+            obs_set(input.attributes.syncwith.value, event.target.value)
         })
     })
 
@@ -295,16 +308,18 @@ async function obs_set_gallerysize(_, state) {
         //console.log(transform)
         //console.log(GALLERYSIZE_LASTTRIGGER[0], calltime, GALLERYSIZE_LASTTRIGGER[0] > calltime)
         if (GALLERYSIZE_LASTTRIGGER[0] > calltime) {
-            console.log("Aborting gallery update, new one started")
+            //console.log("Aborting gallery update, new one started")
             return;
         }
         await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
     }
     if (GALLERYSIZE_LASTTRIGGER[0] > calltime) {
-        console.log("Aborting gallery update, new one started")
+        //console.log("Aborting gallery update, new one started")
         return;
     }
-    _obs_set("gallerysize", state)
+    // Don't use the gallerysize setter.  It can lead to race conditions and
+    // lose all the settings. We poll instead.
+    //_obs_set("gallerysize", state)
 }
 async function obs_get_gallerysize(_) {
     let ret = await obs.call("GetSceneItemId", {sceneName: NOTES, sourceName: GALLERY});

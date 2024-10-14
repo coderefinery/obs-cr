@@ -154,23 +154,33 @@ function init_volume(obs) {
 //
 // Gallery crop
 //
-function init_gallery(obs) {
-    obs_watch_init("gallerysize", state => {
-        forEach('.gallerysize', x => {
-            x.value = state;
-            x.parentElement.style.backgroundColor = (state > 0) ? "red" : "";
-            liveUpdate('gallery-size', state)
-        })
-        forEach('.gallerysize-state', x => {
-                x.textContent = `${state.toFixed(2)}`;
-        })
+async function updateGallerySize() {
+    gallerysize = await obs_get('gallerysize')
+    forEach('.gallerysize', slider => {
+        slider.value = gallerysize;
+        slider.parentElement.style.backgroundColor = (gallerysize > 0) ? "red" : "";
+        liveUpdate('gallery-size', gallerysize)
     })
+
+}
+function init_gallery(obs) {
+    // obs_watch_init("gallerysize", state => {
+    //     forEach('.gallerysize', x => {
+    //         x.value = state;
+    //         x.parentElement.style.backgroundColor = (state > 0) ? "red" : "";
+    //         liveUpdate('gallery-size', state)
+    //     })
+    //     forEach('.gallerysize-state', x => {
+    //             x.textContent = `${state.toFixed(2)}`;
+    //     })
+    // })
     forEach('.gallerysize', slider => {
         slider.addEventListener('input', event => {
-            console.log("E", event.target.value)
+            //console.log("E", event.target.value)
             obs_set("gallerysize", Number(event.target.value))
         })
     })
+    setInterval(updateGallerySize, 1000)
 
     forEach('.gallerycrop', cell => {
         cell.addEventListener('click', event => {
@@ -240,7 +250,7 @@ async function init_preset(obs) {
     }
 
     // Preset label clicks
-    forEach('.preset-label', button => {
+    forEach('button.preset-label, button.preset-go', button => {
         button.addEventListener('click', event => {
             switch_to(event.target.id)
         })
@@ -251,7 +261,7 @@ async function init_preset(obs) {
         // Set sbox choices
         ["-", ...SCENES].forEach(scene => {
             opt = document.createElement('option')
-            opt.text = scene
+            opt.text = scene_to_name(scene)
             opt.value = scene
             select.options.add(opt)
         })
@@ -288,7 +298,7 @@ function quickUpdate() {
     // Note that preset-labels may not be defined yet.  This will
     // be updated later once presets are loaded
     forEach('.preset-label', x => {
-        ScenesAndPresets.add(x.textContent)
+        ScenesAndPresets.add(x.value)
     });
     // Regular scenes
     for (scene of ['-', ...SCENES]) {
@@ -299,7 +309,7 @@ function quickUpdate() {
 
     options = ScenesAndPresets.map(scene => {
         opt = document.createElement('option')
-        opt.text = scene
+        opt.text = scene_to_name(scene)
         opt.value = scene
         return opt
     })
@@ -362,5 +372,4 @@ function init_quick(obs) {
         button.addEventListener('click', quickBack)
     })
     quickUpdate()
-
 }
