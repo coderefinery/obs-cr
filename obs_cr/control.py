@@ -732,6 +732,7 @@ def gallery_crop(n):
             transform['crop'+k.title()] = v
         #print('====new:', transform)
         obsreq.set_scene_item_transform(scene, id_, transform)
+    obs['gallerycrop'] = n or 0
 
 # Playback
 class PlaybackTimer(Helper, ttk.Label):
