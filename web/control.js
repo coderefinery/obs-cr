@@ -205,11 +205,21 @@ function init_gallery(obs) {
 //
 // Scene presets
 //
-async function presetSwitch(preset) {
+async function presetSwitch(preset, round=0) {
+    console.log('presetSwitch', preset, round)
     scene = document.querySelector(`.preset-sbox#${preset}`).value
-    resolution = document.querySelector(`.preset-rbox#${preset}`).value
-    if (resolution != '-')
-       await obs_set('ss_resolution', resolution)
+    if (round==0) {
+        old_scene = await obs_get['scene']
+        resolution = document.querySelector(`.preset-rbox#${preset}`).value
+        if (resolution != '-')
+            await obs_set('ss_resolution', resolution)
+            if (!CONFIG.SCENES_REMOTE.includes(old_scene) && CONFIG.SCENES_REMOTE.includes(scene)) {
+                // TODO: wait 0.1 second if old scene is not same as
+                // current scene.  This gives it time to change resolution before changing.
+                setTimeout(presetSwitch, 0.1*1000, preset, 1)
+                return
+            }
+    }
     await obs_set('scene', scene)
     //console.log("Click preset", preset, scene)
 }

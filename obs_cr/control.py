@@ -330,6 +330,7 @@ def label_to_scene(name):
     return SCENE_NAMES_REVERSELOOKUP.get(name, name)
 
 def set_resolution(w, h):
+    """Do the actual resolution switching"""
     if not cli_args.broadcaster:
         return
     if not cli_args.resolution_command:
@@ -343,7 +344,19 @@ def set_resolution(w, h):
     if not 200 < h < 3000:
         raise ValueError(f"invalid height: {h!r}")
     cmd = cmd.replace('WIDTH', str(w)).replace('HEIGHT', str(h))
+    print(f"Change resolution to {w}x{h}")
     subprocess.call(cmd, shell=True)
+
+
+def change_resolution(resolution):
+    """Watching function to wait for resolutoin switching signals"""
+    w, h = resolution.split('x')
+    if w.isdigit and h.isdigit():
+        w = int(w)
+        h = int(h)
+        set_resolution(w, h)
+    else:
+        LOG.warning("Invalid resolution: %s", resolution)
 
 
 def switch(name):
@@ -394,7 +407,6 @@ def play(name):
     #snd = simpleaudio.WaveObject.from_wave_file(str(path))
     if not muted:
         SOUNDFILES[soundfile].play()
-
 
 
 
@@ -905,17 +917,12 @@ class Preset():
         scene_name = label_to_scene(self.sbox_value.get())
         resolution = self.rbox_value.get()
         print(f'Setting to preset {self.label!r} ({scene_name!r} at {resolution!r})')
-        w, h = resolution.split('x')
-        if w.isdigit and h.isdigit():
-            w = int(w)
-            h = int(h)
-            set_resolution(w, h)
-            obs.ss_resolution = resolution
-            if old_scene_name not in SCENES_REMOTE and scene_name in SCENES_REMOTE:
-                # We can't wait in this thread since the resolution callback
-                # needs to run in the meantime while waiting.
-                self.button.after(int(0.1*1000), self._switch_to_callback, scene_name)
-                return
+        obs.ss_resolution = resolution
+        if old_scene_name not in SCENES_REMOTE and scene_name in SCENES_REMOTE:
+            # We can't wait in this thread since the resolution callback
+            # needs to run in the meantime while waiting.
+            self.button.after(int(0.1*1000), self._switch_to_callback, scene_name)
+            return
         self._switch_to_callback(scene_name)
     def _switch_to_callback(self, scene_name):
         """Callback of _switch_to, see comment there for why this is needed"""
@@ -1339,6 +1346,9 @@ def main():
     if cli_args.notes_window:
         obs._watch('notes_scroll', notes_scroll)
     obs._watch('playsound', play)
+
+    if cli_args.broadcaster:
+        obs._watch('ss_resolution', change_resolution)
 
     # begin
     print('starting...')
