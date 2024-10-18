@@ -383,3 +383,15 @@ function init_quick(obs) {
     })
     quickUpdate()
 }
+
+
+//
+// Scrolling notes
+//
+function init_scrollnotes(obs) {
+    forEach('.scrollnotes.up',   button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "Up"))})
+    forEach('.scrollnotes.down', button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "Down"))})
+    forEach('.scrollnotes.pgup', button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "Prior"))})
+    forEach('.scrollnotes.pgdn', button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "Next"))})
+    forEach('.scrollnotes.end',  button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "End"))})
+}
