@@ -289,6 +289,20 @@ async function obs_get_volume(name) {
     return ret.inputVolumeDb;
 }
 
+
+// File playback
+async function obs_playfile(filename) {
+    await obs.call("SetInputSettings", {
+        inputName: CONFIG.PLAYBACK_INPUT,
+        inputSettings: {'local_file': filename},
+        overlay: true})
+}
+async function obs_playfile_stop() {
+    await obs.call("TriggerMediaInputAction", {inputName: CONFIG.PLAYBACK_INPUT,
+                                               mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP'})
+}
+
+
 // Gallery size
 GALLERYSIZE_LASTTRIGGER = [0];
 async function obs_set_gallerysize(_, state) {

@@ -144,6 +144,15 @@
             <td><button class="gallerycrop" id="n5">n=5-6</button></td>
         </tr>
     </table>
+    <table border="1">
+        <tr>
+            <th>Jingle:</th>
+            <td class="playfile timer" title="Timer for ongoing playback">-</td>
+            <td><button class="playfile short">short</button></td>
+            <td><button class="playfile long" >long</button></td>
+            <td><button class="playfile stop" >StopPlay</button></td>
+        </tr>
+    </table>
     <table border="p">
         <tr>
             <th>Notes scroll:</th>
@@ -250,6 +259,7 @@
             init_preset(obs)
             init_quick(obs)
             init_scrollnotes(obs)
+            init_playfile(obs)
 
             // Poll to keep the connection alive
             setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},

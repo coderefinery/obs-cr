@@ -395,3 +395,56 @@ function init_scrollnotes(obs) {
     forEach('.scrollnotes.pgdn', button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "Next"))})
     forEach('.scrollnotes.end',  button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "End"))})
 }
+
+
+
+//
+// Playing sound
+//
+async function playfileTimerUpdate(data=undefined) {
+    ret = await obs.call("GetMediaInputStatus", {inputName: CONFIG.PLAYBACK_INPUT})
+    state = ret.mediaState // 'OBS_MEDIA_STATE_PAUSED', 'OBS_MEDIA_STATE_PLAYING'
+    if (['OBS_MEDIA_STATE_OPENING', 'OBS_MEDIA_STATE_BUFFERING', 'OBS_MEDIA_STATE_PAUSED'].includes(state)) {
+        setTimeout(playfileTimerUpdate, 500)
+        return
+    } else if (state != "OBS_MEDIA_STATE_PLAYING") {
+        forEach('.playfile.timer', cell => {
+            cell.textContent = '-'
+            cell.style.backgroundColor = ''
+        })
+        return
+    }
+    duration = Math.floor(ret.mediaDuration / 1000)
+    cursor = Math.floor(ret.mediaCursor / 1000)
+    if (duration < 0) {
+        setTimeout(playfileTimerUpdate, 500)
+    }
+    function s_to_mmss(s) {
+        return `${Math.floor(s/60)}:${String(s%60).padStart(2, '0')}`
+    }
+    forEach('.playfile.timer', cell => {
+        cell.textContent = `${s_to_mmss(cursor)}/${s_to_mmss(duration)}`
+        cell.style.backgroundColor = 'orange'
+    })
+    setTimeout(playfileTimerUpdate, 500)
+}
+async function init_playfile(obs) {
+    for (let fileinfo of CONFIG.PLAYBACK_FILES) {
+        forEach(`.playfile.${fileinfo.label}`, button =>{
+            button.addEventListener('click', event => {
+                console.log("Trigger playback", fileinfo)
+                obs_playfile(fileinfo.filename)
+            })
+            button.title = fileinfo.tooltip
+        })
+    }
+
+    forEach('.playfile.stop', button => {
+        button.addEventListener('click', event => {
+            obs_playfile_stop()
+        })
+    })
+
+    await obs.on('MediaInputPlaybackStarted', playfileTimerUpdate)
+    playfileTimerUpdate() // Run once to init - returns if not playing
+}

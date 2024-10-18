@@ -1,6 +1,5 @@
 AUDIO_INPUT: Instructors
 AUDIO_INPUT_BRCD: BroadcasterMic
-PLAYBACK_INPUT:  CRaudio
 NOTES: Notes
 GALLERY: ZoomGalleryCapture
 
@@ -34,6 +33,17 @@ SCENES:
 
 # Scenes which have a remote screenshare from Zoom
 SCENES_REMOTE: ["Screenshare", "ScreenshareCrop", "ScreenshareLandscape"]
+
+PLAYBACK_INPUT: CRaudio
+PLAYBACK_FILES:
+    - filename: '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_sound_short.mp3'
+      label: short
+      tooltip: 'Short audio for coming back from breaks, 0:03 duration'
+    - filename: '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_Jingle_long.mp3'
+      label: long
+      tooltip: 'Long theme song for starting/ending day, 1:23 duration'
+
+
 
 GALLERY_CROP_FACTORS:
     0:    {'cropTop':  0, 'cropBottom':  0, 'cropLeft':  0, 'cropRight':  0, }
