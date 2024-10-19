@@ -48,14 +48,14 @@ SOUNDS:
     alert-medium: '440.wav'
     alert-low: '261.wav'
 INDICATORS:
-    indicator-warning: 'red'
-    indicator-caution: 'yellow'
-    indicator-time: 'yellow'
-    indicator-notes: 'cyan'
-    indicator-question: 'cyan'
-    indicator-chat: 'cyan'
-    indicator-slower: 'yellow'
-    indicator-faster: 'yellow'
+    warning:  {color: 'red',    sound: 'alert-high',   tooltip: "Generalized 'something urgent has come up'.  Focus on figuring out what that is."}
+    caution:  {color: 'yellow', sound: 'alert-medium', tooltip: "Generalized 'something to look at' has come up.  Look when you have time."}
+    time:     {color: 'yellow', sound: 'alert-medium', tooltip: "Take a look at the clock."}
+    notes:    {color: 'cyan',   sound: 'alert-low',    tooltip: "Check the notes: something has come up."}
+    question: {color: 'cyan',   sound: 'alert-low',    tooltip: "Your co-teacher has a question.  Give them time to speak or ask their thoughts."}
+    chat:     {color: 'cyan',   sound: 'alert-low',    tooltip: "Check the Zulip chat: something has come up"}
+    slower:   {color: 'yellow', sound: 'alert-medium', tooltip: "Try to speak at a slower pace"}
+    faster:   {color: 'yellow', sound: 'alert-medium', tooltip: "Try to speak at a faster pace"}
 
 
 PLAYBACK_INPUT: CRaudio

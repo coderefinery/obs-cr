@@ -88,28 +88,27 @@ function init_live(obs) {
 // Indicators
 //
 function indicatorUpdate(name, state) {
-    cells = document.getElementsByClassName(name);
-    for (c of cells) {
-        c.style.backgroundColor = state ? CONFIG.INDICATORS[name] : '';
-    }
+    forEach(`.indicator#${name}`, cell => {
+        cell.style.backgroundColor = state ? CONFIG.INDICATORS[name]['color'] : '';
+    });
 }
 async function indicatorClick(event) {
     cell = event.target;
-    class_ = cell.classList[cell.classList.length-1];
-    console.log('a', "Click on", cell, class_, "newstate=", !cell.style.backgroundColor);
+    id = cell.id;
+    console.log('a', "Click on", cell, id, "newstate=", !cell.style.backgroundColor);
     new_state = !cell.style.backgroundColor
-    await obs_set(class_, new_state);
+    await obs_set('indicator-'+id, new_state);
     if (new_state) {
-        if (CONFIG.INDICATORS[class_] === 'red')    {await obs_broadcast('playsound', 'alert-high')};
-        if (CONFIG.INDICATORS[class_] === 'yellow') {await obs_broadcast('playsound', 'alert-medium')};
-        if (CONFIG.INDICATORS[class_] === 'cyan')   {await obs_broadcast('playsound', 'alert-low')};
+        await obs_broadcast('playsound', CONFIG.INDICATORS[id]['sound'])
     }
 }
 async function init_indicators() {
     await forEachAsync('.indicator', async cell => {
-        let class_ = cell.classList[cell.classList.length-1];
+        let id = cell.id;
         cell.addEventListener('click', indicatorClick);
-        await obs_watch_init(class_, function(state) {indicatorUpdate(class_, state);});
+        await obs_watch_init('indicator-'+id, state => {
+            indicatorUpdate(id, state);
+        });
         }
     );
     obs_watch('playsound', soundEvent);
@@ -137,6 +136,7 @@ async function init_scene(obs) {
     await obs_watch_init("scene", sceneUpdate)
     forEach('.scene', x => {
         x.addEventListener('click', sceneClick);
+        x.title = CONFIG.SCENES[x.id].description
     })
 }
 
