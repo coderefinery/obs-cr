@@ -1,6 +1,38 @@
 // Functions for control panel.
 
 //
+// Primary initialization setup
+//
+INIT_FUNCTIONS = [
+    load_config,
+    init_rellinks,
+    init_soundfiles,
+    obs_init,
+    _obs_init_watchers,
+    init_misc,
+    init_sync_checkboxes,
+    init_sync_selects,
+    init_sync_textcontent,
+    init_sync_input,
+    init_live,
+    init_indicators,
+    init_scene,
+    init_mute,
+    init_volume,
+    init_gallery,
+    init_preset,
+    init_quick,
+    init_scrollnotes,
+    init_playfile,
+]
+// Run all initialization in sequence (one after another - no parallel)
+async function init_all() {
+    for (func of INIT_FUNCTIONS) {
+        await func()
+    }
+}
+
+//
 // Misc elements
 //
 function updateTime() {
