@@ -60,12 +60,12 @@ INDICATORS:
 
 PLAYBACK_INPUT: CRaudio
 PLAYBACK_FILES:
-    - filename: '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_sound_short.mp3'
-      label: short
-      tooltip: 'Short audio for coming back from breaks, 0:03 duration'
-    - filename: '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_Jingle_long.mp3'
-      label: long
-      tooltip: 'Long theme song for starting/ending day, 1:23 duration'
+    short:
+        filename: '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_sound_short.mp3'
+        tooltip: 'Short audio for coming back from breaks, 0:03 duration'
+    long:
+        filename: '/home/rkdarst/git/coderefinery-artwork/audiologo/CR_LOGO_Jingle_long.mp3'
+        tooltip: 'Long theme song for starting/ending day, 1:23 duration'
 
 
 

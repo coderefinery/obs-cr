@@ -410,6 +410,11 @@ async function quickBreak(event) {
 async function quickBack(event, round=0) {
     // TODO: play jingle if requested
     // Count down to going online
+    if (round == 0) {
+        if (document.querySelector('.quick-back-jingle').checked) {
+            obs_playfile(CONFIG.PLAYBACK_FILES['short']['filename'])
+        }
+    }
     if (round < 3) {
         obs_broadcast('playsound', 'low')  // don't await to keep time
         setTimeout(quickBack, 1000, event, round+1)
@@ -492,13 +497,15 @@ async function playfileTimerUpdate(data=undefined) {
     setTimeout(playfileTimerUpdate, 500)
 }
 async function init_playfile() {
-    for (let fileinfo of CONFIG.PLAYBACK_FILES) {
-        forEach(`.playfile.${fileinfo.label}`, button => {
+    for (let label in CONFIG.PLAYBACK_FILES) {
+        let filename = CONFIG.PLAYBACK_FILES[label]['filename']
+        let tooltip = CONFIG.PLAYBACK_FILES[label]['tooltip']
+        forEach(`.playfile.${label}`, button => {
             button.addEventListener('click', async event => {
-                console.log("Trigger playback", fileinfo)
-                await obs_playfile(fileinfo.filename)
+                console.log("Trigger playback", label)
+                await obs_playfile(filename)
             })
-            button.title = fileinfo.tooltip
+            button.title = tooltip
         })
     }
 
