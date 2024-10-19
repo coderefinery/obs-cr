@@ -8,14 +8,20 @@ OBS_DEBUG = false;
 // the anonymous function on all of them.  Used for updating all
 // elements of a given class at the same time.
 function forEach(querySelector, func) {
+    let n = 0
     for (let x of document.querySelectorAll(querySelector)) {
         func(x);
+        n += 1
     }
+    return n
 }
 async function forEachAsync(querySelector, func) {
+    let n = 0
     for (let x of document.querySelectorAll(querySelector)) {
         await func(x);
+        n += 1
     }
+    return n
 }
 
 
