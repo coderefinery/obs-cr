@@ -87,16 +87,36 @@ function init_live(obs) {
 //
 // Indicators
 //
-function indicatorUpdate(name, state) {
+function indicatorBlink(name) {
     forEach(`.indicator#${name}`, cell => {
-        cell.style.backgroundColor = state ? CONFIG.INDICATORS[name]['color'] : '';
+        // Disable it
+        if (!cell.state) {
+            cell.style.backgroundColor = ''
+            return
+        }
+        cell.style.backgroundColor = !cell.style.backgroundColor ? CONFIG.INDICATORS[name]['color'] : '';
+    })
+    console.log("setting timeout")
+    // Get one cell to see if if timer needs to continue
+    if (!document.querySelector(`.indicator#${name}`).state) {
+        return
+    }
+    setTimeout(indicatorBlink, CONFIG.INDICATORS[id]['blink'], id)
+}
+function indicatorUpdate(id, state) {
+    forEach(`.indicator#${id}`, cell => {
+        cell.state = state
+        cell.style.backgroundColor = state ? CONFIG.INDICATORS[id]['color'] : '';
+        if (state && CONFIG.INDICATORS[id]['blink']) {
+            setTimeout(indicatorBlink, CONFIG.INDICATORS[id]['blink'], id)
+        }
     });
 }
 async function indicatorClick(event) {
     cell = event.target;
     id = cell.id;
-    console.log('a', "Click on", cell, id, "newstate=", !cell.style.backgroundColor);
-    new_state = !cell.style.backgroundColor
+    console.log('a', "Click on", cell, id, "newstate=", !cell.state);
+    new_state = !cell.state
     await obs_set('indicator-'+id, new_state);
     if (new_state) {
         await obs_broadcast('playsound', CONFIG.INDICATORS[id]['sound'])

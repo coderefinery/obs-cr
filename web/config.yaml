@@ -48,7 +48,7 @@ SOUNDS:
     alert-medium: '440.wav'
     alert-low: '261.wav'
 INDICATORS:
-    warning:  {color: 'red',    sound: 'alert-high',   tooltip: "Generalized 'something urgent has come up'.  Focus on figuring out what that is."}
+    warning:  {color: 'red',    sound: 'alert-high',   tooltip: "Generalized 'something urgent has come up'.  Focus on figuring out what that is.", blink: 500}
     caution:  {color: 'yellow', sound: 'alert-medium', tooltip: "Generalized 'something to look at' has come up.  Look when you have time."}
     time:     {color: 'yellow', sound: 'alert-medium', tooltip: "Take a look at the clock."}
     notes:    {color: 'cyan',   sound: 'alert-low',    tooltip: "Check the notes: something has come up."}
