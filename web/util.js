@@ -8,10 +8,16 @@ OBS_DEBUG = false;
 // the anonymous function on all of them.  Used for updating all
 // elements of a given class at the same time.
 function forEach(querySelector, func) {
-    return document.querySelectorAll(querySelector).forEach(x => {
+    for (let x of document.querySelectorAll(querySelector)) {
         func(x);
-    })
+    }
 }
+async function forEachAsync(querySelector, func) {
+    for (let x of document.querySelectorAll(querySelector)) {
+        await func(x);
+    }
+}
+
 
 // If this is SSL, show the warning
 if (window.location.protocol === 'https:') {
@@ -88,7 +94,7 @@ function scene_to_name(scene) {
     // Human names of named presets
     label = document.querySelector(`.preset-label[id="${scene}"]`)
     if (label) {
-        return label.textContent
+        return label.value
     }
     return scene
 }
@@ -125,46 +131,46 @@ async function switch_to(scene) {
 // Synced Buttons
 //
 
-async function init_sync_checkboxes(obs) {
-    forEach('input[type="checkbox"].synced', async checkbox => {
+async function init_sync_checkboxes() {
+    await forEachAsync('input[type="checkbox"].synced', async checkbox => {
         await obs_watch_init(checkbox.attributes.syncwith.value, newvalue => {
-            if (newvalue !== null)
+            if (newvalue != null)
                 checkbox.checked = newvalue
         })
-        checkbox.addEventListener('click', event => {
-            obs_set(checkbox.attributes.syncwith.value, event.target.checked)
+        checkbox.addEventListener('click', async event => {
+            await obs_set(checkbox.attributes.syncwith.value, event.target.checked)
         })
     })
 }
 
-async function init_sync_selects(obs) {
-    forEach('select.synced', async select => {
+async function init_sync_selects() {
+    await forEachAsync('select.synced', async select => {
         await obs_watch_init(select.attributes.syncwith.value, newvalue => {
-            if (newvalue !== null)
+            if (newvalue != null)
                 select.value = newvalue
-        })
-        select.addEventListener('input', event => {
-            obs_set(select.attributes.syncwith.value, event.target.value)
+            })
+        select.addEventListener('input', async event => {
+            await obs_set(select.attributes.syncwith.value, event.target.value)
         })
     })
 }
 
-async function init_sync_textcontent(obs) {
-    forEach('span.synced, button.synced', async span => {
+async function init_sync_textcontent() {
+    await forEachAsync('span.synced, button.synced', async span => {
         await obs_watch_init(span.attributes.syncwith.value, newvalue => {
-            if (newvalue !== null)
+            if (newvalue != null)
                 span.textContent = newvalue
         })
     })
 }
-async function init_sync_input(obs) {
-    forEach('input.synced[type="text"]', async input => {
+async function init_sync_input() {
+    await forEachAsync('input.synced[type="text"]', async input => {
         await obs_watch_init(input.attributes.syncwith.value, newvalue => {
-            if (newvalue !== null)
+            if (newvalue != null)
                 input.value = newvalue
         })
-        input.addEventListener('change', event => {
-            obs_set(input.attributes.syncwith.value, event.target.value)
+        input.addEventListener('change', async event => {
+            await obs_set(input.attributes.syncwith.value, event.target.value)
         })
     })
 
@@ -176,7 +182,8 @@ async function init_sync_input(obs) {
 // Main OBS relay functions.
 //
 
-// Set a value (and broadcast an event that represents it)
+// Set a value (and broadcast an event that represents it).  Handles
+// special cases
 async function obs_set(name, value) {
     if (window["obs_set_"+name]) {
         if (OBS_DEBUG) {console.debug("obs_set", name, value)}
@@ -184,6 +191,7 @@ async function obs_set(name, value) {
     }
     await _obs_set(name, value);
 };
+// Raw setting: no special cases.
 async function _obs_set(name, value) {
     if (OBS_DEBUG) {console.debug("_obs_set      ", name, value)}
     x = await obs.call("SetPersistentData", {
@@ -234,25 +242,29 @@ function obs_watch(name, callback) {
     WATCHERS[name].push(callback);
 };
 
-// Handler for watching things.
-function _obs_trigger(name, value) {
-    (WATCHERS[name] || []).forEach( x => {
-        x(value)
-    })
+async function obs_force(name) {
+    value = await obs_get(name)
+    await _obs_trigger(name, value)
 }
-function _obs_on_custom_event (data) {
+// Handler for watching things.
+async function _obs_trigger(name, value) {
+    for (x of (WATCHERS[name] || [])) {
+        await x(value)
+    }
+}
+async function _obs_on_custom_event (data) {
     for (name in data) {
         //console.log("C", name, data[name])
-        _obs_trigger(name, data[name])
+        await _obs_trigger(name, data[name])
     }
 };
 
 // Initialize all the different watchers
-function _obs_init_watchers(obs) {
-    obs.on('CustomEvent', _obs_on_custom_event);
-    obs.on('CurrentProgramSceneChanged', event => {_obs_trigger('scene', event.sceneName)});
-    obs.on('InputMuteStateChanged', event =>{_obs_trigger('mute-'+event.inputName, event.inputMuted)});
-    obs.on('InputVolumeChanged', event =>{_obs_trigger('volume-'+event.inputName, event.inputVolumeDb)});
+async function _obs_init_watchers() {
+    await obs.on('CustomEvent', _obs_on_custom_event);
+    await obs.on('CurrentProgramSceneChanged', event => {_obs_trigger('scene', event.sceneName)});
+    await obs.on('InputMuteStateChanged', event =>{_obs_trigger('mute-'+event.inputName, event.inputMuted)});
+    await obs.on('InputVolumeChanged', event =>{_obs_trigger('volume-'+event.inputName, event.inputVolumeDb)});
 }
 
 

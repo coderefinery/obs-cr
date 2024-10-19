@@ -43,27 +43,26 @@ function indicatorUpdate(name, state) {
         c.style.backgroundColor = state ? INDICATORS[name] : '';
     }
 }
-function indicatorClick(event) {
+async function indicatorClick(event) {
     cell = event.target;
     class_ = cell.classList[cell.classList.length-1];
     console.log('a', "Click on", cell, class_, "newstate=", !cell.style.backgroundColor);
     new_state = !cell.style.backgroundColor
-    obs_set(class_, new_state);
+    await obs_set(class_, new_state);
     if (new_state) {
-        if (INDICATORS[class_] === 'red')    {obs_broadcast('playsound', 'alert-high')};
-        if (INDICATORS[class_] === 'yellow') {obs_broadcast('playsound', 'alert-medium')};
-        if (INDICATORS[class_] === 'cyan')   {obs_broadcast('playsound', 'alert-low')};
+        if (INDICATORS[class_] === 'red')    {await obs_broadcast('playsound', 'alert-high')};
+        if (INDICATORS[class_] === 'yellow') {await obs_broadcast('playsound', 'alert-medium')};
+        if (INDICATORS[class_] === 'cyan')   {await obs_broadcast('playsound', 'alert-low')};
     }
 }
-function init_indicators(obs) {
-	cells = document.querySelectorAll('.indicator');
-    cells.forEach(cell => {
+async function init_indicators() {
+    await forEachAsync('.indicator', async cell => {
         let class_ = cell.classList[cell.classList.length-1];
         cell.addEventListener('click', indicatorClick);
-        obs_watch_init(class_, function(state) {indicatorUpdate(class_, state);});
+        await obs_watch_init(class_, function(state) {indicatorUpdate(class_, state);});
         }
     );
-
+    obs_watch('playsound', soundEvent);
 }
 
 //
@@ -71,24 +70,23 @@ function init_indicators(obs) {
 //
 function sceneUpdate(name) {
     //console.log(name)
-    document.querySelectorAll('.scene').forEach(x => {
+    forEach('.scene', x => {
         x.style.backgroundColor = ''
     })
-    document.querySelectorAll(`.scene#${name}`).forEach(x => {
+    forEach(`.scene#${name}`, x => {
         x.style.backgroundColor = x.getAttribute('livecolor') || 'red'
     })
     liveUpdate('scene', SCENES_SAFE.includes(name) ? false : name)
 }
-function sceneClick(event) {
+async function sceneClick(event) {
     cell = event.target;
-    obs_set("scene", cell.id)
+    await obs_set("scene", cell.id)
 }
-function init_scene(obs) {
+async function init_scene(obs) {
     //console.log('init_scene')
-    obs_watch_init("scene", sceneUpdate)
-    document.querySelectorAll('.scene').forEach(x => {
+    await obs_watch_init("scene", sceneUpdate)
+    forEach('.scene', x => {
         x.addEventListener('click', sceneClick);
-        x.switchto = () => {obs_set(x.id)}
     })
 }
 
@@ -97,25 +95,27 @@ function init_scene(obs) {
 // Audio stuff
 //
 function muteUpdate(name, state) {
-    document.querySelectorAll(`.mute#${name}`).forEach(x => {
+    // Update local state to match the remote state
+    forEach(`.mute#${name}`, x => {
         x.style.backgroundColor = state ? '' : 'red';
     })
     liveUpdate('mute-'+name, !state)
 }
-function muteClick(event) {
+async function muteClick(event) {
+    // Trigger local change to OBS/other clients.
     //console.log('muteClick', event, event.target.style.backgroundColor)
-    obs_set_mute(event.target.id, event.target.style.backgroundColor);
+    await obs_set_mute(event.target.id, event.target.style.backgroundColor);
 }
-function init_mute(obs) {
+async function init_mute() {
     allAudioDevs = new Set;
-    document.querySelectorAll('.mute').forEach(x => allAudioDevs.add(x.id));
+    forEach('.mute', x => allAudioDevs.add(x.id));
 
-    allAudioDevs.forEach(x => {
-        obs_get_mute(x).then( state => {muteUpdate(x, state)});
+    for (let x of allAudioDevs) {
+        await obs_get_mute(x).then( state => {muteUpdate(x, state)});
         obs_watch('mute-'+x, state => {muteUpdate(x, state)});
-    })
+    }
 
-    document.querySelectorAll('.mute').forEach(cell => {
+    forEach('.mute', cell => {
         cell.addEventListener('click', muteClick);
     })
 }
@@ -126,26 +126,28 @@ function vol_to_state(dB) {
     return -Math.log10(-(dB-1));
 }
 function volumeUpdate(name, dB) {
-    document.querySelectorAll(`.volume#${name}`).forEach(x => {
+    // Trigger local update to match global state
+    forEach(`.volume#${name}`, x => {
         x.value = vol_to_state(dB);
     })
-    document.querySelectorAll(`.volume-dB#${name}`).forEach(x => {
+    forEach(`.volume-dB#${name}`, x => {
         x.textContent = `${dB.toFixed(1)} dB`
     })
 }
-function volumeClick(event) {
-    obs_set_volume(event.target.id, vol_to_dB(event.target.value))
+async function volumeClick(event) {
+    // Propagate local change to OBS/global clients
+    await obs_set_volume(event.target.id, vol_to_dB(event.target.value))
 }
-function init_volume(obs) {
+async function init_volume() {
     allAudioDevs = new Set;
-    document.querySelectorAll('.volume').forEach(x => allAudioDevs.add(x.id));
+    forEach('.volume', x => allAudioDevs.add(x.id));
 
-    allAudioDevs.forEach(x => {
-        obs_get_volume(x).then( state => {volumeUpdate(x, state)});
+    for (let x of allAudioDevs) {
+        await obs_get_volume(x).then( state => {volumeUpdate(x, state)});
         obs_watch('volume-'+x, state => {volumeUpdate(x, state)});
-    })
+    }
 
-    document.querySelectorAll('.volume').forEach(cell => {
+    forEach('.volume', cell => {
         cell.addEventListener('input', volumeClick);
     })
 }
@@ -163,7 +165,7 @@ async function updateGallerySize() {
     })
 
 }
-function init_gallery(obs) {
+async function init_gallery() {
     // obs_watch_init("gallerysize", state => {
     //     forEach('.gallerysize', x => {
     //         x.value = state;
@@ -175,22 +177,22 @@ function init_gallery(obs) {
     //     })
     // })
     forEach('.gallerysize', slider => {
-        slider.addEventListener('input', event => {
+        slider.addEventListener('input', async event => {
             //console.log("E", event.target.value)
-            obs_set("gallerysize", Number(event.target.value))
+            await obs_set("gallerysize", Number(event.target.value))
         })
     })
     setInterval(updateGallerySize, 1000)
 
     forEach('.gallerycrop', cell => {
-        cell.addEventListener('click', event => {
+        cell.addEventListener('click', async event => {
             // IDs are `n0` with 0 being the size.  0=set null crop.
             // Integers aren't valid IDs thus the `n` prefix.
             let id = event.target.id.slice(1)
-            obs_set('gallerycrop', Number(id))
+            await obs_set('gallerycrop', Number(id))
         })
     })
-    obs_watch_init('gallerycrop', crop => {
+    await obs_watch_init('gallerycrop', crop => {
         forEach(`.gallerycrop`, cell => {
             cell.style.backgroundColor = ''
         })
@@ -207,7 +209,7 @@ function init_gallery(obs) {
 //
 async function presetSwitch(preset, round=0) {
     console.log('presetSwitch', preset, round)
-    scene = document.querySelector(`.preset-sbox#${preset}`).value
+    let scene = document.querySelector(`.preset-sbox#${preset}`).value
     if (round==0) {
         old_scene = await obs_get['scene']
         resolution = document.querySelector(`.preset-rbox#${preset}`).value
@@ -220,6 +222,7 @@ async function presetSwitch(preset, round=0) {
                 return
             }
     }
+    console.warn(preset, scene)
     await obs_set('scene', scene)
     //console.log("Click preset", preset, scene)
 }
@@ -228,10 +231,9 @@ async function presetSwitch(preset, round=0) {
 async function presetUpdate() {
     //console.log('presetUpdate')
     PRESETS = new Set;
-    forEach('.preset-label', x => PRESETS.add(x.id));
-    for (let preset of PRESETS) {
-        await presetUpdateOne(preset)
-    }
+    await forEachAsync('.preset-label', async preset => {
+        await presetUpdateOne(preset.id)
+    });
 }
 async function presetUpdateOne(preset) {
     //console.log('presetUpdate', preset)
@@ -241,15 +243,20 @@ async function presetUpdateOne(preset) {
     current_resolution = await obs_get('ss_resolution')
     state = (current_scene == preset_scene &&
              current_resolution == preset_resolution)
-    //console.log("Update preset state", preset, preset_scene, preset_resolution, state, "detected:", current_scene, current_resolution)
+    //console.log("Update preset state", preset, state, 'setting:', preset_scene, preset_resolution, "detected:", current_scene, current_resolution)
 
     forEach(`.preset-label#${preset}`, label => {
         color = SCENES_SAFE.includes(preset_scene) ? 'orange' : 'red'
         label.style.backgroundColor = state ? color : ''
     })
+    forEach(`.preset-go#${preset}`, button => {
+        console.log(preset_scene, preset_scene == '-')
+        enabled = (preset_scene != '-')// && (preset_resolution != '-')
+        button.disabled = enabled ? false : true
+    })
 }
 
-async function init_preset(obs) {
+async function init_preset() {
     PRESETS = new Set;
     forEach('.preset-label', x => PRESETS.add(x.id));
     //console.log(PRESETS)
@@ -257,17 +264,19 @@ async function init_preset(obs) {
     // Preset labels updates (update the quick action list)
     for (let preset of PRESETS) {
         obs_watch(`preset-${preset}-label`, quickUpdate)
+        // We don't need to watch_init - we do it below.
     }
 
     // Preset label clicks
     forEach('button.preset-label, button.preset-go', button => {
-        button.addEventListener('click', event => {
-            switch_to(event.target.id)
+        button.addEventListener('click', async event => {
+            await switch_to(event.target.id)
+            await presetUpdateOne(event.target.id)
         })
     })
 
     // Preset scene choices
-    forEach(`.preset-sbox`, select => {
+    await forEachAsync(`.preset-sbox`, async select => {
         // Set sbox choices
         ["-", ...SCENES].forEach(scene => {
             opt = document.createElement('option')
@@ -275,11 +284,14 @@ async function init_preset(obs) {
             opt.value = scene
             select.options.add(opt)
         })
+        // We have to re-init here, since the previous init
+        // didn't have the values to select
+        await obs_force(`preset-${select.id}-sbox`)
         obs_watch(`preset-${select.id}-sbox`, _ => {presetUpdate(select.id)})
     })
 
     // Preset resolution choices
-    forEach(`.preset-rbox`, select => {
+    await forEachAsync(`.preset-rbox`, async select => {
         // Set rbox choices
         ["-", ...CONFIG.SCREENSHARE_SIZES].forEach(resolution => {
             opt = document.createElement('option')
@@ -287,11 +299,13 @@ async function init_preset(obs) {
             opt.value = resolution
             select.options.add(opt)
         })
+        await obs_force(`preset-${select.id}-rbox`)
         obs_watch(`preset-${select.id}-rbox`, _ => {presetUpdate(select.id)})
+
     })
 
     //General watchers
-    await obs_watch_init(`scene`, _ => {presetUpdate()})
+    await obs_watch_init(`scene`, async _ => {await presetUpdate()})
     quickUpdate()
 
 }
@@ -301,14 +315,18 @@ async function init_preset(obs) {
 // Quick action functions
 //
 // Update current status of the quick back list
-function quickUpdate() {
+async function quickUpdate() {
     ScenesAndPresets = new Set;
     ScenesAndPresets.add('-')
 
     // Note that preset-labels may not be defined yet.  This will
     // be updated later once presets are loaded
-    forEach('.preset-label', x => {
-        ScenesAndPresets.add(x.value)
+    forEach('.preset-go', x => {
+        console.log(x, x.id, scene_to_name(x.id))
+        if (x.disabled) {
+            return
+        }
+        ScenesAndPresets.add(scene_to_name(x.id))
     });
     // Regular scenes
     for (scene of ['-', ...SCENES]) {
@@ -324,12 +342,13 @@ function quickUpdate() {
         return opt
     })
 
-    forEach('.quick-back-scene', select => {
+    await forEachAsync('.quick-back-scene', async select => {
         // Remove all options
         select.options.length = 0
         for (scene of options) {
             select.options.add(scene)
         }
+        await obs_force(select.attributes.syncwith.value)
     })
 }
 // Go to a break
@@ -350,12 +369,12 @@ async function quickBack(event, round=0) {
     // TODO: play jingle if requested
     // Count down to going online
     if (round < 3) {
-        obs_broadcast('playsound', 'low')
+        obs_broadcast('playsound', 'low')  // don't await to keep time
         setTimeout(quickBack, 1000, event, round+1)
         return
     }
     if (round == 3) {
-        await obs_broadcast('playsound', 'low')
+        await obs_broadcast('playsound', 'low')  // *do* await now to keep time
         setTimeout(quickBack, 200, event, round+1)
         return
     }
@@ -372,7 +391,7 @@ async function quickBack(event, round=0) {
     // Restore the gallery size
     await obs_set('gallerysize', await obs_get('gallery_last_state'))
 }
-function init_quick(obs) {
+async function init_quick() {
     // Quick break button clicking
     forEach('.quick-break', button => {
         button.addEventListener('click', quickBreak)
@@ -388,12 +407,12 @@ function init_quick(obs) {
 //
 // Scrolling notes
 //
-function init_scrollnotes(obs) {
-    forEach('.scrollnotes.up',   button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "Up"))})
-    forEach('.scrollnotes.down', button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "Down"))})
-    forEach('.scrollnotes.pgup', button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "Prior"))})
-    forEach('.scrollnotes.pgdn', button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "Next"))})
-    forEach('.scrollnotes.end',  button => {button.addEventListener('click', x=> obs_broadcast('notes_scroll', "End"))})
+function init_scrollnotes() {
+    forEach('.scrollnotes.up',   button => {button.addEventListener('click', async x=> await obs_broadcast('notes_scroll', "Up"))})
+    forEach('.scrollnotes.down', button => {button.addEventListener('click', async x=> await obs_broadcast('notes_scroll', "Down"))})
+    forEach('.scrollnotes.pgup', button => {button.addEventListener('click', async x=> await obs_broadcast('notes_scroll', "Prior"))})
+    forEach('.scrollnotes.pgdn', button => {button.addEventListener('click', async x=> await obs_broadcast('notes_scroll', "Next"))})
+    forEach('.scrollnotes.end',  button => {button.addEventListener('click', async x=> await obs_broadcast('notes_scroll', "End"))})
 }
 
 
@@ -408,6 +427,7 @@ async function playfileTimerUpdate(data=undefined) {
         setTimeout(playfileTimerUpdate, 500)
         return
     } else if (state != "OBS_MEDIA_STATE_PLAYING") {
+        // Stop condition: no longer playing, reset everything and stop the updater.
         forEach('.playfile.timer', cell => {
             cell.textContent = '-'
             cell.style.backgroundColor = ''
@@ -417,9 +437,10 @@ async function playfileTimerUpdate(data=undefined) {
     duration = Math.floor(ret.mediaDuration / 1000)
     cursor = Math.floor(ret.mediaCursor / 1000)
     if (duration < 0) {
-        setTimeout(playfileTimerUpdate, 500)
+        setTimeout(playfileTimerUpdate, 500) // Wait 0.5s and re-update timer
     }
     function s_to_mmss(s) {
+        // s to mm:ss
         return `${Math.floor(s/60)}:${String(s%60).padStart(2, '0')}`
     }
     forEach('.playfile.timer', cell => {
@@ -428,23 +449,23 @@ async function playfileTimerUpdate(data=undefined) {
     })
     setTimeout(playfileTimerUpdate, 500)
 }
-async function init_playfile(obs) {
+async function init_playfile() {
     for (let fileinfo of CONFIG.PLAYBACK_FILES) {
-        forEach(`.playfile.${fileinfo.label}`, button =>{
-            button.addEventListener('click', event => {
+        forEach(`.playfile.${fileinfo.label}`, button => {
+            button.addEventListener('click', async event => {
                 console.log("Trigger playback", fileinfo)
-                obs_playfile(fileinfo.filename)
+                await obs_playfile(fileinfo.filename)
             })
             button.title = fileinfo.tooltip
         })
     }
 
     forEach('.playfile.stop', button => {
-        button.addEventListener('click', event => {
-            obs_playfile_stop()
+        button.addEventListener('click', async event => {
+            await obs_playfile_stop()
         })
     })
 
     await obs.on('MediaInputPlaybackStarted', playfileTimerUpdate)
-    playfileTimerUpdate() // Run once to init - returns if not playing
+    await playfileTimerUpdate() // Run once to init - returns if not playing
 }
