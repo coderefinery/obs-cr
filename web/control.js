@@ -24,6 +24,7 @@ INIT_FUNCTIONS = [
     init_quick,
     init_scrollnotes,
     init_playfile,
+    init_preview,
 ]
 // Run all initialization in sequence (one after another - no parallel)
 async function init_all() {
@@ -509,4 +510,48 @@ async function init_playfile() {
 
     await obs.on('MediaInputPlaybackStarted', playfileTimerUpdate)
     await playfileTimerUpdate() // Run once to init - returns if not playing
+}
+
+
+//
+// Preview pane
+//
+let PREVIEW_UPDATE_RUNNING = false;
+async function update_preview () {
+    if (PREVIEW_UPDATE_RUNNING) {
+         console.log('aborting, already running');
+         return;
+    }
+    try {
+        PREVIEW_UPDATE_RUNNING = true;
+        res = await obs.call('GetCurrentProgramScene',);
+        //console.log(res)
+        sceneName = res.currentProgramSceneName;
+        ret = await obs.call('GetSourceScreenshot',
+                             {sourceName: sceneName,
+                              imageFormat: "png",
+                              //imageWidth: ,
+                              //imageHeight: ,
+                            })
+        img = ret.imageData;
+        //console.log(ret)
+        //console.log(res)
+        n = forEach('img.preview', element => {
+            element.src = `data:img/png;base64=${img}`
+            //console.log(element)
+        })
+    } finally {
+        PREVIEW_UPDATE_RUNNING = false;
+    }
+    return n
+}
+async function init_preview () {
+    const params = getFragmentParams();
+    UPDATE_INTERVAL = parseFloat(params.delay)*1000 || 250;
+
+    n = await update_preview();
+    console.log(n)
+    if (n) {
+        setInterval(update_preview, UPDATE_INTERVAL);
+    }
 }

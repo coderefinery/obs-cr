@@ -4,7 +4,9 @@
 
     <meta charset="UTF-8">
     <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <script src="util.js"> </script>
+    <script src="control.js"> </script>
 
     <style>
         body, html {
@@ -22,7 +24,7 @@
             justify-content: center;
             overflow: hidden;
         }
-        #preview {
+        img.preview {
             max-height: 100%;
             max-width: 100%;
             object-fit: contain;
@@ -45,70 +47,12 @@
     </div>
 
     <div class="preview-container">
-        <img id="preview" alt="Screenshot will appear here"/>
+        <img class="preview" alt="Screenshot will appear here"/>
     </div>
 
     <script>
 
-      // If this is SSL, show the warning
-      if (window.location.protocol === 'https:') {
-	      forEach('.ssl-warning', x =>{x.style.display = 'block'});
-      }
-
-
-      const params = getFragmentParams();
-      const url = params.url || 'localhost:4455';
-      const password = params.password || '';
-      // Update interval in milliseconds.
-      const UPDATE_INTERVAL = parseFloat(params.delay)*1000 || 250;
-
-      // Create a new OBS WebSocket instance
-      const obs = new OBSWebSocket();
-
-      let UPDATE_RUNNING = false;
-      async function update_preview () {
-        if (UPDATE_RUNNING) {
-            console.log('aborting, already running');
-            return;
-        }
-        try {
-            UPDATE_RUNNING = true;
-            res = await obs.call('GetCurrentProgramScene',);
-            sceneName = res.currentProgramSceneName;
-            update_status(`Scene: ${sceneName}`);
-            obs.call('GetSourceScreenshot',
-                        {sourceName: sceneName,
-                        imageFormat: "png",
-                        }).then(res => {
-                            img = res.imageData;
-                            document.getElementById("preview").src = `data:img/png;base64=${img}`
-                        });
-        } finally {
-            UPDATE_RUNNING = false;
-        }
-
-      }
-
-
-      update_status(`Trying to connect to ws://${url}`)
-      obs.connect(`ws://${url}`, password)
-        .then(() => {
-            update_status(`Connected to OBS at ws://${url}.`);
- 
-            // Poll to keep the connection alive
-            setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
-                        60000);
-            obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected!: ${e}`); } )
-            obs.on('ConnectionError', e => { update_status(`OBS Disconnected!: ${e}`); } )
-
-            update_preview();
-            setInterval(update_preview, UPDATE_INTERVAL);
-        })
-        .catch(err => {
-            update_status(`Connection failed: ${err.message}`);
-      });
-
-    
+    init_all()
 
     </script>
 
