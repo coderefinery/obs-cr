@@ -1,8 +1,16 @@
 AUDIO_INPUT: Instructors
 AUDIO_INPUT_BRCD: BroadcasterMic
+AUDIO_INPUTS:
+    - Instructors
+    - BroadcasterMic
+
 NOTES: Notes
 GALLERY: ZoomGalleryCapture
-
+SCENES_WITH_RESIZEABLE_GALLERY: ["Screenshare", "ScreenshareCrop", "ScreenshareLandscape", "BroadcasterScreen", "Notes"]
+#SCENES: ["Title", "Gallery", ...SCENES_WITH_RESIZEABLE_GALLERY, "Empty"]
+SCENES_SAFE: ["Title", "Notes", "Empty"] # Has no instructor screens
+# Scenes which have a remote screenshare from Zoom
+SCENES_REMOTE: ["Screenshare", "ScreenshareCrop", "ScreenshareLandscape"]
 
 
 SCENES:
@@ -31,8 +39,24 @@ SCENES:
         name: Empty
         description: Empty black screen
 
-# Scenes which have a remote screenshare from Zoom
-SCENES_REMOTE: ["Screenshare", "ScreenshareCrop", "ScreenshareLandscape"]
+
+
+SOUNDS:
+    low: '311.wav'
+    high: '349.wav'
+    alert-high: '622.wav'
+    alert-medium: '440.wav'
+    alert-low: '261.wav'
+INDICATORS:
+    indicator-warning: 'red'
+    indicator-caution: 'yellow'
+    indicator-time: 'yellow'
+    indicator-notes: 'cyan'
+    indicator-question: 'cyan'
+    indicator-chat: 'cyan'
+    indicator-slower: 'yellow'
+    indicator-faster: 'yellow'
+
 
 PLAYBACK_INPUT: CRaudio
 PLAYBACK_FILES:

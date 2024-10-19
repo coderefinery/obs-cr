@@ -8,13 +8,6 @@
     <script src="util.js"></script>
     <script src="control.js"></script>
     <script type="module">
-        //Load global YAML config.  This is loaded too late to be
-        // used to layout the HTML but can be used for other things.
-        //fetch("config.yaml").then(response => {
-        //    response.text().then( text => {
-        //        globalThis.CONFIG = jsyaml.load(text)
-        //    })
-        //})
     </script>
 
     <style>
@@ -38,6 +31,7 @@
     Reload the page when done.</div>
 
     <div class="status">Status is updated here</div>
+    <span class="time" title="Current time"></span>
     <span class="synced" syncwith="scene">Scene</span>
     <span class="synced" syncwith="ss_resolution">Resolution</span>
 
@@ -168,93 +162,14 @@
     <a class="preview-href" herf="">Real-time scene preview</a>
 
     <script>
-      NOTES = "Notes"
-      GALLERY = "ZoomGalleryCapture"
-      SCENES_WITH_RESIZEABLE_GALLERY = ["Screenshare", "ScreenshareCrop", "ScreenshareLandscape", "BroadcasterScreen", "Notes"]
-      SCENES = ["Title", "Gallery", ...SCENES_WITH_RESIZEABLE_GALLERY, "Empty"]
-      SCENES_SAFE = ["Title", "Notes", "Empty"]
-      SOUNDS = {
-	  'low': '311.wav',
-	  'high': '349.wav',
-	  'alert-high': '622.wav',
-	  'alert-medium': '440.wav',
-	  'alert-low': '261.wav',
-      }
-      SOUNDFILES = { }
-      INDICATORS = {
-	  'indicator-warning': 'red',
-	  'indicator-caution': 'yellow',
-	  'indicator-time': 'yellow',
-	  'indicator-notes': 'cyan',
-	  'indicator-question': 'cyan',
-	  'indicator-chat': 'cyan',
-	  'indicator-slower': 'yellow',
-	  'indicator-faster': 'yellow',
-      }
-
-      purl = new URL(window.location.href);
-      purl.pathname = purl.pathname.replace(/\/[^\/]*?$/, '/preview.html')
-      forEach('.preview-href', x => {x.href = purl.toString()});
-
-
-      function soundEvent(value) {
-        //console.log(`sound event: ${value}`);
-            update_status(`Sound event: ${value}`);
-        filename = SOUNDS[value];
-
-        if (value in SOUNDFILES) {
-            SOUNDFILES[filename].play();
-        }
-        else {
-            console.log(`Loading ./sound/${filename}`)
-                const audio = new Audio(`./sound/${filename}`);
-            //console.log(audio);
-            SOUNDFILES[filename] = audio;
-            audio.play().catch((error) => {
-                // Handle the error
-                console.error('Error playing audio:', error);
-                forEach('.audio-warning', x => {x.style.display = 'block'});
-            });
-        }
-      }
-
-      const params = getFragmentParams();
-      const url = params.url || 'localhost:4455';
-      const password = params.password || '';
-
-      // Create a new OBS WebSocket instance
-      const obs = new OBSWebSocket();
-
-      update_status(`Trying to connect to ws://${url}`)
-
-      async function load_config () {
-        return await fetch("config.yaml").then(response => {
-            response.text().then( text => {
-                CONFIG = jsyaml.load(text)
-                globalThis.CONFIG = CONFIG
-                // Make mapping human name -> scene names
-                CONFIG.SCENES_REVERSE = { }
-                for (scene in CONFIG.SCENES) {
-                    CONFIG.SCENES_REVERSE[CONFIG.SCENES[scene].name]= scene
-                }
-            })
-        })
-      }
-
-      async function obs_init () {
-        await obs.connect(`ws://${url}`, password).catch(err => {update_status(`Connection failed: ${err.message}`)})
-        update_status(`Connected to OBS at ws://${url}.`);
-        // Poll to keep the connection alive
-        setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
-                    60000);
-        obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected (closed)!: ${e}`); } )
-        obs.on('ConnectionError', e => { update_status(`OBS Disconnected (error)!: ${e}`); } )
-      }
 
     INIT_FUNCTIONS = [
         load_config,
+        init_rellinks,
+        init_soundfiles,
         obs_init,
         _obs_init_watchers,
+        init_misc,
         init_sync_checkboxes,
         init_sync_selects,
         init_sync_textcontent,

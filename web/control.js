@@ -1,6 +1,23 @@
 // Functions for control panel.
 
 //
+// Misc elements
+//
+function updateTime() {
+    return forEach('.time', element => {
+        date = new Date
+        time = `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`
+        element.textContent = time
+    })
+}
+async function init_misc() {
+    n = updateTime()
+    if (n) {
+        setInterval(updateTime, 500)
+    }
+}
+
+//
 // Live indicator
 //
 LIVE_STATUS = { }
@@ -40,7 +57,7 @@ function init_live(obs) {
 function indicatorUpdate(name, state) {
     cells = document.getElementsByClassName(name);
     for (c of cells) {
-        c.style.backgroundColor = state ? INDICATORS[name] : '';
+        c.style.backgroundColor = state ? CONFIG.INDICATORS[name] : '';
     }
 }
 async function indicatorClick(event) {
@@ -50,9 +67,9 @@ async function indicatorClick(event) {
     new_state = !cell.style.backgroundColor
     await obs_set(class_, new_state);
     if (new_state) {
-        if (INDICATORS[class_] === 'red')    {await obs_broadcast('playsound', 'alert-high')};
-        if (INDICATORS[class_] === 'yellow') {await obs_broadcast('playsound', 'alert-medium')};
-        if (INDICATORS[class_] === 'cyan')   {await obs_broadcast('playsound', 'alert-low')};
+        if (CONFIG.INDICATORS[class_] === 'red')    {await obs_broadcast('playsound', 'alert-high')};
+        if (CONFIG.INDICATORS[class_] === 'yellow') {await obs_broadcast('playsound', 'alert-medium')};
+        if (CONFIG.INDICATORS[class_] === 'cyan')   {await obs_broadcast('playsound', 'alert-low')};
     }
 }
 async function init_indicators() {
@@ -76,7 +93,7 @@ function sceneUpdate(name) {
     forEach(`.scene#${name}`, x => {
         x.style.backgroundColor = x.getAttribute('livecolor') || 'red'
     })
-    liveUpdate('scene', SCENES_SAFE.includes(name) ? false : name)
+    liveUpdate('scene', CONFIG.SCENES_SAFE.includes(name) ? false : name)
 }
 async function sceneClick(event) {
     cell = event.target;
@@ -107,10 +124,7 @@ async function muteClick(event) {
     await obs_set_mute(event.target.id, event.target.style.backgroundColor);
 }
 async function init_mute() {
-    allAudioDevs = new Set;
-    forEach('.mute', x => allAudioDevs.add(x.id));
-
-    for (let x of allAudioDevs) {
+    for (let x of CONFIG.AUDIO_INPUTS) {
         await obs_get_mute(x).then( state => {muteUpdate(x, state)});
         obs_watch('mute-'+x, state => {muteUpdate(x, state)});
     }
@@ -139,10 +153,7 @@ async function volumeClick(event) {
     await obs_set_volume(event.target.id, vol_to_dB(event.target.value))
 }
 async function init_volume() {
-    allAudioDevs = new Set;
-    forEach('.volume', x => allAudioDevs.add(x.id));
-
-    for (let x of allAudioDevs) {
+    for (let x of CONFIG.AUDIO_INPUTS) {
         await obs_get_volume(x).then( state => {volumeUpdate(x, state)});
         obs_watch('volume-'+x, state => {volumeUpdate(x, state)});
     }
@@ -230,10 +241,9 @@ async function presetSwitch(preset, round=0) {
 // current selected preset.  This updates the preset button color.
 async function presetUpdate() {
     //console.log('presetUpdate')
-    PRESETS = new Set;
-    await forEachAsync('.preset-label', async preset => {
-        await presetUpdateOne(preset.id)
-    });
+    for (preset of PRESETS) {
+        await presetUpdateOne(preset)
+    };
 }
 async function presetUpdateOne(preset) {
     //console.log('presetUpdate', preset)
@@ -246,18 +256,17 @@ async function presetUpdateOne(preset) {
     //console.log("Update preset state", preset, state, 'setting:', preset_scene, preset_resolution, "detected:", current_scene, current_resolution)
 
     forEach(`.preset-label#${preset}`, label => {
-        color = SCENES_SAFE.includes(preset_scene) ? 'orange' : 'red'
+        color = CONFIG.SCENES_SAFE.includes(preset_scene) ? 'orange' : 'red'
         label.style.backgroundColor = state ? color : ''
     })
     forEach(`.preset-go#${preset}`, button => {
-        console.log(preset_scene, preset_scene == '-')
+        //console.log(preset_scene, preset_scene == '-')
         enabled = (preset_scene != '-')// && (preset_resolution != '-')
         button.disabled = enabled ? false : true
     })
 }
-
+PRESETS = new Set;
 async function init_preset() {
-    PRESETS = new Set;
     forEach('.preset-label', x => PRESETS.add(x.id));
     //console.log(PRESETS)
 
@@ -278,7 +287,7 @@ async function init_preset() {
     // Preset scene choices
     await forEachAsync(`.preset-sbox`, async select => {
         // Set sbox choices
-        ["-", ...SCENES].forEach(scene => {
+        ["-", ...Object.keys(CONFIG.SCENES)].forEach(scene => {
             opt = document.createElement('option')
             opt.text = scene_to_name(scene)
             opt.value = scene
@@ -322,14 +331,14 @@ async function quickUpdate() {
     // Note that preset-labels may not be defined yet.  This will
     // be updated later once presets are loaded
     forEach('.preset-go', x => {
-        console.log(x, x.id, scene_to_name(x.id))
+        //console.log(x, x.id, scene_to_name(x.id))
         if (x.disabled) {
             return
         }
         ScenesAndPresets.add(scene_to_name(x.id))
     });
     // Regular scenes
-    for (scene of ['-', ...SCENES]) {
+    for (scene of ['-', ...Object.keys(CONFIG.SCENES)]) {
         //console.log(scene)
         ScenesAndPresets.add(scene)
     }

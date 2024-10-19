@@ -24,10 +24,31 @@ async function forEachAsync(querySelector, func) {
     return n
 }
 
+// Load global configuration
+async function load_config () {
+    response = await fetch("config.yaml")
+    text = await response.text()
+    CONFIG = jsyaml.load(text)
+    globalThis.CONFIG = CONFIG
+    // Make mapping human name -> scene names
+    CONFIG.SCENES_REVERSE = { }
+    for (scene in CONFIG.SCENES) {
+        CONFIG.SCENES_REVERSE[CONFIG.SCENES[scene].name]= scene
+    }
+    return globalThis.CONFIG
+  }
+
 
 // If this is SSL, show the warning
 if (window.location.protocol === 'https:') {
     forEach('.ssl-warning', x => {x.style.display = 'block'});
+}
+
+
+function init_rellinks() {
+    purl = new URL(window.location.href);
+    purl.pathname = purl.pathname.replace(/\/[^\/]*?$/, '/preview.html')
+    forEach('.preview-href', x => {x.href = purl.toString()});
 }
 
 // Convert key=value&key2=value2 in URL fragment to dict
@@ -132,6 +153,28 @@ async function switch_to(scene) {
 }
 
 
+// Play sound events locally (indicators, going back live, etc)
+SOUNDFILES = { }
+async function init_soundfiles() {
+    for (effectname in CONFIG.SOUNDS) {
+        filename = CONFIG.SOUNDS[effectname]
+        //console.log(`Loading ./sound/${filename}`)
+        audio = new Audio(`./sound/${filename}`);
+        SOUNDFILES[effectname] = audio;
+    }
+}
+async function soundEvent(value) {
+    //console.log(`sound event: ${value}`);
+    update_status(`Sound event: ${value}`);
+    audio = SOUNDFILES[value];
+    audio.play().catch((error) => {
+        // Handle the error
+        console.error('Error playing audio:', error);
+        forEach('.audio-warning', x => {x.style.display = 'block'});
+    });
+}
+
+
 
 //
 // Synced Buttons
@@ -187,6 +230,26 @@ async function init_sync_input() {
 //
 // Main OBS relay functions.
 //
+
+// Connect to OBS
+async function obs_init () {
+    const params = getFragmentParams();
+    const url = params.url || 'localhost:4455';
+    const password = params.password || '';
+
+    // Create a new OBS WebSocket instance
+    globalThis.obs = new OBSWebSocket();
+    update_status(`Trying to connect to ws://${url}`)
+
+    await obs.connect(`ws://${url}`, password).catch(err => {update_status(`Connection failed: ${err.message}`)})
+    update_status(`Connected to OBS at ws://${url}.`);
+    // Poll to keep the connection alive
+    setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
+                60000);
+    obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected (closed)!: ${e}`); } )
+    obs.on('ConnectionError', e => { update_status(`OBS Disconnected (error)!: ${e}`); } )
+}
+
 
 // Set a value (and broadcast an event that represents it).  Handles
 // special cases
@@ -330,8 +393,8 @@ async function obs_set_gallerysize(_, state) {
     GALLERYSIZE_LASTTRIGGER[0] = calltime;
     //console.log("Setting gallery size at", calltime)
     //
-    for (let scene of SCENES_WITH_RESIZEABLE_GALLERY) {
-        let ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: GALLERY});
+    for (let scene of CONFIG.SCENES_WITH_RESIZEABLE_GALLERY) {
+        let ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: CONFIG.GALLERY});
         let sid = ret.sceneItemId;
         ret = await obs.call("GetSceneItemTransform", {sceneName: scene, sceneItemId: sid})
         let transform = ret.sceneItemTransform
@@ -354,15 +417,15 @@ async function obs_set_gallerysize(_, state) {
     //_obs_set("gallerysize", state)
 }
 async function obs_get_gallerysize(_) {
-    let ret = await obs.call("GetSceneItemId", {sceneName: NOTES, sourceName: GALLERY});
+    let ret = await obs.call("GetSceneItemId", {sceneName: CONFIG.NOTES, sourceName: CONFIG.GALLERY});
     let sid = ret.sceneItemId;
-    ret = await obs.call("GetSceneItemTransform", {sceneName: NOTES, sceneItemId: sid})
+    ret = await obs.call("GetSceneItemTransform", {sceneName: CONFIG.NOTES, sceneItemId: sid})
     let transform = ret.sceneItemTransform
     return transform.scaleX;
 }
 async function obs_set_gallerycrop(_, state) {
-    for (let scene of SCENES_WITH_RESIZEABLE_GALLERY) {
-        let ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: GALLERY});
+    for (let scene of CONFIG.SCENES_WITH_RESIZEABLE_GALLERY) {
+        let ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: CONFIG.GALLERY});
         let sid = ret.sceneItemId;
         ret = await obs.call("GetSceneItemTransform", {sceneName: scene, sceneItemId: sid})
         let transform = ret.sceneItemTransform
