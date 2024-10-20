@@ -47,8 +47,10 @@ if (window.location.protocol === 'https:') {
 
 function init_rellinks() {
     purl = new URL(window.location.href);
-    purl.pathname = purl.pathname.replace(/\/[^\/]*?$/, '/preview.html')
-    forEach('.preview-href', x => {x.href = purl.toString()});
+    for (page of ["preview", "index", "control", "small"]) {
+        purl.pathname = purl.pathname.replace(/\/[^\/]*?$/, `/${page}.html`)
+        forEach(`.${page}-href`, x => {x.href = purl.toString()});
+    }
 }
 
 // Convert key=value&key2=value2 in URL fragment to dict
