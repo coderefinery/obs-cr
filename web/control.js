@@ -7,6 +7,7 @@ INIT_FUNCTIONS = [
     load_config,
     init_rellinks,
     init_soundfiles,
+    init_audio,
     obs_init,
     _obs_init_watchers,
     init_misc,
@@ -581,4 +582,25 @@ async function init_preview () {
     if (n) {
         setInterval(update_preview, UPDATE_INTERVAL);
     }
+}
+
+
+//
+// Enable audio
+//
+async function audioTest(event, round=0) {
+    console.log(round)
+    if (round == 0) {await soundEvent('low');          setTimeout(audioTest, 200, null, 1); return}
+    if (round == 1) {await soundEvent('high');         setTimeout(audioTest, 200, null, 2); return}
+    if (round == 2) {await soundEvent('alert-low');    setTimeout(audioTest, 200, null, 3); return}
+    if (round == 3) {await soundEvent('alert-medium'); setTimeout(audioTest, 200, null, 4); return}
+    if (round == 4) {await soundEvent('alert-high');   setTimeout(audioTest, 200, null, 5); return}
+    forEach('.enable-audio, .audio-warning', div => {
+        div.style['display'] = 'none'
+    })
+}
+function init_audio() {
+    forEach('.enable-audio-button', button => {
+        button.addEventListener('click', audioTest)
+    })
 }
