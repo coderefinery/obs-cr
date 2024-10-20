@@ -431,7 +431,7 @@ async function quickBack(event, round=0) {
     // TODO: play jingle if requested
     // Count down to going online
     if (round == 0) {
-        if (document.querySelector('.quick-back-jingle').checked) {
+        if (await obs_get('checkbutton-quick_jingle-value')) {
             obs_playfile(CONFIG.PLAYBACK_FILES['short']['filename'])
         }
     }
@@ -448,12 +448,12 @@ async function quickBack(event, round=0) {
     // Unmute audios (instructor, and brcd if it's checked)
     await obs_broadcast('playsound', 'high')
     await obs_set_mute(CONFIG.AUDIO_INPUT, false)
-    if (document.querySelector('.quick-back-audio-brcd').checked) {
+    if (await obs_get('checkbutton-quick_brcd-value')) { //Todo: don't block the rest of the threads here
         await obs_set_mute(CONFIG.AUDIO_INPUT_BRCD, false)
-        document.querySelector('.quick-back-audio-brcd').checked = false
+        await obs_set('checkbutton-quick_brcd-value', false)
     }
     // Find and change to our scene
-    to_scene = document.querySelector('.quick-back-scene').value
+    to_scene = await obs_get('quickback-quickback-a-value')
     await switch_to(to_scene)
     // Restore the gallery size
     await obs_set('gallerysize', await obs_get('gallery_last_state'))
