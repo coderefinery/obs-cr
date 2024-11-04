@@ -40,8 +40,10 @@ async function load_config () {
 
 
 // If this is SSL, show the warning
-if (window.location.protocol === 'https:') {
-    forEach('.ssl-warning', x => {x.style.display = 'block'});
+async function init_ssl_warning () {
+    if (window.location.protocol === 'https:') {
+        forEach('.ssl-warning', x => {x.style.display = 'block'});
+    }
 }
 
 

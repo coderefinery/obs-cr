@@ -5,6 +5,7 @@
 //
 INIT_FUNCTIONS = [
     load_config,
+    init_ssl_warning,
     init_rellinks,
     init_soundfiles,
     init_audio,
