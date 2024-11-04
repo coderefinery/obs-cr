@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+  <head>
+    <title>OBS CR control</title>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="util.js"></script>
+    <script src="control.js"></script>
+    <script type="module">
+    </script>
+  </head>
+  <body>
+
+    <div class="ssl-warning" style="display:none; color: maroon">
+        You are currently using HTTPS.  Unfortunately OBS probably isn't
+        using SSL and browsers only allow SSL websocket connections from
+        SSL pages, so you need to turn SSL off.  Please try changing the
+        URL to 'http' instead of 'https' which might require telling
+        your browser to not force SSL for this page (firefox: click
+        around the page icon).
+    </div>
+
+    <div class="audio-warning" style="display:none; color: maroon">
+        Audio playback has failed.  Do you need to allow it on this page?
+        Or try clicking the "enable audio" button.
+    </div>
+
+    <div class="enable-audio">
+        Click this button once to play some sound, to enable audio in this browser.
+        Browsers won't play sound unless you interact first, to avoid sites spamming
+        sound without your request.
+        <button class="enable-audio-button">Enable audio</button>
+    </div>
+
+    <div class="status">Status is updated here</div>
+    <!--<span class="synced" syncwith="scene">Scene</span>-->
+    <!--<span class="synced" syncwith="ss_resolution">Resolution</span>-->
+
+
+    <table border="1">
+      <tr><th title="Synced indicators.  Used for non-verbal instructor communication.">Indicators:</th>
+          <td class="live" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</td>
+          <td><button class="indicator" id="warning">Warn</button></td>
+          <td><button class="indicator" id="caution">Caution</button></td>
+          <td><button class="indicator" id="time">Time</button></td>
+          <td><button class="indicator" id="notes">Notes</button></td>
+          <td><button class="indicator" id="question">Question</button></td>
+          <td><button class="indicator" id="chat">Chat</button></td>
+          <td><button class="indicator" id="slower">Slower</button></td>
+          <td><button class="indicator" id="faster">Faster</button></td>
+          <td><span class="time" title="Current time"></span></td>
+        </tr>
+    </table>
+
+    <table border="1">
+        <tr>
+            <th title="Quick actions to take you to or from a break.">Quick actions:</th>
+            <td><button class="quick-break" title="Cut audio/gallery and swich scene to Notes.">Break</button></td>
+            <td>Back from break:</td>
+            <td><button class="quick-back" title="Do the jump back from the break.  The following fields control how you go back.  There is a three second countdown to return.">Back to →</button></td>
+            <td><select class="quick-back-scene synced" syncwith="quickback-quickback-a-value" title="Which scene to return to."></select></td>
+            <td><input class="quick-back-audio-brcd synced" type="checkbox" syncwith="checkbutton-quick_brcd-value" title="If true, un-mute the broadcaster also.">Brcd Audio?</input></td>
+            <td><input class="quick-back-jingle synced" type="checkbox" syncwith="checkbutton-quick_jingle-value" title="If true, play a short jingle when returning.">Jingle?</input></td>
+        </tr>
+    </table>
+
+    <table border="1">
+        <tr>
+            <th title="Select a scene.  The current scene is highlighted.  You might want to use presets instead, which also configures the screenshare size.">Scene selection</th>
+            <td><button class="scene" id="Title" livecolor="orange">Title</button></td>
+            <td><button class="scene" id="Gallery">Gallery</button></td>
+            <td><button class="scene" id="Screenshare">SS Portrait</button></td>
+            <td><button class="scene" id="ScreenshareCrop">SS Crop</button></td>
+            <td><button class="scene" id="ScreenshareLandscape">SS Landscape</button></td>
+            <td><button class="scene" id="BroadcasterScreen">BrdScr</button></td>
+            <td><button class="scene" id="Notes" livecolor="orange">Notes</button></td>
+            <td><button class="scene" id="Empty" livecolor="orange">Empty</button></td>
+        </tr>
+    </table>
+
+    <table border="1">
+        <tr>
+            <th rowspan="3" title="Presets allow you to give a name to a {scene, resolution} combination and jump directly there.  Recommended to make scenes configured for each instructor.  Note they still have to screenshare on Zoom.">Scene presets:</th>
+            <td><button class="preset-go"           id="preset-a">Go</button></td>
+            <td><input  class="preset-label synced" id="preset-a" type="text" syncwith="preset-preset-a-label" value="A" size="10"></td>
+            <td><select class="preset-sbox synced"  id="preset-a" syncwith="preset-preset-a-sbox"></select></td>
+            <td><select class="preset-rbox synced"  id="preset-a" syncwith="preset-preset-a-rbox"></select></td>
+            <td>&nbsp&nbsp</td>
+            <td><button class="preset-go"           id="preset-b">Go</button></td>
+            <td><input  class="preset-label synced" id="preset-b" type="text" syncwith="preset-preset-b-label" value="B" size="10"></td>
+            <td><select class="preset-sbox synced"  id="preset-b" syncwith="preset-preset-b-sbox"></select></td>
+            <td><select class="preset-rbox synced"  id="preset-b" syncwith="preset-preset-b-rbox"></select></td>
+        </tr>
+        <tr>
+            <td><button class="preset-go"           id="preset-c">Go</button></td>
+            <td><input  class="preset-label synced" id="preset-c" type="text" syncwith="preset-preset-c-label" value="C" size="10"></td>
+            <td><select class="preset-sbox synced"  id="preset-c" syncwith="preset-preset-c-sbox"></select></td>
+            <td><select class="preset-rbox synced"  id="preset-c" syncwith="preset-preset-c-rbox"></select></td>
+            <td></td>
+            <td><button class="preset-go"           id="preset-d">Go</button></td>
+            <td><input  class="preset-label synced" id="preset-d" type="text" syncwith="preset-preset-d-label" value="D" size="10"></td>
+            <td><select class="preset-sbox synced"  id="preset-d" syncwith="preset-preset-d-sbox"></select></td>
+            <td><select class="preset-rbox synced"  id="preset-d" syncwith="preset-preset-d-rbox"></select></td>
+        </tr>
+        <tr>
+            <td><button class="preset-go"           id="preset-e">Go</button></td>
+            <td><input  class="preset-label synced" id="preset-e" type="text" syncwith="preset-preset-e-label" value="E" size="10"></td>
+            <td><select class="preset-sbox synced"  id="preset-e" syncwith="preset-preset-e-sbox"></select></td>
+            <td><select class="preset-rbox synced"  id="preset-e" syncwith="preset-preset-e-rbox"></select></td>
+            <td></td>
+            <td><button class="preset-go"           id="preset-f">Go</button></td>
+            <td><input  class="preset-label synced" id="preset-f" type="text" syncwith="preset-preset-f-label" value="F" size="10"></td>
+            <td><select class="preset-sbox synced"  id="preset-f" syncwith="preset-preset-f-sbox"></select></td>
+            <td><select class="preset-rbox synced"  id="preset-f" syncwith="preset-preset-f-rbox"></select></td>
+        </tr>
+    </table>
+
+    <table border="1">
+        <tr>
+            <th>Audio:</th>
+            <td><button class="mute" id="BroadcasterMic" title="If red, the broadcaster computer is unmuted in OBS">Brcd</button></td>
+            <td><button class="mute" id="Instructors" title="If red, the instructor Zoom share is unmuted in OBS">Instr</button></td>
+            <td><input class="volume" id="Instructors" type="range" min="-2" max="0" step="0.05" title="Instructor volume control."></td>
+            <td><span class="volume-dB" id="Instructors" title="Instructor volume gain"></span></td>
+        </tr>
+    </table>
+    <table border="1">
+        <tr>
+            <th title="The current size of the gallery of instructors inserted into the various scenes.">Gallery size:</th>
+            <td colspan="4"><input class="gallerysize" type="range" min="0" max="1" step="0.01" title="Gallery size slider.  If zero, the gallery is not visible."></td>
+            <td><span class="gallerysize-state"></span></td>
+        </tr>
+        <tr>
+            <th title="This resized the gallery to be appropriate for various numbers of instructors.">Gallery crop:</th>
+            <td><button class="gallerycrop" id="n0">None</button></td>
+            <td><button class="gallerycrop" id="n1">n=1</button></td>
+            <td><button class="gallerycrop" id="n2">n=2</button></td>
+            <td><button class="gallerycrop" id="n3">n=3-4</button></td>
+            <td><button class="gallerycrop" id="n5">n=5-6</button></td>
+        </tr>
+    </table>
+    <table border="1">
+        <tr>
+            <th title="These buttons control other audio that can be played.  This goes through a separate input from the instructors: they instructors don't hear it, and muting instructors doesn't affect this.">Jingle:</th>
+            <td class="playfile timer" title="Timer for ongoing playback">-</td>
+            <td><button class="playfile short">short</button></td>
+            <td><button class="playfile long" >long</button></td>
+            <td><button class="playfile stop" title="Stop the playback">StopPlay</button></td>
+        </tr>
+    </table>
+    <table border="p">
+        <tr>
+            <th title="These scroll the notes on the broadcaster computer up and down.  The broadcaster has to enable this, and sometimes it doesn't work and the notes window needs to be clicked.">Notes scroll:</th>
+            <td><button class="scrollnotes up"  >Up  </button></td>
+            <td><button class="scrollnotes down">Down</button></td>
+            <td><button class="scrollnotes pgup">PgUp</button></td>
+            <td><button class="scrollnotes pgdn">PgDn</button></td>
+            <td><button class="scrollnotes end" >End </button></td>
+        </tr>
+    </table>
+
+    <a class="preview-href" href="">Real-time scene preview</a>
+    <a class="small-href" href="">Short panel for instructors</a>
+    <button onclick="window.open(window.location.href, 'popupWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');">Pop out window</a>
+
+    <script>
+        init_all()
+    </script>
+
+  <body>
+  </html>

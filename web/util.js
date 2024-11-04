@@ -49,7 +49,7 @@ async function init_ssl_warning () {
 
 function init_rellinks() {
     purl = new URL(window.location.href);
-    for (page of ["preview", "index", "control", "small"]) {
+    for (page of ["preview", "index", "control", "small", "director"]) {
         purl.pathname = purl.pathname.replace(/\/[^\/]*?$/, `/${page}.html`)
         forEach(`.${page}-href`, x => {x.href = purl.toString()});
     }
