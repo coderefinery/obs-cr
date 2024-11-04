@@ -26,8 +26,9 @@ async function forEachAsync(querySelector, func) {
 
 // Load global configuration
 async function load_config () {
-    response = await fetch("config.yaml")
-    text = await response.text()
+    response = await fetch("config.yaml").catch(update_status("Can not load config.yaml"))
+    console.log(response)
+    text = await response.text().catch(update_status("config.yaml data not loaded"))
     CONFIG = jsyaml.load(text)
     globalThis.CONFIG = CONFIG
     // Make mapping human name -> scene names
