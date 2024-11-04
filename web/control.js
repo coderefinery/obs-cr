@@ -7,6 +7,7 @@ INIT_FUNCTIONS = [
     load_config,
     init_ssl_warning,
     init_rellinks,
+    init_hide_popoutbutton,
     init_soundfiles,
     init_audio,
     obs_init,

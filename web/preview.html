@@ -39,12 +39,13 @@
     only allow SSL websocket connections from SSL pages, so you need
     to turn SSL off.  Please try changing the URL to 'http' instead of
     'https' which might require telling your browser to not force SSL for this
-    page (firefox: click around the page icon).</div>
+    page (try clicking lock or
+    shield icons by the URL bar)..</div>
 
     <div id="header">
         <span id="status">Status is updated here</span>.
         <span style="font-size: 50%">Please close if not needed to save bandwidth/CPU.</span>
-        <button onclick="window.open(window.location.href, 'popupWindow', 'width=400,height=600,menubar=no,toolbar=no,location=no,status=no');">Pop out window</a>
+        <button class="popout" onclick="window.open(window.location.href, 'popupWindow', 'width=400,height=600,menubar=no,toolbar=no,location=no,status=no');">Pop out window</a>
     </div>
 
     <div class="preview-container">

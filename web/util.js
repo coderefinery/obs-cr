@@ -27,7 +27,6 @@ async function forEachAsync(querySelector, func) {
 // Load global configuration
 async function load_config () {
     response = await fetch("config.yaml").catch(update_status("Can not load config.yaml"))
-    console.log(response)
     text = await response.text().catch(update_status("config.yaml data not loaded"))
     CONFIG = jsyaml.load(text)
     globalThis.CONFIG = CONFIG
@@ -50,9 +49,15 @@ async function init_ssl_warning () {
 
 function init_rellinks() {
     purl = new URL(window.location.href);
-    for (page of ["preview", "index", "control", "small", "director"]) {
+    for (page of ["preview", "index", "control", "small", "director", "annunciators"]) {
         purl.pathname = purl.pathname.replace(/\/[^\/]*?$/, `/${page}.html`)
         forEach(`.${page}-href`, x => {x.href = purl.toString()});
+    }
+}
+
+function init_hide_popoutbutton () {
+    if (! window.toolbar.visible) {
+        forEach('button.popout', button => {button.style.display = 'none'})
     }
 }
 
@@ -246,7 +251,13 @@ async function obs_init () {
     globalThis.obs = new OBSWebSocket();
     update_status(`Trying to connect to ws://${url}`)
 
-    await obs.connect(`ws://${url}`, password).catch(err => {update_status(`Connection failed: ${err.message}`)})
+    try {
+	await obs.connect(`ws://${url}`, password)
+    } catch (err) {
+	console.log(err)
+	update_status(`Connection failed: ${err.message}`)
+	return
+    }
     update_status(`Connected to OBS at ws://${url}.`);
     // Poll to keep the connection alive
     setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},

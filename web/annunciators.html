@@ -38,8 +38,7 @@
 
 
     <table border="1">
-      <tr><th title="Synced indicators.  Used for non-verbal instructor communication.">Indicators:</th>
-          <td class="live" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</td>
+      <tr><td class="live" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</td>
           <td><button class="indicator" id="warning">Warn</button></td>
           <td><button class="indicator" id="caution">Caution</button></td>
           <td><button class="indicator" id="time">Time</button></td>
@@ -51,31 +50,7 @@
         </tr>
     </table>
 
-    <table border="">
-        <tr>
-            <td><span class="synced" syncwith="scene">Scene</span></td>
-            <td><span class="time" title="Current time"></span></td>
-            <td class="playfile timer" title="Timer for ongoing playback">-</td>
-            <td class="status">Status</td>
-          </tr>
-    </table>
-
-    <table border="1">
-        <tr>
-            <th title="Quick actions to take you to or from a break.">Quick actions:</th>
-            <td><button class="quick-break" title="Cut audio/gallery and swich scene to Notes.">Break</button></td>
-            <th title="These scroll the notes on the broadcaster computer up and down.  The broadcaster has to enable this, and sometimes it doesn't work and the notes window needs to be clicked.">Notes scroll:</th>
-            <td><button class="scrollnotes up"  >Up  </button></td>
-            <td><button class="scrollnotes down">Down</button></td>
-            <td><button class="scrollnotes pgup">PgUp</button></td>
-            <td><button class="scrollnotes pgdn">PgDn</button></td>
-            <td><button class="scrollnotes end" >End </button></td>
-        </tr>
-    </table>
-
-    <a class="preview-href" href="">Real-time scene preview.</a>
-    <a class="director-href" href="">Big panel for directors.</a>
-    <button class="popout"  onclick="window.open(window.location.href, 'popupWindow', 'width=700,height=300,menubar=no,toolbar=no,location=no,status=no');">Pop out window</a>
+    <button class="popout" onclick="window.open(window.location.href, 'popupWindow', 'width=700,height=300,menubar=no,toolbar=no,location=no,status=no');">Pop out window</a>
 
     <script>
         init_all()
