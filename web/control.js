@@ -156,11 +156,12 @@ async function sceneClick(event) {
 }
 async function init_scene(obs) {
     //console.log('init_scene')
-    await obs_watch_init("scene", sceneUpdate)
     forEach('.scene', x => {
         x.addEventListener('click', sceneClick);
         x.title = CONFIG.SCENES[x.id].description
     })
+    // This must always run because it updates the live annunciator
+    await obs_watch_init("scene", sceneUpdate)
 }
 
 
@@ -180,6 +181,7 @@ async function muteClick(event) {
     await obs_set_mute(event.target.id, event.target.style.backgroundColor);
 }
 async function init_mute() {
+    // These watchers must always run to update the "live" annunciator
     for (let x of CONFIG.AUDIO_INPUTS) {
         await obs_get_mute(x).then( state => {muteUpdate(x, state)});
         obs_watch('mute-'+x, state => {muteUpdate(x, state)});
