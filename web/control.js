@@ -211,14 +211,15 @@ async function volumeClick(event) {
     await obs_set_volume(event.target.id, vol_to_dB(event.target.value))
 }
 async function init_volume() {
-    for (let x of CONFIG.AUDIO_INPUTS) {
-        await obs_get_volume(x).then( state => {volumeUpdate(x, state)});
-        obs_watch('volume-'+x, state => {volumeUpdate(x, state)});
-    }
-
-    forEach('.volume', cell => {
+    n = forEach('.volume', cell => {
         cell.addEventListener('input', volumeClick);
     })
+    if (n) {
+        for (let x of CONFIG.AUDIO_INPUTS) {
+            await obs_get_volume(x).then( state => {volumeUpdate(x, state)});
+            obs_watch('volume-'+x, state => {volumeUpdate(x, state)});
+        }
+    }
 }
 
 
@@ -253,7 +254,7 @@ async function init_gallery() {
     })
     setInterval(updateGallerySize, 1000)
 
-    forEach('.gallerycrop', cell => {
+    n = forEach('.gallerycrop', cell => {
         cell.addEventListener('click', async event => {
             // IDs are `n0` with 0 being the size.  0=set null crop.
             // Integers aren't valid IDs thus the `n` prefix.
@@ -261,15 +262,17 @@ async function init_gallery() {
             await obs_set('gallerycrop', Number(id))
         })
     })
-    await obs_watch_init('gallerycrop', crop => {
-        forEach(`.gallerycrop`, cell => {
-            cell.style.backgroundColor = ''
+    if (n) {
+       await obs_watch_init('gallerycrop', crop => {
+            forEach(`.gallerycrop`, cell => {
+                cell.style.backgroundColor = ''
+            })
+            // Ids are `n0` and so on (see above)
+            forEach(`.gallerycrop#n${crop}`, cell => {
+                cell.style.backgroundColor = 'orange'
+            })
         })
-        // Ids are `n0` and so on (see above)
-        forEach(`.gallerycrop#n${crop}`, cell => {
-            cell.style.backgroundColor = 'orange'
-        })
-    })
+    }
 }
 
 
