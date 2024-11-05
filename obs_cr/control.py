@@ -706,10 +706,12 @@ class GallerySize(Helper, ttk.Frame):
             obsreq.set_scene_item_transform(scene, id_, transform)
     def save_last(self):
         """Save gallery size for future restoring"""
-        self.last_state = self.value.get()
+        last_state = self.value.get()
         # The custom event doesn't seem to work - somehow
-        obsreq.broadcast_custom_event({'eventData': {'gallery_last_state': self.last_state}})
-        obsreq.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', 'gallery_last_state', self.last_state)
+        if last_state != 0:
+            self.last_state = last_state
+            obsreq.broadcast_custom_event({'eventData': {'gallery_last_state': self.last_state}})
+            obsreq.set_persistent_data('OBS_WEBSOCKET_DATA_REALM_PROFILE', 'gallery_last_state', self.last_state)
     def restore_last(self):
         """Restore last gallery size"""
         self.update(self.last_state)

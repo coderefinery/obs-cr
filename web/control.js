@@ -421,8 +421,11 @@ async function quickUpdate() {
 // Go to a break
 async function quickBreak(event) {
     await switch_to(CONFIG.NOTES)
-    await obs_set('gallery_last_state', await obs_get('gallerysize'))
-    await obs_set('gallerysize', 0)
+    old_gallery_size = await obs_get('gallerysize')
+    if (old_gallery_size != 0) {
+        await obs_set('gallery_last_state', old_gallery_size)
+        await obs_set('gallerysize', 0)
+    }
     // mute brcd
     // Beep for going offline
     await obs_set_mute(CONFIG.AUDIO_INPUT, true)
