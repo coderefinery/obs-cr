@@ -68,13 +68,26 @@ PLAYBACK_FILES:
         tooltip: 'Long theme song for starting/ending day, 1:23 duration'
 
 
+# Old crop factors
+#GALLERY_CROP_FACTORS:
+#    0:    {'cropTop':  0, 'cropBottom':  0, 'cropLeft':  0, 'cropRight':  0, }
+#    1:    {'cropTop':  0, 'cropBottom':  0, 'cropLeft': 59, 'cropRight': 59, }
+#    2:    {'cropTop': 90, 'cropBottom':  0, 'cropLeft': 12, 'cropRight': 12, }  # checked
+#    3:    {'cropTop':  4, 'cropBottom':  0, 'cropLeft': 60, 'cropRight': 60, }  # checked
+#    5:    {'cropTop': 50, 'cropBottom':  0, 'cropLeft': 11, 'cropRight': 11, }  # checked
 
+# For a 1190 x 750 windows
+# top corp is 40 and bottom is 58
+# top = top-40 + 3
+# left/right = side + 2
+# bottom = 750 - bottom - 58
 GALLERY_CROP_FACTORS:
-    0:    {'cropTop':  0, 'cropBottom':  0, 'cropLeft':  0, 'cropRight':  0, }
-    1:    {'cropTop':  0, 'cropBottom':  0, 'cropLeft': 59, 'cropRight': 59, }
-    2:    {'cropTop': 90, 'cropBottom':  0, 'cropLeft': 12, 'cropRight': 12, }  # checked
-    3:    {'cropTop':  4, 'cropBottom':  0, 'cropLeft': 60, 'cropRight': 60, }  # checked
-    5:    {'cropTop': 50, 'cropBottom':  0, 'cropLeft': 11, 'cropRight': 11, }  # checked
+    0:    {'cropTop':   0, 'cropBottom':   0, 'cropLeft':  0, 'cropRight':  0, }
+    1:    {'cropTop':   8, 'cropBottom':   2, 'cropLeft': 20, 'cropRight': 20, } # 45, 20, 690, checked
+    2:    {'cropTop': 174, 'cropBottom': 166, 'cropLeft': 25, 'cropRight': 25, } # 211, 23, 526, calculated
+    3:    {'cropTop':  10, 'cropBottom':   4, 'cropLeft': 28, 'cropRight': 28, } # 47, 26, 688, calculated
+    5:    {'cropTop': 117, 'cropBottom': 111, 'cropLeft': 24, 'cropRight': 24, } # 154, 22, 581, calculated
+
 
 SCREENSHARE_SIZES:
    - "840x1080"
