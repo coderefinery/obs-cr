@@ -13,6 +13,7 @@ import random
 import subprocess
 import textwrap
 import time
+import yaml
 
 from tkinter import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from tkinter import ttk
@@ -104,6 +105,7 @@ SOUNDFILES = { name: simpleaudio.WaveObject.from_wave_file(str(pathlib.Path(__fi
           for name in SOUNDS.values()
     }
 
+CONFIG = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), 'config.yaml')))
 
 LOG = logging.getLogger(__name__)
 
@@ -743,8 +745,8 @@ def gallery_crop(n):
         id_ = obsreq.get_scene_item_id(scene, GALLERY).scene_item_id
         transform = obsreq.get_scene_item_transform(scene, id_).scene_item_transform
         #print('====old', transform)
-        for (k,v) in GALLERY_CROP_FACTORS[n].items():
-            transform['crop'+k.title()] = v
+        for (k,v) in CONFIG['GALLERY_CROP_FACTORS'][n].items():
+            transform[k] = v   # k is like 'cropTop' and v is integer crop factor
         #print('====new:', transform)
         obsreq.set_scene_item_transform(scene, id_, transform)
     obs['gallerycrop'] = n or 0
@@ -1283,7 +1285,7 @@ def main():
     crop_buttons = ttk.Frame(frm)
     crop_buttons.columnconfigure(tuple(range(5)), weight=1)
     crop_buttons.grid(row=8, column=1, columnspan=5)
-    for i, (n, label) in enumerate([(None, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
+    for i, (n, label) in enumerate([(0, 'None'), (1, 'n=1'), (2, 'n=2'), (3, 'n=3-4'), (5, 'n=5-6')]):
         b = ttk.Button(crop_buttons, text=label, command=partial(gallery_crop, n))
         if not cli_args.small:
             b.grid(row=0, column=i)
