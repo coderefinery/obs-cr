@@ -76,17 +76,27 @@ PLAYBACK_FILES:
 #    3:    {'cropTop':  4, 'cropBottom':  0, 'cropLeft': 60, 'cropRight': 60, }  # checked
 #    5:    {'cropTop': 50, 'cropBottom':  0, 'cropLeft': 11, 'cropRight': 11, }  # checked
 
+# Zoom Classic
 # For a 1190 x 750 windows
 # top corp is 40 and bottom is 58
 # top = top-40 + 3
 # left/right = side + 2
 # bottom = 750 - bottom - 58
+#GALLERY_CROP_FACTORS:
+#    0:    {'cropTop':   0, 'cropBottom':   0, 'cropLeft':  0, 'cropRight':  0, }
+#    1:    {'cropTop':   8, 'cropBottom':   2, 'cropLeft': 20, 'cropRight': 20, } # 45, 20, 690, checked
+#    2:    {'cropTop': 174, 'cropBottom': 166, 'cropLeft': 25, 'cropRight': 25, } # 211, 23, 526, calculated
+#    3:    {'cropTop':  10, 'cropBottom':   4, 'cropLeft': 28, 'cropRight': 28, } # 47, 26, 688, calculated
+#    5:    {'cropTop': 117, 'cropBottom': 111, 'cropLeft': 24, 'cropRight': 24, } # 154, 22, 581, calculated
+
+# Zoom Workplace (window name: Meeting)
+# 1190 x 804
 GALLERY_CROP_FACTORS:
-    0:    {'cropTop':   0, 'cropBottom':   0, 'cropLeft':  0, 'cropRight':  0, }
-    1:    {'cropTop':   8, 'cropBottom':   2, 'cropLeft': 20, 'cropRight': 20, } # 45, 20, 690, checked
-    2:    {'cropTop': 174, 'cropBottom': 166, 'cropLeft': 25, 'cropRight': 25, } # 211, 23, 526, calculated
-    3:    {'cropTop':  10, 'cropBottom':   4, 'cropLeft': 28, 'cropRight': 28, } # 47, 26, 688, calculated
-    5:    {'cropTop': 117, 'cropBottom': 111, 'cropLeft': 24, 'cropRight': 24, } # 154, 22, 581, calculated
+    0:    {'cropTop':  95, 'cropBottom':  72, 'cropLeft':  2, 'cropRight':  2, }  # checked
+    1:    {'cropTop': 110, 'cropBottom': 130, 'cropLeft': 94, 'cropRight': 94, }  # checked
+    2:    {'cropTop': 230, 'cropBottom': 251, 'cropLeft': 20, 'cropRight': 20, }  # checked
+    3:    {'cropTop': 110, 'cropBottom': 129, 'cropLeft': 94, 'cropRight': 94, }  # checked
+    5:    {'cropTop':  95, 'cropBottom':  72, 'cropLeft': 20, 'cropRight': 20, }  # unchecked
 
 
 SCREENSHARE_SIZES:
@@ -95,3 +105,8 @@ SCREENSHARE_SIZES:
    - "1920x1200"
    - "1680x1080"
    - "3840x1080"
+
+
+COMMANDS:
+  resolution-zoom:  "xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;"
+  resolution-zoomw: "xdotool search --onlyvisible --name '^Zoom Workplace$' windowsize WIDTH HEIGHT;"
