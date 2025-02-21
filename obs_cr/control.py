@@ -341,6 +341,10 @@ def set_resolution(w, h):
     cmd = cli_args.resolution_command
     w = int(w)
     h = int(h)
+    if cmd in CONFIG['SS_RESOLUTION']:
+        cmd = CONFIG['SS_RESOLUTION']['command']
+        w += CONFIG['SS_RESOLUTION']['border_pixels'][1]
+        h += CONFIG['SS_RESOLUTION']['border_pixels'][0]
     if not  200 < w < 5000:
         raise ValueError(f"invalid width: {w!r}")
     if not 200 < h < 3000:

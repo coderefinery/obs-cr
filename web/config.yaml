@@ -107,6 +107,12 @@ SCREENSHARE_SIZES:
    - "3840x1080"
 
 
-COMMANDS:
-  resolution-zoom:  "xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;"
-  resolution-zoomw: "xdotool search --onlyvisible --name '^Zoom Workplace$' windowsize WIDTH HEIGHT;"
+SS_RESOLUTION:
+  # Zoom classic.  Has no extra border
+  zoom:
+    command: "xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;"
+    border_pixels: [0, 0]
+  # Zoom Workplace second window: top=65, left=2, right=2, bottom=2
+  zoomw:
+    command: "xdotool search --onlyvisible --name '^Zoom Workplace$' windowsize WIDTH HEIGHT;"
+    border_pixels: [67, 4]
