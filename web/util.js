@@ -202,6 +202,15 @@ async function init_sync_checkboxes() {
     })
 }
 
+async function init_sync_buttons() {
+    await forEachAsync('button.synced', async button => {
+        button.addEventListener('click', async event => {
+            console.log(button, event.target)
+            await obs_set(event.target.attributes.syncwith.value, event.target.innerText)
+        })
+    })
+}
+
 async function init_sync_selects() {
     await forEachAsync('select.synced', async select => {
         await obs_watch_init(select.attributes.syncwith.value, newvalue => {
@@ -232,7 +241,6 @@ async function init_sync_input() {
             await obs_set(input.attributes.syncwith.value, event.target.value)
         })
     })
-
 }
 
 
@@ -440,6 +448,10 @@ async function obs_get_gallerysize(_) {
     return transform.scaleX;
 }
 async function obs_set_gallerycrop(_, state) {
+    ss_resolution = await obs_get('ss_resolution')
+    ss_height = parseInt(ss_resolution.split('x')[1])
+    ss_width = parseInt(ss_resolution.split('x')[0])
+
     for (let scene of ["Gallery", "GalleryTop", ...CONFIG.SCENES_WITH_RESIZEABLE_GALLERY]) {
         var ret;
         // Find the "normal" galleries that are full screen
@@ -479,9 +491,6 @@ async function obs_set_gallerycrop(_, state) {
             transform = {...factors}
             // How to compute this?  Hm...
             //factors = JSON.parse(JSON.stringify(CONFIG.GALLERY_CROP_FACTORS[state]))
-            ss_resolution = await obs_get('ss_resolution')
-            ss_height = parseInt(ss_resolution.split('x')[1])
-            ss_width = parseInt(ss_resolution.split('x')[0])
             transform.cropBottom += ss_height
             if (state > 0) {
                 // Take 200× + 96.  Divide that to the two sides, then add 96 to the right side.

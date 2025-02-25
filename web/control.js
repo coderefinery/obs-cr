@@ -14,6 +14,7 @@ INIT_FUNCTIONS = [
     _obs_init_watchers,
     init_misc,
     init_sync_checkboxes,
+    init_sync_buttons,
     init_sync_selects,
     init_sync_textcontent,
     init_sync_input,

@@ -81,7 +81,7 @@ def main():
 
     if cli_args.broadcaster:
         obs._watch('ss_resolution', change_resolution)
-        obs._watch('mainwindow_resolution', change_resolution)
+        obs._watch('mainwindow_resolution', change_resolution_mainwindow)
 
     print('connected, waiting...')
     while True:
@@ -153,7 +153,9 @@ def change_resolution(resolution):
 def change_resolution_mainwindow(_):
     """Watching function to wait for resolutoin switching signals"""
     cmd = cli_args.resolution_command
-    subprocess.call(CONFIG['SS_RESOLUTION'][cmd]['command_resetmainwindow'])
+    cmd2 = CONFIG['SS_RESOLUTION'][cmd]['command_resetmainwindow']
+    print(f"Setting mainwindow resolution: {cmd2}")
+    subprocess.check_call(cmd2, shell=True)
 
 
 

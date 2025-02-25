@@ -132,6 +132,8 @@ SS_RESOLUTION:
   zoomw:
     command: "xdotool search --onlyvisible --name '^Zoom Workplace$' windowsize WIDTH HEIGHT;"
     border_pixels: [67, 4]
+    command_resetmainwindow: "xdotool search --onlyvisible --name '^Meeting$' windowsize 1190 804;"
+    mainwindow_forcesize: [1190, 804]
   zoomw-top:
     command: "xdotool search --onlyvisible --name '^Meeting$' windowsize WIDTH HEIGHT;"
     border_pixels: [0, 0]
