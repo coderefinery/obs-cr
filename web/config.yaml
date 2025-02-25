@@ -6,6 +6,7 @@ AUDIO_INPUTS:
 
 NOTES: Notes
 GALLERY: ZoomGalleryCapture
+GALLERYTOP: ZoomGalleryTopCapture
 SCENES_WITH_RESIZEABLE_GALLERY: ["Screenshare", "ScreenshareCrop", "ScreenshareLandscape", "BroadcasterScreen", "Notes"]
 #SCENES: ["Title", "Gallery", ...SCENES_WITH_RESIZEABLE_GALLERY, "Empty"]
 SCENES_SAFE: ["Title", "Notes", "Empty"] # Has no instructor screens
@@ -20,6 +21,9 @@ SCENES:
     Gallery:
         name: Gallery
         description: All instructors gallery
+    GalleryTop:
+        name: GalleryTop
+        description: All instructors gallery in top mode
     Screenshare:
         name: SS Portrait
         description: Screenshare, normal portrait mode.\nUsed when the instructor can share a portion of the screen with the right 840x1080 aspect ratio.
@@ -96,7 +100,15 @@ GALLERY_CROP_FACTORS:
     1:    {'cropTop': 110, 'cropBottom': 130, 'cropLeft': 94, 'cropRight': 94, }  # checked
     2:    {'cropTop': 230, 'cropBottom': 251, 'cropLeft': 20, 'cropRight': 20, }  # checked
     3:    {'cropTop': 110, 'cropBottom': 129, 'cropLeft': 94, 'cropRight': 94, }  # checked
-    5:    {'cropTop':  95, 'cropBottom':  72, 'cropLeft': 20, 'cropRight': 20, }  # unchecked
+    5:    {'cropTop': 165, 'cropBottom': 190, 'cropLeft': 20, 'cropRight': 20, }  # unchecked
+    7:    {'cropTop': 105, 'cropBottom': 120, 'cropLeft': 85, 'cropRight': 85, }  # unchecked
+
+# Zoom Workplace Crop factors in "top gallery" mode.  Does not include
+# the height of the screenshare, which gets added to these values.
+# 2 + 272 + 200×n + 96 + 272 + 2
+TOPGALLERY_CROP_FACTORS:
+    0: {cropTop: 70, cropBottom: 74, cropLeft: 0, cropRight: 0}
+    1: {cropTop: 70, cropBottom: 74, cropLeft: 100, cropRight: 100}
 
 
 SCREENSHARE_SIZES:
@@ -106,6 +118,10 @@ SCREENSHARE_SIZES:
    - "1680x1080"
    - "3840x1080"
 
+# Crop factors to get to the screenshare in "top gallery" mode.
+# This is added to the screenshare WxH to get the size to which
+# the window should be set.
+SCREENSHARE_TOPGALLERY_BORDER: {top: 195, bottom: 74, left: 2, right: 2, }
 
 SS_RESOLUTION:
   # Zoom classic.  Has no extra border
@@ -116,3 +132,6 @@ SS_RESOLUTION:
   zoomw:
     command: "xdotool search --onlyvisible --name '^Zoom Workplace$' windowsize WIDTH HEIGHT;"
     border_pixels: [67, 4]
+  zoomw-top:
+    command: "xdotool search --onlyvisible --name '^Meeting$' windowsize WIDTH HEIGHT;"
+    border_pixels: [0, 0]

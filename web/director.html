@@ -69,6 +69,7 @@
             <th title="Select a scene.  The current scene is highlighted.  You might want to use presets instead, which also configures the screenshare size.">Scene selection</th>
             <td><button class="scene" id="Title" livecolor="orange">Title</button></td>
             <td><button class="scene" id="Gallery">Gallery</button></td>
+            <td><button class="scene" id="GalleryTop">GalleryTop</button></td>
             <td><button class="scene" id="Screenshare">SS Portrait</button></td>
             <td><button class="scene" id="ScreenshareCrop">SS Crop</button></td>
             <td><button class="scene" id="ScreenshareLandscape">SS Landscape</button></td>
@@ -154,6 +155,12 @@
             <td><button class="playfile stop" title="Stop the playback">StopPlay</button></td>
         </tr>
     </table>
+    <table border="1">
+        <tr>
+            <th>Zoom screenshare size</th>
+            <td><select class="ss-resolution synced"  id="ss-resolution" syncwith="ss_resolution"></select></td>
+        </tr>
+    </table>
     <table border="p">
         <tr>
             <th title="These scroll the notes on the broadcaster computer up and down.  The broadcaster has to enable this, and sometimes it doesn't work and the notes window needs to be clicked.">Notes scroll:</th>
@@ -162,6 +169,13 @@
             <td><button class="scrollnotes pgup">PgUp</button></td>
             <td><button class="scrollnotes pgdn">PgDn</button></td>
             <td><button class="scrollnotes end" >End </button></td>
+        </tr>
+    </table>
+
+    <table>
+        <tr>
+            <th>Zoom mode</th>
+            <td><input class="synced" syncwith="topgallery-mode" type="checkbox" title="">Single window / top gallery mode</input></td>
         </tr>
     </table>
 

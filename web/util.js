@@ -440,14 +440,60 @@ async function obs_get_gallerysize(_) {
     return transform.scaleX;
 }
 async function obs_set_gallerycrop(_, state) {
-    for (let scene of CONFIG.SCENES_WITH_RESIZEABLE_GALLERY) {
-        let ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: CONFIG.GALLERY});
-        let sid = ret.sceneItemId;
-        ret = await obs.call("GetSceneItemTransform", {sceneName: scene, sceneItemId: sid})
-        let transform = ret.sceneItemTransform
-        transform = { ...transform, ...CONFIG.GALLERY_CROP_FACTORS[state]}
-        //console.log(transform)
-        await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
+    for (let scene of ["Gallery", "GalleryTop", ...CONFIG.SCENES_WITH_RESIZEABLE_GALLERY]) {
+        var ret;
+        // Find the "normal" galleries that are full screen
+        try {
+            ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: CONFIG.GALLERY});
+        } catch (err) {
+            console.log(`Gallery crop: scene ${scene} did not have ${CONFIG.GALLERY}`)
+            ret = false;
+        }
+        if (ret) {
+            console.log(`GalleryCrop: ${scene}->${CONFIG.GALLERY}`)
+            let sid = ret.sceneItemId;
+            ret = await obs.call("GetSceneItemTransform", {sceneName: scene, sceneItemId: sid})
+            let transform = ret.sceneItemTransform
+            let factors = CONFIG.GALLERY_CROP_FACTORS[state]
+            console.log(`GT-old, ${scene}, Gallery, ${sid}:`, transform)
+            transform = { ...transform, ...factors}
+            console.log(`GT-old, ${scene}, Gallery, ${sid}:`, transform)
+            //console.log(transform)
+            await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
+        }
+        // Find the galleries that are the top bar
+        try {
+            ret = await obs.call("GetSceneItemId", {sceneName: scene, sourceName: CONFIG.GALLERYTOP});
+        } catch (err) {
+            console.log(`Gallery (top) crop: scene ${scene} did not have ${CONFIG.GALLERYTOP}`)
+            ret = false;
+        }
+        if (ret) {
+            console.log(`GalleryCrop: ${scene}->${CONFIG.GALLERYTOP}`)
+            let sid = ret.sceneItemId;
+            //ret = await obs.call("GetSceneItemTransform", {sceneName: scene, sceneItemId: sid})
+            //let transform = ret.sceneItemTransform
+            let factors = CONFIG.TOPGALLERY_CROP_FACTORS[state];
+            //console.log(`GT-old, top, ${scene}, GalleryTop, ${sid}:`, transform)
+            //transform = { ...transform, ...factors}
+            transform = {...factors}
+            // How to compute this?  Hm...
+            //factors = JSON.parse(JSON.stringify(CONFIG.GALLERY_CROP_FACTORS[state]))
+            ss_resolution = await obs_get('ss_resolution')
+            ss_height = parseInt(ss_resolution.split('x')[1])
+            ss_width = parseInt(ss_resolution.split('x')[0])
+            transform.cropBottom += ss_height
+            if (state > 0) {
+                // Take 200× + 96.  Divide that to the two sides, then add 96 to the right side.
+                picturewidths = 202*state + 94 //200 * state + 96
+                width_onsides = ((ss_width+4) - picturewidths) / 2
+                transform.cropLeft = Math.max(0, width_onsides)
+                transform.cropRight = Math.max(0, width_onsides + 96)
+            }
+            console.log(`GT-new, top, state=${state}, ${scene}, GalleryTop, ${sid}:`, transform)
+            await obs.call("SetSceneItemTransform", {sceneName: scene, sceneItemId: sid, sceneItemTransform: transform})
+
+        }
     }
     _obs_set("gallerycrop", state)
 }

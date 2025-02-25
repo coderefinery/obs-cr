@@ -27,6 +27,7 @@ INIT_FUNCTIONS = [
     init_quick,
     init_scrollnotes,
     init_playfile,
+    init_ss_resolution,
     init_preview,
 ]
 // Run all initialization in sequence (one after another - no parallel)
@@ -548,6 +549,25 @@ async function init_playfile() {
 
     await obs.on('MediaInputPlaybackStarted', playfileTimerUpdate)
     await playfileTimerUpdate() // Run once to init - returns if not playing
+}
+
+
+//
+// Screenshare resolution box
+//
+async function init_ss_resolution() {
+    // Preset resolution choices
+    await forEachAsync(`select.ss-resolution`, async select => {
+        // Set resolution choices
+        ["-", ...CONFIG.SCREENSHARE_SIZES].forEach(resolution => {
+            opt = document.createElement('option')
+            opt.text = resolution
+            opt.value = resolution
+            select.options.add(opt)
+        })
+        //await obs_force(`ss-resolution`)
+        //obs_watch(`preset-${select.id}-rbox`, _ => {presetUpdate(select.id)})
+    })
 }
 
 
