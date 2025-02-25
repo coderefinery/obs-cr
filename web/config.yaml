@@ -107,8 +107,11 @@ GALLERY_CROP_FACTORS:
 # the height of the screenshare, which gets added to these values.
 # 2 + 272 + 200×n + 96 + 272 + 2
 TOPGALLERY_CROP_FACTORS:
-    0: {cropTop: 70, cropBottom: 74, cropLeft: 0, cropRight: 0}
-    1: {cropTop: 70, cropBottom: 74, cropLeft: 100, cropRight: 100}
+    0: {cropTop: 70, cropBottom: 76, cropLeft: 2, cropRight: 2}
+    1: {cropTop: 70, cropBottom: 74, cropLeft: 100, cropRight: 100}     # L/R crop factors aren't used
+    2: {cropTop: 70, cropBottom: 74, cropLeft: 110, cropRight: 110}
+    3: {cropTop: 70, cropBottom: 74, cropLeft: 120, cropRight: 120}
+    5: {cropTop: 70, cropBottom: 74, cropLeft: 130, cropRight: 130}
 
 
 SCREENSHARE_SIZES:
@@ -131,7 +134,7 @@ SS_RESOLUTION:
   # Zoom Workplace second window: top=65, left=2, right=2, bottom=2
   zoomw:
     command: "xdotool search --onlyvisible --name '^Zoom Workplace$' windowsize WIDTH HEIGHT;"
-    border_pixels: [67, 4]
+    border_pixels: [67, 4]  # Crop set in OBS scene-item properties
     command_resetmainwindow: "xdotool search --onlyvisible --name '^Meeting$' windowsize 1190 804;"
     mainwindow_forcesize: [1190, 804]
   zoomw-top:
