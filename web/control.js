@@ -29,6 +29,7 @@ INIT_FUNCTIONS = [
     init_scrollnotes,
     init_playfile,
     init_ss_resolution,
+    init_ss_reset_button,
     init_preview,
 ]
 // Run all initialization in sequence (one after another - no parallel)
@@ -571,6 +572,16 @@ async function init_ss_resolution() {
     })
 }
 
+async function init_ss_reset_button() {
+    await forEachAsync(`button.reset-secondwindow-size`, async button => {
+        button.addEventListener('click', async event => {
+            console.log("Reset secondwindow size", event)
+            await obs_set_gallerycrop()
+            await obs_set('ss_resolution', await obs_get('ss_resolution'))
+        })
+    })
+
+}
 
 //
 // Preview pane

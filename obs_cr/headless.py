@@ -124,7 +124,7 @@ def set_resolution(w, h):
         h += CONFIG['SS_RESOLUTION'][cmd]['border_pixels'][0]
         cmd = CONFIG['SS_RESOLUTION'][cmd]['command']
     # Are we in the "zoom top gallery" view?
-    if obs['topgallery-mode']:
+    if obs['singlewindow-mode']:
         w += CONFIG['SCREENSHARE_TOPGALLERY_BORDER']['left'] + CONFIG['SCREENSHARE_TOPGALLERY_BORDER']['right']
         h += CONFIG['SCREENSHARE_TOPGALLERY_BORDER']['top'] + CONFIG['SCREENSHARE_TOPGALLERY_BORDER']['bottom']
 
