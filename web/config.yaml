@@ -134,7 +134,7 @@ SS_RESOLUTION:
   # Zoom Workplace second window: top=65, left=2, right=2, bottom=2
   zoomw:
     command: "xdotool search --onlyvisible --name '^Zoom Workplace$' windowsize WIDTH HEIGHT;"
-    border_pixels: [67, 4]  # Crop set in OBS scene-item properties
+    border_pixels: [65, 0] # prev [67, 4]  # Crop set in OBS scene-item properties
     command_resetmainwindow: "xdotool search --onlyvisible --name '^Meeting$' windowsize 1190 804;"
     mainwindow_forcesize: [1190, 804]
   zoomw-top:
