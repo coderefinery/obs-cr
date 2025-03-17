@@ -161,7 +161,7 @@
             <td><select class="ss-resolution synced"  id="ss-resolution" syncwith="ss_resolution"></select></td>
         </tr>
     </table>
-    <table border="p">
+    <table border="1">
         <tr>
             <th title="These scroll the notes on the broadcaster computer up and down.  The broadcaster has to enable this, and sometimes it doesn't work and the notes window needs to be clicked.">Notes scroll:</th>
             <td><button class="scrollnotes up"  >Up  </button></td>
@@ -172,7 +172,7 @@
         </tr>
     </table>
 
-    <table>
+    <table border="1">
         <tr>
             <th>Zoom mode</th>
             <td><input class="synced" syncwith="topgallery-mode" type="checkbox" title="Use topbar gallery from the main window.  Use in single-window mode">Top gallery</input></td>
@@ -182,6 +182,16 @@
             <!--<td><input class="synced" syncwith="topgallery-mode" type="checkbox" title="">Single Zoom window mode (top gallery)</input></td>-->
         </tr>
     </table>
+
+    <table border="1">
+        <tr>
+          <th>Announcement</th>
+          <td><input type="checkbox" class="synced announcement-enabled" syncwith="announcement-enabled" title="Enable the announcement text?"></td>
+          <td><input type="text" class="synced announcement-textsize" id="announcement-textsize" syncwith="announcement-textsize" type="number" min="0" size="3" title="Announcement text size"></td>
+          <td><input type="text" class="synced announcement" id="announcement-text" syncwith="announcement" title="The announcement text"></td>
+        </tr>
+      </table>
+
 
     <a class="preview-href" href="">Preview</a>,
     <a class="small-href" href="">Short panel</a>,

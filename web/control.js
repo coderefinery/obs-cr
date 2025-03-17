@@ -29,6 +29,7 @@ INIT_FUNCTIONS = [
     init_scrollnotes,
     init_playfile,
     init_ss_resolution,
+    init_announcement,
     init_reset_mainwindow,
     init_reset_secondwindow,
     init_preview,
@@ -630,7 +631,7 @@ async function init_preview () {
     UPDATE_INTERVAL = parseFloat(params.delay)*1000 || 250;
 
     n = await update_preview();
-    console.log(n)
+    //console.log(n)
     if (n) {
         setInterval(update_preview, UPDATE_INTERVAL);
     }
@@ -654,5 +655,44 @@ async function audioTest(event, round=0) {
 function init_audio() {
     forEach('.enable-audio-button', button => {
         button.addEventListener('click', audioTest)
+    })
+}
+
+
+//
+// Announcement text sync
+//
+async function init_announcement() {
+    forEach('input.announcement', input => {
+        input.addEventListener('change', async event => {
+            //await obs_set(input.attributes.syncwith.value, event.target.value)
+            //console.log(await obs.call('GetInputSettings', {inputName: 'Announcement'}))
+            await obs.call('SetInputSettings', {inputName: 'Announcement', inputSettings: {text: event.target.value}})
+        })
+    })
+    forEach('input.announcement-textsize', input => {
+        input.addEventListener('change', async event => {
+            //await obs_set(input.attributes.syncwith.value, event.target.value)
+            await obs.call('GetInputSettings', {inputName: 'Announcement'})
+            await obs.call('SetInputSettings', {inputName: 'Announcement', inputSettings: {font: {size: parseInt(event.target.value, 10)}}})
+        })
+    })
+    forEach("input.announcement-enabled", input => {
+        input.addEventListener('change', async event => {
+            //console.log(event)
+            scenes = (await obs.call('GetSceneList', {}))['scenes']
+            for(sceneData of scenes) {
+                sceneName = sceneData['sceneName']
+                //console.log(scene)
+                sceneItems = (await obs.call('GetSceneItemList', {sceneName: sceneName}))['sceneItems']
+                //console.log(sceneItems)
+                for (sceneItem of sceneItems) {
+                    if (sceneItem.sourceName == 'Announcement') {
+                        //console.log(sceneName, sceneItem)
+                        await obs.call('SetSceneItemEnabled', {sceneName: sceneName, sceneItemId: sceneItem.sceneItemId, sceneItemEnabled: event.target.checked})
+                    }
+                }
+            }
+        })
     })
 }
