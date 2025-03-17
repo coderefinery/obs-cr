@@ -100,8 +100,8 @@ GALLERY_CROP_FACTORS:
     1:    {'cropTop': 110, 'cropBottom': 130, 'cropLeft': 94, 'cropRight': 94, }  # checked
     2:    {'cropTop': 230, 'cropBottom': 251, 'cropLeft': 20, 'cropRight': 20, }  # checked
     3:    {'cropTop': 110, 'cropBottom': 129, 'cropLeft': 94, 'cropRight': 94, }  # checked
-    5:    {'cropTop': 165, 'cropBottom': 190, 'cropLeft': 20, 'cropRight': 20, }  # unchecked
-    7:    {'cropTop': 105, 'cropBottom': 120, 'cropLeft': 85, 'cropRight': 85, }  # unchecked
+    5:    {'cropTop': 175, 'cropBottom': 190, 'cropLeft': 21, 'cropRight': 21, }  # checked
+    7:    {'cropTop': 110, 'cropBottom': 120, 'cropLeft': 92, 'cropRight': 92, }  # checked
 
 # Zoom Workplace Crop factors in "top gallery" mode.  Does not include
 # the height of the screenshare, which gets added to these values.
