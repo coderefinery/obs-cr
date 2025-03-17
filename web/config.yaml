@@ -5,7 +5,7 @@ AUDIO_INPUTS:
     - BroadcasterMic
 
 NOTES: Notes
-GALLERY: ZoomGalleryCapture
+GALLERY: ZoomMeetingCapture
 GALLERYTOP: ZoomGalleryTopCapture
 SCENES_WITH_RESIZEABLE_GALLERY: ["Screenshare", "ScreenshareCrop", "ScreenshareLandscape", "BroadcasterScreen", "Notes"]
 #SCENES: ["Title", "Gallery", ...SCENES_WITH_RESIZEABLE_GALLERY, "Empty"]
