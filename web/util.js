@@ -187,6 +187,16 @@ async function soundEvent(value) {
 }
 
 
+// Wakelock to keep screen on
+// This does NOT currently work on non-SSL sites.
+async function init_wakelock() {
+    const params = getFragmentParams();
+    if (params['wakelock']) {
+        console.error('wakelock trying to activate')
+         wakeLock = await navigator.wakeLock.request('screen');
+    }
+}
+
 
 //
 // Synced Buttons

@@ -33,6 +33,7 @@ INIT_FUNCTIONS = [
     init_reset_mainwindow,
     init_reset_secondwindow,
     init_preview,
+    init_wakelock,
 ]
 // Run all initialization in sequence (one after another - no parallel)
 async function init_all() {
