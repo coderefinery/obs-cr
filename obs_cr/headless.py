@@ -155,7 +155,9 @@ def change_resolution_mainwindow(_):
     cmd = cli_args.resolution_command
     cmd2 = CONFIG['SS_RESOLUTION'][cmd]['command_resetmainwindow']
     print(f"Setting mainwindow resolution: {cmd2}")
-    subprocess.check_call(cmd2, shell=True)
+    ret = subprocess.call(cmd2, shell=True)
+    if ret != 0:
+        print(f"ERROR in change main window ({ret})")
 
 
 
