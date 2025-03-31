@@ -176,6 +176,10 @@ async function init_soundfiles() {
     }
 }
 async function soundEvent(value) {
+    if (document.querySelector("input.no-local-sound").checked) {
+        console.debug(`Not playing sound ${value} due to no-local-sound=true`)
+        return;
+    }
     //console.log(`sound event: ${value}`);
     update_status(`Sound event: ${value}`);
     audio = SOUNDFILES[value];
