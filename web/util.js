@@ -176,7 +176,8 @@ async function init_soundfiles() {
     }
 }
 async function soundEvent(value) {
-    if (document.querySelector("input.no-local-sound").checked) {
+    nosound = document.querySelector("input.no-local-sound")
+    if (nosound != null && nosound.checked) {
         console.debug(`Not playing sound ${value} due to no-local-sound=true`)
         return;
     }
