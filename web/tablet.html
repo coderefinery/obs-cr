@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+  <head>
+    <title>OBS CR control (small)</title>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="util.js"></script>
+    <script src="control.js"></script>
+    <script type="module">
+    </script>
+  </head>
+  <body>
+
+    <div class="ssl-warning" style="display:none; color: maroon">
+        You are currently using HTTPS.  Unfortunately OBS probably isn't
+        using SSL and browsers only allow SSL websocket connections from
+        SSL pages, so you need to turn SSL off.  Please try changing the
+        URL to 'http' instead of 'https' which might require telling
+        your browser to not force SSL for this page (try clicking lock or
+	      shield icons by the URL bar).
+    </div>
+
+    <div class="audio-warning" style="display:none; color: maroon">
+        Audio playback has failed.  Do you need to allow it on this page?
+        Or try clicking the "enable audio" button.
+    </div>
+
+    <div class="enable-audio" style="color: maroon">
+        <button class="enable-audio-button">Enable audio</button>
+        Click this button once to play some sound, to enable audio in this browser.
+        Browsers won't play sound unless you interact first, to avoid sites spamming
+        sound without your request.
+    </div>
+
+    <!--<div class="status">Status is updated here</div>-->
+    <!--<span class="synced" syncwith="scene">Scene</span>-->
+    <!--<span class="synced" syncwith="ss_resolution">Resolution</span>-->
+
+
+    <table border="1">
+      <tr><th title="Synced indicators.  Used for non-verbal instructor communication.">Indicators:</th>
+          <td class="live" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</td>
+          <td><button class="indicator" id="warning">Warn</button></td>
+          <td><button class="indicator" id="caution">Caution</button></td>
+          <td><button class="indicator" id="time">Time</button></td>
+          <td><button class="indicator" id="notes">Notes</button></td>
+          <td><button class="indicator" id="question">Question</button></td>
+          <td><button class="indicator" id="chat">Chat</button></td>
+          <td><button class="indicator" id="slower">Slower</button></td>
+          <td><button class="indicator" id="faster">Faster</button></td>
+        </tr>
+    </table>
+
+    <table border="">
+        <tr>
+            <td><span class="synced" syncwith="scene">Scene</span></td>
+            <td><span class="time" title="Current time"></span></td>
+            <td class="playfile timer" title="Timer for ongoing playback">-</td>
+            <td class="status">Status</td>
+          </tr>
+    </table>
+
+    <table border="1">
+        <tr>
+            <th title="Quick actions to take you to or from a break.">Quick actions:</th>
+            <td><button class="quick-break" title="Cut audio/gallery and swich scene to Notes.">Break</button></td>
+            <th title="These scroll the notes on the broadcaster computer up and down.  The broadcaster has to enable this, and sometimes it doesn't work and the notes window needs to be clicked.">Notes scroll:</th>
+            <td><button class="scrollnotes up"  >Up  </button></td>
+            <td><button class="scrollnotes down">Down</button></td>
+            <td><button class="scrollnotes pgup">PgUp</button></td>
+            <td><button class="scrollnotes pgdn">PgDn</button></td>
+            <td><button class="scrollnotes end" >End </button></td>
+        </tr>
+    </table>
+
+    <table border="1">
+      <tr>
+        <th>Announcement</th>
+        <td><input type="checkbox" class="synced announcement-enabled" syncwith="announcement-enabled" title="Enable the announcement text?"></td>
+        <td><input type="text" class="synced announcement-textsize" id="announcement-textsize" syncwith="announcement-textsize" type="number" min="0" size="3" title="Announcement text size"></td>
+        <td><input type="text" class="synced announcement" id="announcement-text" syncwith="announcement" title="The announcement text"></td>
+      </tr>
+    </table>
+
+
+
+    <a class="preview-href" href="">Preview</a>,
+    <a class="director-href" href="">Director view</a>,
+    <a class="annunciators-href" href="">Annunciator panel only</a>,
+    <button class="popout" title="Pop out this window without tabs/menus" onclick="window.open(window.location.href, 'popupWindow', 'width=700,height=300,menubar=no,toolbar=no,location=no,status=no');">Pop out window</button>
+
+    <script>
+        init_all()
+    </script>
+
+  <body>
+  </html>
