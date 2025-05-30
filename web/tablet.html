@@ -89,6 +89,8 @@
     <a class="annunciators-href" href="">Annunciator panel only</a>,
     <button class="popout" title="Pop out this window without tabs/menus" onclick="window.open(window.location.href, 'popupWindow', 'width=700,height=300,menubar=no,toolbar=no,location=no,status=no');">Pop out window</button>
 
+    <button onClick='qrdiv = document.querySelector("#url-qr-code img") ; if (qrdiv) {qrdiv.remove()} else { new QRCode("url-qr-code", window.location.href)}'>Show QR code</button>
+    <div style="margin: 1em" id="url-qr-code"></div>
     <script>
         init_all()
     </script>
