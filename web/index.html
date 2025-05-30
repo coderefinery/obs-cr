@@ -6,6 +6,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <script src="util.js"></script>
     <script src="control.js"></script>
+    <!-- https://www.geeksforgeeks.org/how-to-make-a-qr-code-generator-using-qrcode-js/ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script type="module">
     </script>
   </head>
@@ -38,6 +40,9 @@
     </ul>
 
     <p>Arguments are given via URL fragments (not query arguments): <code>#url=localhost:4455&password=XXXXX</code></p>
+
+    <button onClick='qrdiv = document.querySelector("#url-qr-code img") ; if (qrdiv) {qrdiv.remove()} else { new QRCode("url-qr-code", window.location.href)}'>Show QR code for phone/tablet view.</button>
+    <div style="margin: 1em" id="url-qr-code"></div>
 
     <script>
         init_rellinks()
