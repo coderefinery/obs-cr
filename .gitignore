@@ -2,3 +2,5 @@ dist/
 *.pyz
 zipapp/
 /_site/
+*.xwd
+venv2
