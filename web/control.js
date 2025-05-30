@@ -322,7 +322,7 @@ async function presetUpdateOne(preset) {
              current_resolution == preset_resolution)
     //console.log("Update preset state", preset, state, 'setting:', preset_scene, preset_resolution, "detected:", current_scene, current_resolution)
 
-    forEach(`.preset-label#${preset}`, label => {
+    forEach(`.preset-label#${preset}, .preset-active#${preset}`, label => {
         color = CONFIG.SCENES_SAFE.includes(preset_scene) ? 'orange' : 'red'
         label.style.backgroundColor = state ? color : ''
     })

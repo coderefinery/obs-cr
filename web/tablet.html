@@ -59,12 +59,12 @@
             <span class="time" title="Current time"></span>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr">
-            <button class="preset-go"           id="preset-a">A</button>
-            <button class="preset-go"           id="preset-d">D</button>
-            <button class="preset-go"           id="preset-b">B</button>
-            <button class="preset-go"           id="preset-e">E</button>
-            <button class="preset-go"           id="preset-c">C</button>
-            <button class="preset-go"           id="preset-f">F</button>
+            <button class="preset-go preset-active synced" syncwith="preset-preset-a-label" id="preset-a">A</button>
+            <button class="preset-go preset-active synced" syncwith="preset-preset-b-label" id="preset-d">D</button>
+            <button class="preset-go preset-active synced" syncwith="preset-preset-c-label" id="preset-b">B</button>
+            <button class="preset-go preset-active synced" syncwith="preset-preset-d-label" id="preset-e">E</button>
+            <button class="preset-go preset-active synced" syncwith="preset-preset-e-label" id="preset-c">C</button>
+            <button class="preset-go preset-active synced" syncwith="preset-preset-f-label" id="preset-f">F</button>
   
           </div>
           <div style="display: grid">
@@ -105,20 +105,7 @@
         </tr>
   </table>
 
-    <table border="1">
-      <tr>
-          <td><button class="preset-go"           id="preset-a">A</button></td>
-          <td><button class="preset-go"           id="preset-d">D</button></td>
-      </tr>
-      <tr>
-          <td><button class="preset-go"           id="preset-b">B</button></td>
-          <td><button class="preset-go"           id="preset-e">E</button></td>
-      </tr>
-      <tr>
-          <td><button class="preset-go"           id="preset-c">C</button></td>
-          <td><button class="preset-go"           id="preset-f">F</button></td>
-      </tr>
-  </table>
+
 
     <table border="1">
         <tr>
@@ -133,7 +120,48 @@
         </tr>
     </table>
 
-
+    <table border="1">
+      <tr>
+          <th rowspan="3" title="Presets allow you to give a name to a {scene, resolution} combination and jump directly there.  Recommended to make scenes configured for each instructor.  Note they still have to screenshare on Zoom.">Scene presets:</th>
+    <td>A:</td>
+          <td><button class="preset-go"           id="preset-a">Go</button></td>
+          <td><input  class="preset-label synced" id="preset-a" type="text" syncwith="preset-preset-a-label" value="A" size="10"></td>
+          <td><select class="preset-sbox synced"  id="preset-a" syncwith="preset-preset-a-sbox"></select></td>
+          <td><select class="preset-rbox synced"  id="preset-a" syncwith="preset-preset-a-rbox"></select></td>
+          <td>&nbsp&nbsp</td>
+    <td>D:</td>
+          <td><button class="preset-go"           id="preset-d">Go</button></td>
+          <td><input  class="preset-label synced" id="preset-d" type="text" syncwith="preset-preset-d-label" value="D" size="10"></td>
+          <td><select class="preset-sbox synced"  id="preset-d" syncwith="preset-preset-d-sbox"></select></td>
+          <td><select class="preset-rbox synced"  id="preset-d" syncwith="preset-preset-d-rbox"></select></td>
+      </tr>
+      <tr>
+    <td>B:</td>
+          <td><button class="preset-go"           id="preset-b">Go</button></td>
+          <td><input  class="preset-label synced" id="preset-b" type="text" syncwith="preset-preset-b-label" value="B" size="10"></td>
+          <td><select class="preset-sbox synced"  id="preset-b" syncwith="preset-preset-b-sbox"></select></td>
+          <td><select class="preset-rbox synced"  id="preset-b" syncwith="preset-preset-b-rbox"></select></td>
+          <td></td>
+    <td>E:</td>
+          <td><button class="preset-go"           id="preset-e">Go</button></td>
+          <td><input  class="preset-label synced" id="preset-e" type="text" syncwith="preset-preset-e-label" value="E" size="10"></td>
+          <td><select class="preset-sbox synced"  id="preset-e" syncwith="preset-preset-e-sbox"></select></td>
+          <td><select class="preset-rbox synced"  id="preset-e" syncwith="preset-preset-e-rbox"></select></td>
+      </tr>
+      <tr>
+    <td>C:</td>
+          <td><button class="preset-go"           id="preset-c">Go</button></td>
+          <td><input  class="preset-label synced" id="preset-c" type="text" syncwith="preset-preset-c-label" value="C" size="10"></td>
+          <td><select class="preset-sbox synced"  id="preset-c" syncwith="preset-preset-c-sbox"></select></td>
+          <td><select class="preset-rbox synced"  id="preset-c" syncwith="preset-preset-c-rbox"></select></td>
+          <td></td>
+    <td>F:</td>
+          <td><button class="preset-go"           id="preset-f">Go</button></td>
+          <td><input  class="preset-label synced" id="preset-f" type="text" syncwith="preset-preset-f-label" value="F" size="10"></td>
+          <td><select class="preset-sbox synced"  id="preset-f" syncwith="preset-preset-f-sbox"></select></td>
+          <td><select class="preset-rbox synced"  id="preset-f" syncwith="preset-preset-f-rbox"></select></td>
+      </tr>
+  </table>
 
 
     <a class="preview-href" href="">Preview</a>,
