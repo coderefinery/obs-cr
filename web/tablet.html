@@ -55,8 +55,12 @@
           <button class="indicator" id="faster">Faster</button>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 2fr 2fr 1fr"> <!-- under indicators-->
-          <div> <!-- first column-->
+          <div style="display:grid"> <!-- first column-->
             <span style="display:flex; justify-content: center" class="time" title="Current time"></span>
+            <span class="synced" syncwith="scene">Scene</span>
+            <span class="playfile timer" title="Timer for ongoing playback">-</span>
+            <span class="status">Status</span>
+  
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr">
             <button class="preset-go preset-active synced" syncwith="preset-preset-a-label" id="preset-a">A</button>
@@ -70,6 +74,7 @@
           <div style="display: grid">
             <button class="quick-break" title="Cut audio/gallery and swich scene to Notes.">Break</button>
             <button class="quick-back" title="Do the jump back from the break.  The following fields control how you go back.  There is a three second countdown to return.">Back</button>
+            <span>Back to:</span>
             <select class="quick-back-scene synced" syncwith="quickback-quickback-a-value" title="Which scene to return to."></select></td>
             <input class="quick-back-audio-brcd synced" type="checkbox" syncwith="checkbutton-quick_brcd-value" title="If true, un-mute the broadcaster also.">Brcd Audio?</input>
             <input class="quick-back-jingle synced" type="checkbox" syncwith="checkbutton-quick_jingle-value" title="If true, play a short jingle when returning.">Jingle?</input>
@@ -92,29 +97,6 @@
         <span style="writing-mode: vertical-lr; direction: ltr; text-align: center">Gallery size</span>
       </div>
     </div>
-
-    <table border="1">
-      <tr><th title="Synced indicators.  Used for non-verbal instructor communication.">Indicators:</th>
-        <td class="live" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</td>
-          <td><button class="indicator" id="warning">Warn</button></td>
-          <td><button class="indicator" id="caution">Caution</button></td>
-          <td><button class="indicator" id="time">Time</button></td>
-          <td><button class="indicator" id="notes">Notes</button></td>
-          <td><button class="indicator" id="question">Question</button></td>
-          <td><button class="indicator" id="chat">Chat</button></td>
-          <td><button class="indicator" id="slower">Slower</button></td>
-          <td><button class="indicator" id="faster">Faster</button></td>
-        </tr>
-    </table>
-    <table border="">
-      <tr>
-          <td><span class="synced" syncwith="scene">Scene</span></td>
-          <td><span class="time" title="Current time"></span></td>
-          <td class="playfile timer" title="Timer for ongoing playback">-</td>
-          <td class="status">Status</td>
-        </tr>
-  </table>
-
 
 
     <table border="1">

@@ -657,6 +657,11 @@ function init_audio() {
     forEach('.enable-audio-button', button => {
         button.addEventListener('click', audioTest)
     })
+    if (getFragmentParams()["nosound"]) {
+        forEach('.enable-audio, .audio-warning', div => {
+            div.style['display'] = 'none'
+        })
+    }
 }
 
 

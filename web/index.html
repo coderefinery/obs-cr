@@ -41,7 +41,7 @@
 
     <p>Arguments are given via URL fragments (not query arguments): <code>#url=localhost:4455&password=XXXXX</code></p>
 
-    <button onClick='qrdiv = document.querySelector("#url-qr-code img") ; if (qrdiv) {qrdiv.remove()} else { new QRCode("url-qr-code", replace_url_path(window.location.href, "tablet.html"))}'>Show QR code for phone/tablet view.</button>
+    <button onClick='qrdiv = document.querySelector("#url-qr-code img") ; if (qrdiv) {qrdiv.remove()} else { new QRCode("url-qr-code", replace_url_path(window.location.href, "tablet"))}'>Show QR code for phone/tablet view.</button>
     <div style="margin: 1em" id="url-qr-code"></div>
 
     <script>
