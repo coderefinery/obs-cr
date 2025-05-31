@@ -37,11 +37,14 @@
         <li><a class="director-href" href="">Big control panel for directors.</a>
           <button class="popout director-href" onclick="window.open(event.target.href, 'popupWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');">Pop out</button>
         </li>
+        <li><a class="tablet-href" href="">Phone/tablet view.</a>
+          <button class="popout tablet-href" onclick="window.open(event.target.href, 'popupWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');">Pop out</button>
+          <button onClick='qrdiv = document.querySelector("#url-qr-code img") ; if (qrdiv) {qrdiv.remove()} else { new QRCode("url-qr-code", replace_url_path(window.location.href, "tablet"))}'>Show QR code for phone/tablet view.</button>
+        </li>
     </ul>
 
     <p>Arguments are given via URL fragments (not query arguments): <code>#url=localhost:4455&password=XXXXX</code></p>
 
-    <button onClick='qrdiv = document.querySelector("#url-qr-code img") ; if (qrdiv) {qrdiv.remove()} else { new QRCode("url-qr-code", replace_url_path(window.location.href, "tablet"))}'>Show QR code for phone/tablet view.</button>
     <div style="margin: 1em" id="url-qr-code"></div>
 
     <script>
