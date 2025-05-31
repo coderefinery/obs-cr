@@ -302,18 +302,22 @@ async function obs_init () {
     const url = params.url || 'localhost:4455';
     const password = params.password || '';
 
+    if (! url.includes('//')) {
+        url = `ws://${url}`
+    }
+
     // Create a new OBS WebSocket instance
     globalThis.obs = new OBSWebSocket();
-    update_status(`Trying to connect to ws://${url}`)
+    update_status(`Trying to connect to ${url}`)
 
     try {
-	await obs.connect(`ws://${url}`, password)
+	    await obs.connect(url, password)
     } catch (err) {
-	console.log(err)
-	update_status(`Connection failed: ${err.message}`)
-	return
+	    console.log(err)
+	    update_status(`Connection to ${url} failed: ${err.message}`)
+	    return
     }
-    update_status(`Connected to OBS at ws://${url}.`);
+    update_status(`Connected to OBS at ${url}.`);
     // Poll to keep the connection alive
     setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
                 60000);
