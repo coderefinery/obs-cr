@@ -321,6 +321,10 @@ async function obs_init () {
 	    return
     }
     update_status(`Connected to OBS at ${url}.`);
+    // Hide SSL warning if we connected with SSL
+    forEach('.ssl-warning', div => {
+        div.style['display'] = 'none'
+    })
     // Poll to keep the connection alive
     setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
                 60000);
