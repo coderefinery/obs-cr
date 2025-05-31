@@ -47,7 +47,15 @@ async function init_ssl_warning () {
 }
 
 
+function replace_url_path(href, page) {
+    // Replace the path component (xxx.html) with page (page.html)
+    purl = new URL(href);
+    purl.pathname = purl.pathname.replace(/\/[^\/]*?$/, `/${page}.html`);
+    return purl.toString();
+}
+
 function init_rellinks() {
+    // For each <a> element with classname PAGE-href, replace link target path with PAGE.html
     purl = new URL(window.location.href);
     for (page of ["preview", "index", "control", "small", "director", "annunciators"]) {
         purl.pathname = purl.pathname.replace(/\/[^\/]*?$/, `/${page}.html`)
