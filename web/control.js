@@ -96,18 +96,18 @@ function init_live(obs) {
 //
 // Indicators
 //
-function indicatorBlink(name) {
-    forEach(`.indicator#${name}`, cell => {
+function indicatorBlink(id,) {
+    forEach(`.indicator#${id}`, cell => {
         // Disable it
         if (!cell.state) {
             cell.style.backgroundColor = ''
             return
         }
-        cell.style.backgroundColor = !cell.style.backgroundColor ? CONFIG.INDICATORS[name]['color'] : '';
+        cell.style.backgroundColor = !cell.style.backgroundColor ? CONFIG.INDICATORS[id]['color'] : '';
     })
     console.log("setting timeout")
     // Get one cell to see if if timer needs to continue
-    if (!document.querySelector(`.indicator#${name}`).state) {
+    if (!document.querySelector(`.indicator#${id}`).state) {
         return
     }
     setTimeout(indicatorBlink, CONFIG.INDICATORS[id]['blink'], id)
