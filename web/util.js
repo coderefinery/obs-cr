@@ -210,6 +210,23 @@ async function init_wakelock() {
     }
 }
 
+//let wakeLock = null;
+async function fullscreen_toggle() {
+    main=document.querySelector('#main')
+    if (main.fs == 1) {
+        document.exitFullscreen()
+        main.fs = 0
+        // Wakelock doesn't work in non-SSL
+        //wakeLock.release().then(() => {
+        //    wakeLock = null;
+        //});
+    } else {
+        main.requestFullscreen()
+        //wakeLock = await navigator.wakeLock.request("screen");
+        main.fs = 1
+    }
+}
+
 
 //
 // Synced Buttons
