@@ -129,6 +129,11 @@ function update_status(text) {
     forEach('.status', x => {x.innerText = text});
 }
 
+function append_status(text) {
+    forEach('.status', x => {x.innerText += " " + text});
+}
+
+
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 // Convert a stable ID to a human name for a scene/preset
@@ -326,10 +331,19 @@ async function obs_init () {
         div.style['display'] = 'none'
     })
     // Poll to keep the connection alive
-    setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
+    globalThis.obs_pinger = setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
                 60000);
-    obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected (closed)!: ${e}`); } )
-    obs.on('ConnectionError', e => { update_status(`OBS Disconnected (error)!: ${e}`); } )
+    obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected (closed)!: ${e}`); obs_reconnect(); } )
+    obs.on('ConnectionError', e => { update_status(`OBS Disconnected (error)!: ${e}`); obs_reconnect(); } )
+}
+
+async function obs_reconnect(n) {
+    if (obs_pinger) {
+        clearInterval(obs_pinger)
+    }
+    return  // disabled
+    append_status("Reconnecting in 5s...")
+    setTimeout(obs_init, 5000)
 }
 
 
