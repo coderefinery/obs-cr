@@ -189,6 +189,11 @@ async function soundEvent(value) {
         console.debug(`Not playing sound ${value} due to no-local-sound=true`)
         return;
     }
+    if (getFragmentParams()["nosound"]) {
+        console.debug(`Not playing sound ${value} due to url fragment #nosound=1`)
+        return;
+
+    }
     //console.log(`sound event: ${value}`);
     update_status(`Sound event: ${value}`);
     audio = SOUNDFILES[value];

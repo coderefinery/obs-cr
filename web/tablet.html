@@ -13,6 +13,10 @@
     <script src="control.js"></script>
     <script type="module">
     </script>
+    <style>
+      .centered {display: flex ; justify-content: center; }
+      .centeredV {display: flex ; align-items: center; }
+    </style>
   </head>
   <body>
 
@@ -43,8 +47,8 @@
 
     <div id="main" style="height: 100%; display: grid; grid-template-columns: 9fr 1fr; background-color: white"> <!-- main (contains panel/sidebar) -->
       <div style="display: grid; grid-template-rows: .5fr 4.5fr"> <!-- main panel -->
-        <div style="display: grid; grid-template-columns: repeat(9, 1fr)"> <!-- top indicators -->
-          <div class="live" style="display: flex; justify-content: center;" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</div>
+        <div style="display: grid; grid-template-columns: repeat(9, 1fr); border: .5ex black solid"> <!-- top indicators -->
+          <div class="live centered centeredV" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</div>
           <button class="indicator" id="warning">Warn</button>
           <button class="indicator" id="caution">Caution</button>
           <button class="indicator" id="time">Time</button>
@@ -55,15 +59,30 @@
           <button class="indicator" id="faster">Faster</button>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 2fr 2fr 1fr"> <!-- under indicators-->
-          <div style="display:grid"> <!-- first column-->
-            <span style="display:flex; justify-content: center" class="time" title="Current time"></span>
-            <span class="synced" syncwith="scene">Scene</span>
-            <span class="playfile timer" title="Timer for ongoing playback">-</span>
-            <span class="status">Status</span>
+          <div style="display:grid;"> <!-- first column-->
+            <div>
+              <div>Time:</div>
+              <div class="time centered" title="Current time"></div>
+            </div>
+            <div>
+              <div>Scene:</div>
+              <span class="synced centered" syncwith="scene">Scene</span>
+
+            </div>
+            <div>
+              <div>Playfile timer:</div>
+              <span class="playfile timer centered" title="Timer for ongoing playback">-</span>
+            </div>
+            <div>
+              <div>Status:</div>
+              <span class="status">Status</span>
+            </div>
             <button onclick="fullscreen_toggle()">Full screen</button>
 
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr">
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 0fr 1fr 1fr 1fr; border: .5ex black solid">
+            <div class="centered" style="grid-column: span 2">Scene presets:</div>
             <button class="preset-go preset-active synced" syncwith="preset-preset-a-label" id="preset-a">A</button>
             <button class="preset-go preset-active synced" syncwith="preset-preset-b-label" id="preset-d">D</button>
             <button class="preset-go preset-active synced" syncwith="preset-preset-c-label" id="preset-b">B</button>
@@ -72,17 +91,32 @@
             <button class="preset-go preset-active synced" syncwith="preset-preset-f-label" id="preset-f">F</button>
 
           </div> <!-- transition buttons -->
-          <div style="display: grid">
+          <div style="display: grid; grid-template-rows: 1.2fr 1fr 3fr">
+            <div style="display: grid; grid-template-columns: 2; grid-template-rows: 0fr 1fr; border: .5ex black solid">
+              <div class="centered" style="grid-column: span 2;">Audio mute:</div>
+              <button class="mute" id="BroadcasterMic" title="If red, the broadcaster computer is unmuted in OBS">Brcd</button>
+              <button class="mute" id="Instructors" title="If red, the instructor Zoom share is unmuted in OBS">Instr</button>
+            </div>
             <button class="quick-break" title="Cut audio/gallery and swich scene to Notes.">Break</button>
-            <button class="quick-back" title="Do the jump back from the break.  The following fields control how you go back.  There is a three second countdown to return.">Back</button>
-            <span>Back to:</span>
-            <select class="quick-back-scene synced" syncwith="quickback-quickback-a-value" title="Which scene to return to."></select></td>
-            <input class="quick-back-audio-brcd synced" type="checkbox" syncwith="checkbutton-quick_brcd-value" title="If true, un-mute the broadcaster also.">Brcd Audio?</input>
-            <input class="quick-back-jingle synced" type="checkbox" syncwith="checkbutton-quick_jingle-value" title="If true, play a short jingle when returning.">Jingle?</input>
-          </div>
+            <div style="display: grid; grid-template-rows: 0fr 1fr 1fr 1fr; border: .5ex solid black">
+              <span class="centered">Back to:</span>
+              <select class="quick-back-scene synced" syncwith="quickback-quickback-a-value" title="Which scene to return to."></select></td>
+              <div style="display: grid ; grid-template-columns: 1fr 1fr">
+                <div style="display: grid; grid-template-rows: 0fr 1fr">
+                  <div class="centered">Brcd Audio:</div>
+                  <input class="quick-back-audio-brcd synced" type="checkbox" syncwith="checkbutton-quick_brcd-value" title="If true, un-mute the broadcaster also."></input>
+                </div>
+                <div style="display: grid; grid-template-rows: 0fr 1fr">
+                  <div class="centered">Jingle:</div>
+                  <input class="quick-back-jingle synced" type="checkbox" syncwith="checkbutton-quick_jingle-value" title="If true, play a short jingle when returning."></input>
+                </div>
+              </div>
+              <button class="quick-back" title="Do the jump back from the break.  The following fields control how you go back.  There is a three second countdown to return.">Back</button>
+            </div>
+            </div>
 
-          <div style="display: grid"> <!-- gallery size buttons -->
-            <span style="display: flex; justify-content: center;">Gal Size:</span>
+          <div style="display: grid; grid-template-rows: 0fr repeat(6, 1fr); border: .5ex black solid"> <!-- gallery size buttons -->
+            <span class="centered">Gal Size:</span>
             <button class="gallerycrop" id="n0">None</button>
             <button class="gallerycrop" id="n1">n=1</button>
             <button class="gallerycrop" id="n2">n=2</button>
@@ -95,7 +129,7 @@
       </div>
       <div style="display: flex"> <!-- right slider -->
         <span style="writing-mode: vertical-lr; direction: rtl; text-align: center">Gallery size</span>
-        <input class="gallerysize" style="appearance: slider-vertical; width: 1fr ; writing-mode: vertical-rl; direction: rtl; height: 100%; justify-content: center" type="range" min="0" max="1" step="0.01" title="Gallery size slider.  If zero, the gallery is not visible.">
+        <input class="gallerysize" style="appearance: slider-vertical; width: 2em ; writing-mode: vertical-rl; direction: rtl; height: 100%; justify-content: center" type="range" min="0" max="1" step="0.01" title="Gallery size slider.  If zero, the gallery is not visible.">
       </div>
     </div>
 
@@ -155,7 +189,9 @@
           <td><select class="preset-rbox synced"  id="preset-f" syncwith="preset-preset-f-rbox"></select></td>
       </tr>
   </table>
-
+  <div>
+    <input type="checkbox" class="no-local-sound" title="No local sound?  Enable if broadcaster to prevent sound loops.">No local sound</input>
+  </div>
 
     <a class="preview-href" href="">Preview</a>,
     <a class="director-href" href="">Director view</a>,
