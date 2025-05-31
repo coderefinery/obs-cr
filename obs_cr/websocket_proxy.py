@@ -84,10 +84,12 @@ ALLOWED_REQUESTS = set("""
 
 def filter_forwarded(message):
     data = json.loads(message)
-    if data['op'] in {0, 1, 2, 3}:
+    if data['op'] in {0, 1}:  # Hello, Identify
+        print(message)
+        return mesage
+    if data['op'] in {2, 3}: # Identify, Reidentify
         return message
-    if data['op'] == 5:
-        # event
+    if data['op'] == 5:  # Event from OBS->client (shouldn't appear here)
         pass
     if data['op'] == 6:
         # request
