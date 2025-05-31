@@ -231,6 +231,7 @@ async function fullscreen_toggle() {
         main.requestFullscreen()
         main.fs = 1
         wakeLock = await navigator.wakeLock.request("screen");
+        update_status("Wakelock enabled.")
     }
 }
 
