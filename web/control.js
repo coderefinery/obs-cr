@@ -319,7 +319,7 @@ async function presetUpdateOne(preset) {
     current_scene = await obs_get('scene')
     current_resolution = await obs_get('ss_resolution')
     state = (current_scene == preset_scene &&
-             current_resolution == preset_resolution)
+             ((current_resolution == preset_resolution) || preset_resolution == "-"))
     //console.log("Update preset state", preset, state, 'setting:', preset_scene, preset_resolution, "detected:", current_scene, current_resolution)
 
     forEach(`.preset-label#${preset}, .preset-active#${preset}`, label => {
