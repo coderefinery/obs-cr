@@ -54,9 +54,9 @@
           <button class="indicator" id="slower">Slower</button>
           <button class="indicator" id="faster">Faster</button>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 2fr 2fr"> <!-- under indicators-->
-          <div>
-            <span class="time" title="Current time"></span>
+        <div style="display: grid; grid-template-columns: 1fr 2fr 2fr 1fr"> <!-- under indicators-->
+          <div> <!-- first column-->
+            <span style="display:flex; justify-content: center" class="time" title="Current time"></span>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr">
             <button class="preset-go preset-active synced" syncwith="preset-preset-a-label" id="preset-a">A</button>
@@ -66,15 +66,25 @@
             <button class="preset-go preset-active synced" syncwith="preset-preset-e-label" id="preset-c">C</button>
             <button class="preset-go preset-active synced" syncwith="preset-preset-f-label" id="preset-f">F</button>
   
-          </div>
+          </div> <!-- transition buttons -->
           <div style="display: grid">
             <button class="quick-break" title="Cut audio/gallery and swich scene to Notes.">Break</button>
             <button class="quick-back" title="Do the jump back from the break.  The following fields control how you go back.  There is a three second countdown to return.">Back</button>
             <select class="quick-back-scene synced" syncwith="quickback-quickback-a-value" title="Which scene to return to."></select></td>
             <input class="quick-back-audio-brcd synced" type="checkbox" syncwith="checkbutton-quick_brcd-value" title="If true, un-mute the broadcaster also.">Brcd Audio?</input>
             <input class="quick-back-jingle synced" type="checkbox" syncwith="checkbutton-quick_jingle-value" title="If true, play a short jingle when returning.">Jingle?</input>
-
           </div>
+
+          <div style="display: grid"> <!-- gallery size buttons -->
+            <span style="display: flex; justify-content: center;">Gal Size:</span>
+            <button class="gallerycrop" id="n0">None</button>
+            <button class="gallerycrop" id="n1">n=1</button>
+            <button class="gallerycrop" id="n2">n=2</button>
+            <button class="gallerycrop" id="n3">n=3-4</button>
+            <button class="gallerycrop" id="n5">n=5-6</button>
+            <button class="gallerycrop" id="n7">n=7-9</button>
+          </div>
+
         </div>
       </div>
       <div style="display: flex"> <!-- right slider -->
