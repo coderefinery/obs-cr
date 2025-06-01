@@ -298,6 +298,17 @@ async function init_sync_input() {
     })
 }
 
+async function copy_times() {
+    // Copy RECORDING_TIME=REAL_TIME
+    recording_status = await obs.call('GetRecordStatus');
+    recording_timecode = recording_status['outputTimecode'].substring(0, 8)
+    now = new Date(date.getTime())
+    current_time = now.toTimeString().substring(0, 8)
+    timestamp = `${recording_timecode}=${current_time}`
+    console.log(timestamp)
+    navigator.clipboard.writeText(timestamp);
+}
+
 
 
 //

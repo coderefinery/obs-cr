@@ -54,6 +54,8 @@ async def handle(conn):
 
 ALLOWED_REQUESTS = set("""
     GetVersion
+    GetRecordStatus
+    GetStreamStatus
 
     GetPersistentData
     SetPersistentData
@@ -86,7 +88,7 @@ def filter_forwarded(message):
     data = json.loads(message)
     if data['op'] in {0, 1}:  # Hello, Identify
         print(message)
-        return mesage
+        return message
     if data['op'] in {2, 3}: # Identify, Reidentify
         return message
     if data['op'] == 5:  # Event from OBS->client (shouldn't appear here)
