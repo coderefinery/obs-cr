@@ -33,6 +33,7 @@ INIT_FUNCTIONS = [
     init_reset_mainwindow,
     init_reset_secondwindow,
     init_preview,
+    init_timers,
     //init_wakelock,
 ]
 // Run all initialization in sequence (one after another - no parallel)
@@ -701,4 +702,98 @@ async function init_announcement() {
             }
         })
     })
+}
+
+
+//
+// Timers
+//
+async function init_timers() {
+    //console.log('XXXXXXX')
+    IDs = [ ]
+    forEach("input.timer", input => {
+        // User change
+        //console.log(input)
+        let id = input.id
+        input.addEventListener('change', async event => {
+            //console.log(event)
+            input = event.target
+            regex = /(\d\d?)(:(\d\d?))?(\/(\d\d?))?/
+            match = input.value.match(regex)
+            minutes = match[1]
+            seconds = match[3] || 0
+            duration = match[5]*60 || null
+            console.log('timer parse', match, minutes, seconds, duration)
+            // hourmin = input.value.split(/:/)
+            // try {
+            //     if (hourmin.length == 1) {
+            //         endtime = Date.now()/1000 + 60*parseInt(hourmin.slice(-1))
+            //     } else {
+            //         endtime = Date.now()/1000 + ( 60*parseInt(hourmin.slice(-2,1))  + parseInt(hourmin.slice(-1)))
+            //     }
+            //     endtime = Math.round(endtime)
+            //     duration = Math.round(endtime - Date.now()/1000)
+            // } catch {
+            //     console.log(`Timer ${id}, could not parse ${input.value}`)
+            //     return
+            // }
+            //console.log(endtime)
+            endtime = Date.now()/1000 + 60*parseInt(minutes)  + parseInt(seconds)
+            if (duration === null) {
+                duration = Math.round(endtime - Date.now()/1000)
+            }
+            timer_set(id, endtime, duration)
+            obs_set('timer-'+id, `${endtime}:${duration}`)
+        })
+        obs_watch_init('timer-'+input.id, endtime => {
+            endtime = endtime.split(/:/)
+            if (endtime.length == 2) {
+                duration = endtime[1]
+                endtime = endtime[0]
+            } else {
+                endtime = endtime[0]
+                duration = null
+            }
+            if (endtime > Date.now()/1000) {
+                timer_set(id, endtime, duration)
+            }
+        })
+    })
+}
+async function timer_set(id, endtime, duration) {
+    console.log('timer_set', id, endtime)
+    // Start a countdown timer
+    input = document.querySelector('input#'+id)
+    input.endtime = endtime
+    setTimeout(timer_tick, 500, id, endtime, duration)
+}
+async function timer_tick(id, endtime, duration) {
+    // If we have been updated, just exit - a new handler will have been registered
+    console.log('tick', id, endtime, input.endtime, duration)
+    input = document.querySelector('input#'+id)
+    if (input.endtime != endtime) {
+        console.log(`timer ${id} has been reset`)
+        return
+    }
+    endtime = input.endtime
+    // Abort if time expired
+    if (endtime < Date.now()/1000) {
+        console.log(`timer ${id} has expired`)
+        input.style.backgroundColor = null
+        return
+    }
+    if (document.activeElement !== input) {
+        // Only tick if we are not focused
+        remaining = Math.floor((endtime - Date.now()/1000))
+        time = `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2, "0")}`
+        input.value = time
+        fraction_remaining = remaining / duration
+        if (fraction_remaining < .75) {
+            fraction = fraction_remaining * 4 // 1 when started, 0 when out
+            input.style.backgroundColor = `hsl(288, 100%, ${Math.max(50+50*fraction)}%)`
+        }
+    } else {
+        console.log(`timer ${id} is focused`)
+    }
+    setTimeout(timer_tick, 500, id, endtime, duration)
 }
