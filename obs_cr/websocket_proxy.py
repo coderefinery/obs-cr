@@ -29,6 +29,7 @@ async def handle(conn):
         #additional_headers=headers,
         subprotocols=conn.request.headers['Sec-WebSocket-Protocol'].split(),
         #extensions=conn.request.headers['Sec-WebSocket-Extensions'].split(),
+        max_size=10*2**20,
       ) as target_ws:
         #await conn.send('test')
         async def forward_messages():
@@ -123,6 +124,7 @@ async def main(target_url):
         *args.bind.rsplit(':', 1),
         subprotocols=['obswebsocket.json'],
         ssl=ssl_context,
+        max_size=10*2**20,
         )
     print(f'Server started on {args.bind}')
     await server.serve_forever()
