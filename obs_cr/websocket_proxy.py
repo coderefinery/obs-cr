@@ -51,7 +51,17 @@ async def handle(conn):
                 await conn.send(message)
                 await asyncio.sleep(0)
                 #print('done', conn.closed)
-        await asyncio.gather(forward_messages(), return_messages())
+        async def wait_closed():
+            # Wait for the incoming client to disconnect, then close the server connection.
+            remote_address = conn.remote_address
+            await conn.wait_closed()
+            print(f"Disconnected: {remote_address[0]}:{remote_address[1]}")
+            await target_ws.close()
+        try:
+            await asyncio.gather(forward_messages(), return_messages(), wait_closed())
+        except (websockets.exceptions.ConnectionClosedOK, websockets.exceptions.ConnectionClosedError) as e:
+            print(e.__class__.__name__, str(e))
+            await conn.close()
 
 ALLOWED_REQUESTS = set("""
     GetVersion
