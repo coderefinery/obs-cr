@@ -326,7 +326,9 @@ async function obs_init () {
     }
 
     // Create a new OBS WebSocket instance
-    globalThis.obs = new OBSWebSocket();
+    if (globalThis.obs === undefined) {
+        globalThis.obs = new OBSWebSocket();
+    }
     update_status(`Trying to connect to ${url}`)
 
     try {
@@ -341,17 +343,22 @@ async function obs_init () {
     forEach('.ssl-warning', div => {
         div.style['display'] = 'none'
     })
+    forEach('.reconnect-button', x => {x.style.display = 'none'})
     // Poll to keep the connection alive
     globalThis.obs_pinger = setInterval(async function() {console.log("Connection ping: ", (await obs.call('GetVersion')).obsVersion)},
                 60000);
-    obs.on('ConnectionClosed', e => { update_status(`OBS Disconnected (closed)!: ${e}`); obs_reconnect(); } )
-    obs.on('ConnectionError', e => { update_status(`OBS Disconnected (error)!: ${e}`); obs_reconnect(); } )
+    obs.on('ConnectionClosed', e => { obs_disconnected(e) } )
+    obs.on('ConnectionError', e => { obs_disconnected(e) } )
 }
 
-async function obs_reconnect(n) {
+async function obs_disconnected(e) {
     if (obs_pinger) {
         clearInterval(obs_pinger)
     }
+    update_status(`OBS Disconnected (closed)!: ${e}`)
+    forEach('.reconnect-button', x => {x.style.display = ''})
+}
+async function obs_reconnect(n) {
     return  // disabled
     append_status("Reconnecting in 5s...")
     setTimeout(obs_init, 5000)
