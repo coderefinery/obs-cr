@@ -1,21 +1,22 @@
-# Control for livestream
+# Control panel for CodeRefinery livestream teaching
 
-This provides two control services for OBS:
-* A control panel that allows switching scenes, muting/unmuting audio,
-  and so on.
-* A live preview.
+This provides control panels for OBS, optimized for automation useful
+for the CodeRefinery teaching style.  Since 2025, this is all done by
+the web and there is no local installation.  The main entry point is
+`web/index.html`.
 
-These are local applications running in Python Tkinter, so should work
-on any operating system (if not, that's a bug).
+The usage of these is taught as part of CodeRefinery instructor
+training, unfortunately there aren't good examples here.
 
+The general architecture is that it uses OBS as the main
+synchorization server.  There are three main operations: get
+persistent value, set persistent value, and watch for changes of
+persistent value (with a callback).  Together, this allows us to build
+almost anything.  (Some values are managed the same way but the
+backend but control other controls, such as scene selection or
+volume).
 
-
-## Installation
-
-### zipapp
-
-This doesn't work anymore since there are compiled modules needed to
-play sound.
+## OLD - Local app installation
 
 
 ### Local install
@@ -31,61 +32,14 @@ $ pip install https://github.com/coderefinery/obs-cr/archive/master.zip
 
 
 
-## Usage
-
-If you are just using this: The broadcaster should give you the
-respective commands to run and you don't need to worry.
-
-There is `control.py` to make a control panel, and `preview.py` to
-give a preview.
-
-```
-obs-cr-control HOSTNAME:PORT PASSWORD
-obs-cr-preview HOSTNAME:PORT PASSWORD [--delay S]
-```
-
-* `obs-cr-control --small` starts a small panel, designed for the most
-  critical indicators and buttons on a crowded teacher's screen.  It
-  doesn't replace or have everything of the full panel (you need the
-  full panel open somewhere else, or a separate director).
-* `obs-cr-control --test` will run without connecting to OBS.  Not
-  everything works and there might be visible tracebacks,  but you can
-  test the general things out.
-
-
-### obs-cr-control
-
-This is a streaming control panel.  There are tooltips that explain
-most things, but just open it up and see.
-
-This is synced with OBS (it uses OBS as the synchronization server
-itself, which is cool).  Anything RED indicates something may be
-live.  "Indicators" are synced lights: click a light on any control
-panel, and it's synced across all of them.
-
-* `--small` shows a smaller window, suitable for instructors who don't
-  want to do a lot of control.
-* `--broadcaster` enables extra options that only make sense on the
-  broadcaster's computer (like sharing the broadcaster's screen)
-* `--resolution-command` is a command that resizes the Zoom
-  screenshare window.  `WIDTH` and `HEIGHT` get replaced by the
-  desired window size.
-* `--notes-window` is a regex which matches a window title.  This is
-  taken to be the "notes window" and enables the buttons that scroll
-  the notes up/down.  Linux only for now.
-
-### obs-cr-preview
-
-This shows a live preview with less latency than the stream shows.
-Use `--delay S` to set the delay to S seconds, the default is 1 which
-might be a bit too slow.  This is an relatively space-inefficient
-screenshot, so try not to make it too close to realtime.  0.2 is
-probably fine, even 0.1.
-
-
 ## Cheatsheet
 
 Commands for copying and pasting
+
+* `python obs_cr/headless.py localhost:4445 PASSWORD --no-sound --resolution-command=zoomw -v --broadcaster --notes-window='Notes - CodeRefinery.*March 2025.*Privat()e'`
+
+* `python3 obs_cr/websocket_proxy.py --ssl-domain=DOMAIN` - finds
+  certs made by acme.sh in `~/.acme.sh/`.
 
 * Linux, Firefox: `obs-cr-control localhost:4445 TOKEN --notes-window='^TTT4HPC 07/05/2024.*Privat()e' --resolution-command="xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;" --broadcaster`
 
