@@ -47,7 +47,7 @@
 
     <div id="main" style="height: 100%; display: grid; grid-template-columns: 9fr 1fr; background-color: white"> <!-- main (contains panel/sidebar) -->
       <div style="display: grid; grid-template-rows: .5fr 4.5fr"> <!-- main panel -->
-        <div style="display: grid; grid-template-columns: repeat(9, 1fr); border: .5ex black solid"> <!-- top indicators -->
+        <div style="display: grid; grid-template-columns: repeat(10, 1fr); border: .5ex black solid"> <!-- top indicators -->
           <div class="live centered centeredV" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</div>
           <button class="indicator" id="warning">Warn</button>
           <button class="indicator" id="caution">Caution</button>
@@ -57,13 +57,10 @@
           <button class="indicator" id="chat">Chat</button>
           <button class="indicator" id="slower">Slower</button>
           <button class="indicator" id="faster">Faster</button>
+          <input size="6" id="A" class="timer" style="text-align: center" title="Timer.  Set the duration with formats MM[:SS][/DD] (time remaining) or @HH:MM[/DD] (end time), where DD is planned duration in minutes. It starts changing color 75% of the way through.">
         </div>
         <div style="display: grid; grid-template-columns: 1fr 2fr 2fr 1fr"> <!-- under indicators-->
           <div style="display:grid;"> <!-- first column-->
-            <div>
-              <div>Timer</div>
-              <div class="centered"><input size="6" id="A" class="timer" style="text-align: center" title="Timer.  Set the duration with formats MM[:SS][/DD] (time remaining) or @HH:MM[/DD] (end time), where DD is planned duration in minutes. It starts changing color 75% of the way through."></div>
-            </div>
             <div>
               <div>Time:</div>
               <div class="time centered" title="Current time"></div>

@@ -728,16 +728,16 @@ async function init_timers() {
                 endtime.setMinutes(parseInt(match_at[2]))
                 duration = match_at[4]*60 || null
                 endtime = Math.round(endtime.getTime()/1000)
-                console.log('timer parse', match_at, endtime, duration)
+                console.log('timer parse (end time)', match_at, endtime, duration)
             } else {
                 // Simple match
-                regex = /(\d\d?)(:(\d\d?))?(\/(\d\+))?/
+                regex = /(\d\d?)(:(\d\d?))?(\/(\d+))?/
                 match = input.value.match(regex)
                 minutes = match[1]
                 seconds = match[3] || 0
                 duration = match[5]*60 || null
                 endtime = Math.round(Date.now()/1000 + 60*parseInt(minutes)  + parseInt(seconds))
-                console.log('timer parse', match, minutes, seconds, duration)
+                console.log('timer parse (duration)', match, minutes, seconds, duration)
             }
             if (duration === null) {
                 duration = Math.round(endtime - Date.now()/1000)
