@@ -84,16 +84,25 @@
 
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 0fr 1fr 1fr 1fr; border: .5ex black solid">
-            <div class="centered" style="grid-column: span 2">Scene presets:</div>
-            <button class="preset-go preset-active synced" syncwith="preset-preset-a-label" id="preset-a">A</button>
-            <button class="preset-go preset-active synced" syncwith="preset-preset-d-label" id="preset-d">D</button>
-            <button class="preset-go preset-active synced" syncwith="preset-preset-b-label" id="preset-b">B</button>
-            <button class="preset-go preset-active synced" syncwith="preset-preset-e-label" id="preset-e">E</button>
-            <button class="preset-go preset-active synced" syncwith="preset-preset-c-label" id="preset-c">C</button>
-            <button class="preset-go preset-active synced" syncwith="preset-preset-f-label" id="preset-f">F</button>
+          <!-- Preset buttons-->
+          <div style="display: grid; grid-template-rows: 3fr .5fr .25fr">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 0fr 1fr 1fr 1fr; border: .5ex black solid">
+              <div class="centered" style="grid-column: span 2">Scene presets:</div>
+              <button class="preset-go preset-active synced" syncwith="preset-preset-a-label" id="preset-a">A</button>
+              <button class="preset-go preset-active synced" syncwith="preset-preset-d-label" id="preset-d">D</button>
+              <button class="preset-go preset-active synced" syncwith="preset-preset-b-label" id="preset-b">B</button>
+              <button class="preset-go preset-active synced" syncwith="preset-preset-e-label" id="preset-e">E</button>
+              <button class="preset-go preset-active synced" syncwith="preset-preset-c-label" id="preset-c">C</button>
+              <button class="preset-go preset-active synced" syncwith="preset-preset-f-label" id="preset-f">F</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 0fr 1fr; border: .5ex black solid">
+              <div style="grid-column: span 3" class="centered">Notes scroll:</div>
+              <button class="scrollnotes up"  >Up  </button>
+              <button class="scrollnotes down">Down</button>
+              <button class="scrollnotes end" >End </button>
+            </div>
+          </div>
 
-          </div> <!-- transition buttons -->
           <div style="display: grid; grid-template-rows: 1.2fr 1fr 3fr">
             <div style="display: grid; grid-template-columns: 2; grid-template-rows: 0fr 1fr; border: .5ex black solid">
               <div class="centered" style="grid-column: span 2;">Audio mute:</div>
