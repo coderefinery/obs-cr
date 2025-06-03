@@ -719,14 +719,23 @@ async function init_timers() {
             //console.log(event)
             input = event.target
 
-            regex_at = /@(\d\d?):(\d\d?)(\/(\d+))?/
+            regex_at = /@((\d\d?):)?(\d\d?)(\/(\d+))?/
             match_at = input.value.match(regex_at)
             if (match_at) {
                 // Match format @HH:MM/DD where HH:MM is a real time and DD is duration in minutes
                 endtime = new Date()
-                endtime.setHours(parseInt(match_at[1]))
-                endtime.setMinutes(parseInt(match_at[2]))
-                duration = match_at[4]*60 || null
+                hours = match_at[2] || null
+                minutes = match_at[3]
+                if (hours === null) {
+                    if (minutes <= endtime.getMinutes()) {
+                        hours = endtime.getHours() + 1
+                    } else {
+                        hours = endtime.getHours()
+                    }
+                }
+                endtime.setHours(hours)
+                endtime.setMinutes(minutes)
+                duration = match_at[5]*60 || null
                 endtime = Math.round(endtime.getTime()/1000)
                 console.log('timer parse (end time)', match_at, endtime, duration)
             } else {
@@ -764,6 +773,7 @@ async function timer_set(id, endtime, duration) {
     console.log('timer_set', id, endtime)
     // Start a countdown timer
     input = document.querySelector('input#'+id)
+    input.style.backgroundColor = null
     // token is a way to tell when a new timer has been set. If token is different, stop ticking.
     input.token = Math.random()
     setTimeout(timer_tick, 500, id, endtime, duration, input.token)
@@ -790,7 +800,10 @@ async function timer_tick(id, endtime, duration, token) {
         fraction_remaining = remaining / duration
         if (fraction_remaining < .75) {
             fraction = fraction_remaining * 4 // 1 when started, 0 when out
-            input.style.backgroundColor = `hsl(288, 100%, ${Math.max(50+50*fraction)}%)`
+            if (remaining % 2 == 0)
+                input.style.backgroundColor = `hsl(288, 100%, ${Math.max(50+50*fraction)}%)`
+            else
+                input.style.backgroundColor = null
         }
     } else {
         console.log(`timer ${id} is focused`)
