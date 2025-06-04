@@ -800,7 +800,7 @@ async function timer_tick(id, endtime, duration, token) {
         fraction_remaining = remaining / duration
         if (fraction_remaining < .75) {
             fraction = fraction_remaining * 4 // 1 when started, 0 when out
-            if (remaining % 2 == 0)
+            if ((remaining > 60) || (remaining % 2 == 0))
                 input.style.backgroundColor = `hsl(288, 100%, ${Math.max(50+50*fraction)}%)`
             else
                 input.style.backgroundColor = null
