@@ -735,6 +735,7 @@ async function init_timers() {
                 }
                 endtime.setHours(hours)
                 endtime.setMinutes(minutes)
+                endtime.setSeconds(0)
                 duration = match_at[5]*60 || null
                 endtime = Math.round(endtime.getTime()/1000)
                 console.log('timer parse (end time)', match_at, endtime, duration)
