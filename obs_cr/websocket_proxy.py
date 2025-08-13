@@ -143,7 +143,15 @@ async def main(target_url):
 if __name__ == "__main__":
     import argparse
     usage = textwrap.dedent("""\
-    SSL:
+    websocket_proxy.py [--ssl-domain] --target=OBS_ADDRESS:PORT BIND_ADDRESS:PORT
+
+    SSL
+    ---
+
+    This can use SSL if you have certificates.  If you use acme.sh this
+    script knows where to look when you use --ssl-domain.  Otherwise,
+    use --cert and --key with the certs you got from somewhere else.
+    Note that SSL certs are for a domain and are valid on any port.
 
     You may first need to register an account:
       bash acme.sh --register-account -m EMAIL
@@ -157,15 +165,18 @@ if __name__ == "__main__":
     Then run this program with --ssl-domain which hopefully grabs certs from ~/.acme.sh/
       websocket_proxy --ssl-domain=DOMAIN ...
 
+    If you have your own key/cert in some other location:
+      websocket_proxy --cert=/path/to/fullchain.cer --key=/path/to/domain.key ...
     """)
     parser = argparse.ArgumentParser(usage=usage)
-    parser.add_argument('--target', default="ws://localhost:4455")
+    parser.add_argument('bind', nargs='?', default='0.0.0.0:4445',
+                        help="local bind, format ADDRESS:PORT, default=%(default)s")
+    parser.add_argument('--target', default="ws://localhost:4455",
+                        help="OBS address to proxy to, default=%(default)s")
     parser.add_argument('--ssl-domain', metavar='DOMAIN',
                         help="Automatically find acme.sh certs from ~/.acme.sh/DOMAIN_ecc/")
     parser.add_argument('--cert', help="Manual SSL .cer path")
     parser.add_argument('--key', help="Manual SSL .key path")
-    parser.add_argument('bind', nargs='?', default='0.0.0.0:4445',
-                        help="local bind, format ADDRESS:PORT, default=%(default)s")
     args = parser.parse_args()
     print(args.bind)
 
