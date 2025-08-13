@@ -130,7 +130,7 @@ def filter_returned(message):
 
 async def main(target_url):
     server = await websockets.serve(
-        handle, 
+        handle,
         *args.bind.rsplit(':', 1),
         subprotocols=['obswebsocket.json'],
         ssl=ssl_context,
