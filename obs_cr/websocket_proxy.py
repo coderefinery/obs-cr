@@ -34,20 +34,20 @@ async def handle(conn):
         #await conn.send('test')
         async def forward_messages():
             async for message in conn:
-                #print (f'---> {message}')
+                if args.verbose: print(f'---> {message}')
                 message = filter_forwarded(message)
                 if message is None:
                     continue
-                #print(f'>    {message} --->')
+                if args.verbose: print(f'>    {message} --->')
                 await target_ws.send(message)
                 await asyncio.sleep(0)
         async def return_messages():
             async for message in target_ws:
-                #print(f'<    {message} <----')
+                if args.verbose: print(f'<    {message} <----')
                 message = filter_returned(message)
                 if message is None:
                     continue
-                #print(f'<--- {message}')
+                if args.verbose: print(f'<--- {message}')
                 await conn.send(message)
                 await asyncio.sleep(0)
                 #print('done', conn.closed)
@@ -177,6 +177,7 @@ if __name__ == "__main__":
                         help="Automatically find acme.sh certs from ~/.acme.sh/DOMAIN_ecc/")
     parser.add_argument('--cert', help="Manual SSL .cer path")
     parser.add_argument('--key', help="Manual SSL .key path")
+    parser.add_argument('--verbose', '-v', action='count', help="Increase verbosity")
     args = parser.parse_args()
     print(args.bind)
 
