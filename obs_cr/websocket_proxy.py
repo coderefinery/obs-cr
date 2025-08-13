@@ -2,6 +2,7 @@ import asyncio
 import functools
 import json
 import os
+from pathlib import Path
 import ssl
 import textwrap
 
@@ -109,10 +110,30 @@ def filter_forwarded(message):
         request = data['d']
         requestType = request['requestType']
         if requestType == 'SetInputSettings':
+            # Carefully validate inputSettings
             inputSettings = request['requestData']['inputSettings']
-            if len(set(inputSettings) - set('local_file overlay text font'.split())) == 0:
-                return message
-            print(message)
+            # Verify all other inputSettings arguments ane in this allowed list.
+            if len(set(inputSettings) - set('local_file overlay text font'.split())) > 0:
+                print('denied message:', message)
+                return
+            # Verify the local_file argument is a safe path.
+            if 'local_file' in inputSettings:
+                local_file = Path(inputSettings['local_file']).expanduser().resolve()
+                # If it starts with /home/rkdarst/, change to ~/ for this computer
+                if local_file.is_relative_to('/home/rkdarst/'):
+                    local_file = ('~/' / local_file.relative_to('/home/rkdarst/')).expanduser().resolve()
+                # Check the path, ensure it's in ~/git/coderefinery-artwork.
+                # Symlinks, '..', etc. should have been expanded above.
+                if not local_file.is_relative_to(Path('~/git/coderefinery-artwork').expanduser()):
+                    # If it's not in this git repo, exclude
+                    print('denied message:', message)
+                    print(f'exclude suspicious local_file={local_file}')
+                    return
+                # Take our normalized local_file
+                inputSettings['local_file'] = str(local_file)
+                message = json.dumps(data)
+            # Now fully validated
+            return(message)
             return None
         if requestType in ALLOWED_REQUESTS:
             return message
