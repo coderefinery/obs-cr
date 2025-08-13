@@ -14,29 +14,10 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.11"
-    - name: Install OS dependencies
-      # compiler needed for simpleaudio
-      run: |
-        sudo apt-get install build-essential libasound2-dev python3-dev
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    #- name: Build zipapp applicaiton
-    #  run: |
-    #    set -x
-    #    bash make-zip-app.sh
-    #    mkdir -p _site/
-    #    rsync -a obs-cr.pyz _site/
     - name: Copy website
       run: |
         mkdir -p _site/
