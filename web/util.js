@@ -318,7 +318,7 @@ async function copy_times() {
 // Connect to OBS
 async function obs_init () {
     const params = getFragmentParams();
-    const url = params.url || 'localhost:4455';
+    var url = params.url || 'localhost:4455';
     const password = params.password || '';
 
     if (! url.includes('//')) {
