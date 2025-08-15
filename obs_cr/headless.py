@@ -32,7 +32,8 @@ def main():
     parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel in a test mode.  Some things may not work.")
     parser.add_argument('--no-sound', action='store_true', help="Don't play the sound effects that come with certain actions.")
     parser.add_argument('--resolution-command',
-                        help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers.  Example: \"xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;\" (mind the nested quotes)")
+                        help="Preset commands to run for resizing windows.  Choose one of: 'zoomw' (zoom workplace - this is probably what you want) or 'zoom' (old classic zoom).  The exact commands are set in config.yaml")
+                        #help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers.  Example: \"xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;\" (mind the nested quotes)")
     parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer.  Enable extra broadcaster functionality like unmuting and controlling Zoom.")
     parser.add_argument('--verbose', '-v', action='count', default=0)
     args = cli_args = parser.parse_args()
