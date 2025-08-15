@@ -29,13 +29,10 @@ def main():
                       help='Websocket password, or pass "-" and set env var OBS_PASSWORD')
     parser.add_argument('--notes-window',
                         help="window name regex for notes document (for scrolling), get via xwininfo -tree -root | less.  Example: '^Collaborative document.*Privat()e' (the parentheses prevent the regex from matching itself in the process listing)")
-    parser.add_argument('--small', action='store_true',
-                        help="Start a smaller, more limited, control panel for instructors.")
     parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel in a test mode.  Some things may not work.")
     parser.add_argument('--no-sound', action='store_true', help="Don't play the sound effects that come with certain actions.")
     parser.add_argument('--resolution-command',
                         help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers.  Example: \"xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;\" (mind the nested quotes)")
-    parser.add_argument('--no-gallery-poll', action='store_true', help="Don't poll for gallery size (for less verbosity when testing)")
     parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer.  Enable extra broadcaster functionality like unmuting and controlling Zoom.")
     parser.add_argument('--verbose', '-v', action='count', default=0)
     args = cli_args = parser.parse_args()
