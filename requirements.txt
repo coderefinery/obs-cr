@@ -3,3 +3,4 @@ obsws-python
 pillow
 tkinter-tooltip
 pyyaml
+websockets
