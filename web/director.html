@@ -39,7 +39,8 @@
 
 
     <table border="1">
-      <tr><th title="Synced indicators.  Used for non-verbal instructor communication.">Indicators:</th>
+      <tr><td>1</td>
+	  <th title="Synced indicators.  Used for non-verbal instructor communication.">Indicators:</th>
           <td class="live" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</td>
           <td><button class="indicator" id="warning">Warn</button></td>
           <td><button class="indicator" id="caution">Caution</button></td>
@@ -55,7 +56,7 @@
     </table>
 
     <table border="1">
-        <tr>
+        <tr><td>2</td>
             <th title="Quick actions to take you to or from a break.">Quick actions:</th>
             <td><button class="quick-break" title="Cut audio/gallery and swich scene to Notes.">Break</button></td>
             <td>Back from break:</td>
@@ -67,7 +68,7 @@
     </table>
 
     <table border="1">
-        <tr>
+        <tr><td>3</td>
             <th title="Select a scene.  The current scene is highlighted.  You might want to use presets instead, which also configures the screenshare size.">Scene selection</th>
             <td><button class="scene" id="Title" livecolor="orange">Title</button></td>
             <td><button class="scene" id="Gallery">Gallery</button></td>
@@ -82,7 +83,7 @@
     </table>
 
     <table border="1">
-        <tr>
+        <tr><td>4</td>
             <th rowspan="3" title="Presets allow you to give a name to a {scene, resolution} combination and jump directly there.  Recommended to make scenes configured for each instructor.  Note they still have to screenshare on Zoom.">Scene presets:</th>
 	    <td>A:</td>
             <td><button class="preset-go"           id="preset-a">Go</button></td>
@@ -96,7 +97,7 @@
             <td><select class="preset-sbox synced"  id="preset-d" syncwith="preset-preset-d-sbox"></select></td>
             <td><select class="preset-rbox synced"  id="preset-d" syncwith="preset-preset-d-rbox"></select></td>
         </tr>
-        <tr>
+        <tr><td>5</td>
 	    <td>B:</td>
             <td><button class="preset-go"           id="preset-b">Go</button></td>
             <td><input  class="preset-label synced" id="preset-b" type="text" syncwith="preset-preset-b-label" value="B" size="10"></td>
@@ -109,7 +110,7 @@
             <td><select class="preset-sbox synced"  id="preset-e" syncwith="preset-preset-e-sbox"></select></td>
             <td><select class="preset-rbox synced"  id="preset-e" syncwith="preset-preset-e-rbox"></select></td>
         </tr>
-        <tr>
+        <tr><td>6</td>
 	    <td>C:</td>
             <td><button class="preset-go"           id="preset-c">Go</button></td>
             <td><input  class="preset-label synced" id="preset-c" type="text" syncwith="preset-preset-c-label" value="C" size="10"></td>
@@ -125,7 +126,7 @@
     </table>
 
     <table border="1">
-        <tr>
+        <tr><td>7</td>
             <th>Audio:</th>
             <td><button class="mute" id="BroadcasterMic" title="If red, the broadcaster computer is unmuted in OBS">Brcd</button></td>
             <td><button class="mute" id="Instructors" title="If red, the instructor Zoom share is unmuted in OBS">Instr</button></td>
@@ -134,12 +135,12 @@
         </tr>
     </table>
     <table border="1">
-        <tr>
+        <tr><td>8</td>
             <th title="The current size of the gallery of instructors inserted into the various scenes.">Gallery size:</th>
             <td colspan="4"><input class="gallerysize" type="range" min="0" max="1" step="0.01" title="Gallery size slider.  If zero, the gallery is not visible."></td>
             <td><span class="gallerysize-state"></span></td>
         </tr>
-        <tr>
+        <tr><td>9</td>
             <th title="This resized the gallery to be appropriate for various numbers of instructors.">Gallery crop:</th>
             <td><button class="gallerycrop" id="n0">None</button></td>
             <td><button class="gallerycrop" id="n1">n=1</button></td>
@@ -150,7 +151,7 @@
         </tr>
     </table>
     <table border="1">
-        <tr>
+        <tr><td>10</td>
             <th title="These buttons control other audio that can be played.  This goes through a separate input from the instructors: they instructors don't hear it, and muting instructors doesn't affect this.">Jingle:</th>
             <td class="playfile timer" title="Timer for ongoing playback">-</td>
             <td><button class="playfile short">short</button></td>
@@ -159,13 +160,13 @@
         </tr>
     </table>
     <table border="1">
-        <tr>
+        <tr><td>11</td>
             <th>Zoom screenshare size</th>
             <td><select class="ss-resolution synced"  id="ss-resolution" syncwith="ss_resolution"></select></td>
         </tr>
     </table>
     <table border="1">
-        <tr>
+        <tr><td>12</td>
             <th title="These scroll the notes on the broadcaster computer up and down.  The broadcaster has to enable this, and sometimes it doesn't work and the notes window needs to be clicked.">Notes scroll:</th>
             <td><button class="scrollnotes up"  >Up  </button></td>
             <td><button class="scrollnotes down">Down</button></td>
@@ -176,7 +177,7 @@
     </table>
 
     <table border="1">
-        <tr>
+        <tr><td>13</td>
             <th>Zoom mode</th>
             <td><input class="synced" syncwith="topgallery-mode" type="checkbox" title="Use topbar gallery from the main window.  Use in single-window mode">Top gallery</input></td>
             <td><input class="synced" syncwith="singlewindow-mode" type="checkbox" title="Check if you are NOT using Zoom dual monitor mode.">Zoom single window</input></td>
@@ -187,7 +188,7 @@
     </table>
 
     <table border="1">
-        <tr>
+        <tr><td>14</td>
           <th>Announcement</th>
           <td><input type="checkbox" class="synced announcement-enabled" syncwith="announcement-enabled" title="Enable the announcement text?"></td>
           <td><input type="text" class="synced announcement-textsize" id="announcement-textsize" syncwith="announcement-textsize" type="number" min="0" size="3" title="Announcement text size"></td>
@@ -196,14 +197,14 @@
       </table>
 
       <table border="1">
-        <tr>
+        <tr><td>15</td>
           <th>Special functions</th>
           <td><button onclick="copy_times()" title="Copy recording_time=real_time for use in video syncing">Copy recording timestamp (SSL only).</td>
         </tr>
       </table>
 
       <table border="1">
-        <tr>
+        <tr><td>16</td>
           <th>Local config</th>
           <td><input type="checkbox" class="no-local-sound" title="No local sound?  Enable if broadcaster to prevent sound loops.">No local sound</td>
         </tr>
