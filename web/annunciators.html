@@ -12,12 +12,14 @@
   <body>
 
     <div class="ssl-warning" style="display:none; color: maroon">
-        You are currently using HTTPS.  Unfortunately OBS probably isn't
-        using SSL and browsers only allow SSL websocket connections from
-        SSL pages, so you need to turn SSL off.  Please try changing the
+        You are currently using HTTPS.  Unfortunately if the OBS
+        websocket isn't using SSL, then a SSL webpage can't connect to
+        it.  (From SSL webpages, browsers only allow SSL websocket
+        connections).  Thus, you need to turn SSL off.  Please try changing the
         URL to 'http' instead of 'https' which might require telling
         your browser to not force SSL for this page (try clicking lock or
-	      shield icons by the URL bar).
+	shield icons by the URL bar).  This message will disappear if
+        you successfully connect to a wss:// (websocket+SSL) URL.
     </div>
 
     <div class="audio-warning" style="display:none; color: maroon">
