@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+  <head>
+    <title>OBS CR control (tablet)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <!-- boostrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <!-- Core code -->
+    <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="util.js"></script>
+    <script src="control.js"></script>
+    <script type="module">
+    </script>
+    <style>
+      .centered {display: flex ; justify-content: center; }
+      .centeredV {display: flex ; align-items: center; }
+    </style>
+  </head>
+  <body>
+
+    <div class="ssl-warning" style="display:none; color: maroon">
+        You are currently using HTTPS.  Unfortunately if the OBS
+        websocket isn't using SSL, then a SSL webpage can't connect to
+        it.  (From SSL webpages, browsers only allow SSL websocket
+        connections).  Thus, you need to turn SSL off.  Please try changing the
+        URL to 'http' instead of 'https' which might require telling
+        your browser to not force SSL for this page (try clicking lock or
+	shield icons by the URL bar).  This message will disappear if
+        you successfully connect to a wss:// (websocket+SSL) URL.
+    </div>
+
+    <div class="audio-warning" style="display:none; color: maroon">
+        Audio playback has failed.  Do you need to allow it on this page?
+        Or try clicking the "enable audio" button.
+    </div>
+
+    <div class="enable-audio" style="color: maroon">
+        <button class="enable-audio-button">Enable audio</button>
+        Click this button once to play some sound, to enable audio in this browser.
+        Browsers won't play sound unless you interact first, to avoid sites spamming
+        sound without your request.
+    </div>
+
+    <!--<div class="status">Status is updated here</div>-->
+    <!--<span class="synced" syncwith="scene">Scene</span>-->
+    <!--<span class="synced" syncwith="ss_resolution">Resolution</span>-->
+
+    <div id="main" style="height: 100%; display: grid; grid-template-columns: 9fr 1fr; background-color: white"> <!-- main (contains panel/sidebar) -->
+      <div style="display: grid; grid-template-rows: .5fr 4.5fr"> <!-- main panel -->
+        <div style="display: grid; grid-template-columns: repeat(10, 1fr); border: .5ex black solid"> <!-- top indicators -->
+          <div class="live centered centeredV" title="When red, (audio, camera gallery, or screenshare) may be being broadcasted">Live</div>
+          <button class="indicator" id="warning">Warn</button>
+          <button class="indicator" id="caution">Caution</button>
+          <button class="indicator" id="time">Time</button>
+          <button class="indicator" id="notes">Notes</button>
+          <button class="indicator" id="question">Question</button>
+          <button class="indicator" id="chat">Chat</button>
+          <button class="indicator" id="slower">Slower</button>
+          <button class="indicator" id="faster">Faster</button>
+          <input size="6" id="A" class="timer" style="text-align: center" title="Timer.  Set the duration with formats MM[:SS][/DD] (time remaining) or @[HH:]MM[/DD] (end time), where DD is planned duration in minutes. It starts changing color 75% of the way through.">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 2fr 2fr 1fr"> <!-- under indicators-->
+            <div style="display:grid;"> <!-- first column-->
+                <div>
+                <div>Time:</div>
+                <div class="time centered" title="Current time"></div>
+                </div>
+                <div>
+                <div>Scene:</div>
+                <span class="synced centered" syncwith="scene">Scene</span>
+                </div>
+                <div>
+                <div>Playfile timer:</div>
+                <span class="playfile timer centered" title="Timer for ongoing playback">-</span>
+                </div>
+                <div class="reconnect-button" style="display: none">
+                <button class="centered" onclick="obs_init()">Reconnect</button>
+                </div>
+                <div style="font-size: 75%;">
+                <div>Status:</div>
+                <span class="status">Status</span>
+                </div>
+                <button onclick="fullscreen_toggle()" style="font-size: 75%;">Full screen & wakelock</button>
+            </div>
+
+            <div style="display: grid; grid-template-rows: 1fr 1fr 1fr 1fr">
+            </div>
+            <div style="display: grid; grid-template-rows: 1fr 1fr 1fr 1fr">
+                <div></div>
+                <button class="quick-break" title="Cut audio/gallery and swich scene to Notes.">Break</button>
+                <div>Click "break" above to cut audio, hide instructor picture, and switch to Notes.  The Director normally does this but if desired you can too.</div>
+            </div>
+            <div style="display: grid; grid-template-rows: 1fr 1fr 1fr 1fr">
+            </div>
+
+        </div>
+      </div>
+    </div>
+
+
+    <table border="1">
+
+  <div>
+    <input type="checkbox" class="no-local-sound" title="No local sound?  Enable if broadcaster to prevent sound loops.">No local sound</input>
+  </div>
+
+  <a class="index-href" href="">Index</a>,
+  <a class="preview-href" href="">Preview</a>,
+  <button class="popout" title="Pop out this window without tabs/menus" onclick="window.open(window.location.href, 'popupWindow', 'width=700,height=300,menubar=no,toolbar=no,location=no,status=no');">Pop out window</button>
+
+    <script>
+        init_all()
+    </script>
+
+  <body>
+  </html>

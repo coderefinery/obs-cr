@@ -57,7 +57,7 @@ function replace_url_path(href, page) {
 function init_rellinks() {
     // For each <a> element with classname PAGE-href, replace link target path with PAGE.html
     purl = new URL(window.location.href);
-    for (page of ["preview", "index", "control", "small", "director", "annunciators", "tablet"]) {
+    for (page of ["preview", "index", "control", "small", "director", "annunciators", "tablet", "tablet-instructors"]) {
         purl.pathname = purl.pathname.replace(/\/[^\/]*?$/, `/${page}.html`)
         forEach(`.${page}-href`, x => {x.href = purl.toString()});
     }

@@ -773,7 +773,7 @@ async function init_timers() {
 async function timer_set(id, endtime, duration) {
     console.log('timer_set', id, endtime)
     // Start a countdown timer
-    input = document.querySelector('input#'+id)
+    input = document.querySelector('input.timer#'+id)
     input.style.backgroundColor = null
     // token is a way to tell when a new timer has been set. If token is different, stop ticking.
     input.token = Math.random()
@@ -782,7 +782,7 @@ async function timer_set(id, endtime, duration) {
 async function timer_tick(id, endtime, duration, token) {
     // If we have been updated, just exit - a new handler will have been registered
     //console.log('tick', Date(), id, endtime, input.endtime, duration, token)
-    input = document.querySelector('input#'+id)
+    input = document.querySelector('input.timer#'+id) // This only gets one timer box.
     if (input.token != token) {
         console.log(`timer ${id} has been reset`)
         return
