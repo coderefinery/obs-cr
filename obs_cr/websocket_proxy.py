@@ -190,7 +190,7 @@ if __name__ == "__main__":
       websocket_proxy --cert=/path/to/fullchain.cer --key=/path/to/domain.key ...
     """)
     parser = argparse.ArgumentParser(usage=usage)
-    parser.add_argument('bind', nargs='?', default='0.0.0.0:4445',
+    parser.add_argument('bind', nargs='?', default='0.0.0.0:4456',
                         help="local bind, format ADDRESS:PORT, default=%(default)s")
     parser.add_argument('--target', default="ws://localhost:4455",
                         help="OBS address to proxy to, default=%(default)s")
