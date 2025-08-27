@@ -193,7 +193,7 @@ if __name__ == "__main__":
     parser.add_argument('bind', nargs='?', default='0.0.0.0:4456',
                         help="local bind, format ADDRESS:PORT, default=%(default)s")
     parser.add_argument('--target', default="ws://localhost:4455",
-                        help="OBS address to proxy to, default=%(default)s")
+                        help="OBS address to proxy to, default=%(default)s.  Must include ws:// or wss://")
     parser.add_argument('--ssl-domain', metavar='DOMAIN',
                         help="Automatically find acme.sh certs from ~/.acme.sh/DOMAIN_ecc/")
     parser.add_argument('--cert', help="Manual SSL .cer path")
