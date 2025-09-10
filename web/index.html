@@ -36,6 +36,9 @@
             <button class="popout tablet-instructors-href" onclick="window.open(event.target.href, 'popupWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');">Pop out</button>
             <button onClick='qrdiv = document.querySelector("#url-qr-code img") ; if (qrdiv) {qrdiv.remove()} else { new QRCode("url-qr-code", replace_url_path(window.location.href, "tablet-instructors"))}'>Show QR code for phone/tablet view.</button>
           </li>
+          <li><a class="small-href" href="">Small panel for instructors</a> (who want more control)
+            <button class="popout small-href" onclick="window.open(event.target.href, 'popupWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');">Pop out</button>
+          </li>
           <li><a class="preview-href" href="">Real-time scene preview</a>.
             <button class="popout preview-href" onclick="window.open(event.target.href, 'popupWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');">Pop out</button>
           </li>
@@ -49,9 +52,6 @@
           <li><a class="tablet-href" href="">Phone/tablet view</a>.
             <button class="popout tablet-href" onclick="window.open(event.target.href, 'popupWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');">Pop out</button>
             <button onClick='qrdiv = document.querySelector("#url-qr-code img") ; if (qrdiv) {qrdiv.remove()} else { new QRCode("url-qr-code", replace_url_path(window.location.href, "tablet"))}'>Show QR code for phone/tablet view.</button>
-          </li>
-          <li><a class="small-href" href="">Small panel for instructors</a> (who want more control)
-            <button class="popout small-href" onclick="window.open(event.target.href, 'popupWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');">Pop out</button>
           </li>
       </ul>
       </li>
