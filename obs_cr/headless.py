@@ -30,7 +30,7 @@ def main():
     parser.add_argument('--notes-window',
                         help="window name regex for notes document (for scrolling), get via xwininfo -tree -root | less.  Example: '^Collaborative document.*Privat()e' (the parentheses prevent the regex from matching itself in the process listing)")
     parser.add_argument('--test', action='store_true', help="Don't connect to OBS, just show the panel in a test mode.  Some things may not work.")
-    parser.add_argument('--no-sound', action='store_true', help="Don't play the sound effects that come with certain actions.")
+    parser.add_argument('--sound', action='store_true', help="Play the sound effects that come with certain actions.")
     parser.add_argument('--resolution-command',
                         help="Preset commands to run for resizing windows.  Choose one of: 'zoomw' (zoom workplace - this is probably what you want) or 'zoom' (old classic zoom).  The exact commands are set in config.yaml")
                         #help="Command to run when setting resolution.  WIDTH and HEIGHT will be replaced with integers.  Example: \"xdotool search --onlyvisible --name '^Zoom$' windowsize WIDTH HEIGHT;\" (mind the nested quotes)")
@@ -168,7 +168,7 @@ SOUNDFILES = { name: simpleaudio.WaveObject.from_wave_file(str(pathlib.Path(__fi
 
 def play(name):
     """Play sound.  There is an OBS listener to trigger this an the right times"""
-    muted = cli_args.no_sound
+    muted = not cli_args.sound
     print(f"Play {name} {'(muted)' if muted else ''}")
     if 'SOUNDS' not in CONFIG is None:
         LOG.warning("Sounds are not loaded")
