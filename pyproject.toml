@@ -32,6 +32,8 @@ test = [
 [project.scripts]
     obs-cr-control = "obs_cr.control:main"
     obs-cr-preview = "obs_cr.preview:main"
+    obs-cr-headless = "obs_cr.headless:main"
+    obs-cr-websocket-proxy = "obs_cr.websocket_proxy:main"
 
 [project.urls]
 Repository = "https://github.com/coderefinery/obs-coderefinery-control/"
