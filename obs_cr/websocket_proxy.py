@@ -151,7 +151,7 @@ def filter_forwarded(message):
 def filter_returned(message):
     return message
 
-async def main(target_url):
+async def main2(target_url):
     server = await websockets.serve(
         handle,
         *args.bind.rsplit(':', 1),
@@ -163,7 +163,10 @@ async def main(target_url):
     await server.serve_forever()
     print('Server closed')
 
-if __name__ == "__main__":
+def main():
+    global args   # Not good, but solves short-term problem.  Please fix.
+    global ssl_context
+
     import argparse
     usage = textwrap.dedent("""\
     websocket_proxy.py [--ssl-domain] --target=OBS_ADDRESS:PORT BIND_ADDRESS:PORT
@@ -216,5 +219,8 @@ if __name__ == "__main__":
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ssl_context.load_cert_chain(certfile=args.cert, keyfile=args.key)
 
-    asyncio.run(main(target_url=args.target))
+    asyncio.run(main2(target_url=args.target))
 
+
+if __name__ == "__main__":
+    main()
