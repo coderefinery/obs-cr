@@ -169,7 +169,7 @@ def main():
 
     import argparse
     usage = textwrap.dedent("""\
-    websocket_proxy.py [--ssl-domain] --target=OBS_ADDRESS:PORT BIND_ADDRESS:PORT
+    websocket_proxy.py [--ssl-domain] --obs=OBS_ADDRESS:PORT [BIND_ADDRESS:PORT]
 
     SSL
     ---
@@ -197,7 +197,7 @@ def main():
     parser = argparse.ArgumentParser(usage=usage)
     parser.add_argument('bind', nargs='?', default='0.0.0.0:4456',
                         help="local bind, format ADDRESS:PORT, default=%(default)s")
-    parser.add_argument('--target', default="ws://localhost:4455",
+    parser.add_argument('--obs', default="ws://localhost:4455", dest='target',
                         help="OBS address to proxy to, default=%(default)s.  Must include ws:// or wss://")
     parser.add_argument('--ssl-domain', metavar='DOMAIN',
                         help="Automatically find acme.sh certs from ~/.acme.sh/DOMAIN_ecc/")

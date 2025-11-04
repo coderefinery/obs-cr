@@ -25,7 +25,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
                       help='Websocket password, or pass "-" and set env var OBS_PASSWORD')
-    parser.add_argument('--target', dest='hostname_port', default="ws://localhost:4455",
+    parser.add_argument('--obs', dest='hostname_port', default="ws://localhost:4455",
                         help="HOSTNAME:PORT of the OBS to connect to (default=%(default)s")
     parser.add_argument('--notes-window',
                         help="window name regex for notes document (for scrolling), get via xwininfo -tree -root | less.  Example: '^Collaborative document.*Privat()e' (the parentheses prevent the regex from matching itself in the process listing)")
