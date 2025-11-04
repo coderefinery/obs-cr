@@ -11,6 +11,8 @@ import websockets
 
 async def handle(conn):
     target_url = args.target
+    if not (target_url.startswith('ws://') or target_url.startswith('wss://')):
+        target_url = 'ws://' + target_url
     print(f'Connection from {conn.remote_address}')
     #print(path)
     #print(conn.request.headers)
