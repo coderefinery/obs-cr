@@ -11,7 +11,7 @@ import obsws_python
 import yaml
 
 
-from obsdict import ObsState
+from .obsdict import ObsState
 
 CONFIG = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), 'config.yaml')))
 
