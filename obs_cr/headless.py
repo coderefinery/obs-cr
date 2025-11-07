@@ -25,7 +25,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('password', default=os.environ.get('OBS_PASSWORD'),
                       help='Websocket password, or pass "-" and set env var OBS_PASSWORD')
-    parser.add_argument('--obs', dest='hostname_port', default="ws://localhost:4455",
+    parser.add_argument('--obs', dest='hostname_port', default="localhost:4455",
                         help="HOSTNAME:PORT of the OBS to connect to (default=%(default)s")
     parser.add_argument('--notes-window',
                         help="window name regex for notes document (for scrolling), get via xwininfo -tree -root | less.  Example: '^Collaborative document.*Privat()e' (the parentheses prevent the regex from matching itself in the process listing)")
@@ -37,6 +37,7 @@ def main():
     parser.add_argument('--broadcaster', action='store_true', help="This is running on broadcaster's computer.  Enable extra broadcaster functionality like unmuting and controlling Zoom.")
     parser.add_argument('--verbose', '-v', action='count', default=0)
     args = cli_args = parser.parse_args()
+
     if args.verbose >= 3:
         logging.basicConfig(level=9)
     elif args.verbose >= 2:
@@ -54,6 +55,7 @@ def main():
         hostname = cli_args.hostname_port.split(':')[0]
         port = cli_args.hostname_port.split(':')[1]
         password = cli_args.password
+        print(f"Connecting to {hostname}:{port}")
 
         import obsws_python
         obsreq = obsws_python.ReqClient(host=hostname, port=port, password=password, timeout=3)
