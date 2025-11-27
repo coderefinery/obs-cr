@@ -120,6 +120,7 @@ SCREENSHARE_SIZES:
    - "1920x1200"
    - "1680x1080"
    - "2560x1440"
+   - "3440x1440"
    - "3840x1080"
 
 # Crop factors to get to the screenshare in "top gallery" mode.
