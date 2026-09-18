@@ -104,7 +104,7 @@ def notes_scroll(value):
     if value in {'Up', 'Down', 'Prior', 'Next', 'End'}:
         cmd[cmd.index('KEY')] = value
         LOG.info('Scrolling notes: %r', value)
-        print(f"Scrolling notes {value}")
+        print(f"Scrolling notes {value} (to window {cli_args.notes_window})")
         subprocess.call(cmd)
 
 
