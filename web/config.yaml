@@ -115,13 +115,14 @@ TOPGALLERY_CROP_FACTORS:
 
 
 SCREENSHARE_SIZES:
-   - "840x1080"
-   - "1920x1080"
-   - "1920x1200"
-   - "1680x1080"
-   - "2560x1440"
-   - "3440x1440"
-   - "3840x1080"
+   - "840x1080"   # FullHD portrait size
+   - "1120x1440"  # QHD portrait size
+   - "1920x1080"  # FullHD
+   - "1920x1200"  # FullHD but taller
+   - "1680x1080"  # FullHD but narrower
+   - "2560x1440"  # QHD
+   - "3440x1440"  # UWQHD (QHD but wider)
+   - "3840x1080"  # double FullHD
 
 # Crop factors to get to the screenshare in "top gallery" mode.
 # This is added to the screenshare WxH to get the size to which
