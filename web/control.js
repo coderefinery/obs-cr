@@ -607,9 +607,15 @@ async function update_preview () {
     }
     try {
         PREVIEW_UPDATE_RUNNING = true;
-        res = await obs.call('GetCurrentProgramScene',);
-        //console.log(res)
-        sceneName = res.currentProgramSceneName;
+        res = await(obs.call('GetStudioModeEnabled'))
+        isStudioMode = res.studioModeEnabled;
+        if (isStudioMode) {
+            res = await obs.call('GetCurrentPreviewScene',);
+            sceneName = res.currentPreviewSceneName;
+        } else {
+            res = await obs.call('GetCurrentProgramScene',);
+            sceneName = res.currentProgramSceneName;
+        }
         ret = await obs.call('GetSourceScreenshot',
                              {sourceName: sceneName,
                               imageFormat: "png",

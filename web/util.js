@@ -462,7 +462,13 @@ async function obs_get_scene(_) {
     return ret.sceneName || ret.currentProgramSceneName;
 }
 async function obs_set_scene(_, value) {
-    return await obs.call("SetCurrentProgramScene", {sceneName: value})
+        res = await(obs.call('GetStudioModeEnabled'))
+        isStudioMode = res.studioModeEnabled;
+        if (isStudioMode) {
+            return await obs.call("SetCurrentPreviewScene", {sceneName: value})
+        } else {
+            return await obs.call("SetCurrentProgramScene", {sceneName: value})
+        }
 }
 
 
