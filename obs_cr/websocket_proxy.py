@@ -78,9 +78,13 @@ ALLOWED_REQUESTS = set("""
     GetSceneList
     GetCurrentProgramScene
     SetCurrentProgramScene
+    GetCurrentPreviewScene
+    SetCurrentPreviewScene
     GetSceneItemId
     GetSceneItemList
     SetSceneItemEnabled
+    GetStudioModeEnabled
+    #SetStudioModeEnabled
 
     GetInputMute
     SetInputMute
