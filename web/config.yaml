@@ -112,6 +112,8 @@ TOPGALLERY_CROP_FACTORS:
     2: {cropTop: 70, cropBottom: 74, cropLeft: 110, cropRight: 110}
     3: {cropTop: 70, cropBottom: 74, cropLeft: 120, cropRight: 120}
     5: {cropTop: 70, cropBottom: 74, cropLeft: 130, cropRight: 130}
+# There are also hard-coded factors hard-coded in
+# `obs_set_gallerycrop` (search `picturewidths`)
 
 # Crop factors to get to the screenshare in "top gallery" mode.
 # This is added to the screenshare WxH to get the size to which
